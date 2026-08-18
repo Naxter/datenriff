@@ -45,8 +45,12 @@
 
 ## Further sources — open
 
-- [ ] pipelines for night lights, precipitation, energy registry, land cover
-      and forest (the `afterdark`/`rain`/`energy` palettes are prepared)
+- [x] AFTER DARK: `pipelines/black-marble` turns the NASA Black Marble
+      mosaic into H3 r7 cells (mean brightness, clipped to the outline);
+      the app switches datasets per mode, proving the renderer is not a
+      census viewer
+- [ ] pipelines for precipitation, energy registry, land cover and forest
+      (the `rain`/`energy` palettes are prepared)
 
 ## Cinematic polish — in progress
 

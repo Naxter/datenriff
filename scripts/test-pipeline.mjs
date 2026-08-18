@@ -22,12 +22,21 @@ const candidates = [
 ];
 
 const args = ['-m', 'unittest', 'discover', '-s', 'tests', '-t', '.', '-v'];
+const BLACK_MARBLE = join(ROOT, 'pipelines', 'black-marble');
 
 for (const [cmd, pre] of candidates) {
   const probe = spawnSync(cmd, [...pre, '--version'], { stdio: 'ignore' });
   if (probe.error || probe.status !== 0) continue;
-  const run = spawnSync(cmd, [...pre, ...args], { cwd: PIPELINE, stdio: 'inherit' });
-  process.exit(run.status ?? 1);
+  const census = spawnSync(cmd, [...pre, ...args], { cwd: PIPELINE, stdio: 'inherit' });
+  if (census.status !== 0) process.exit(census.status ?? 1);
+  // black-marble reuses the census binary writer; its own tests are stdlib-only
+  const sep = win ? ';' : ':';
+  const nightLights = spawnSync(cmd, [...pre, ...args], {
+    cwd: BLACK_MARBLE,
+    stdio: 'inherit',
+    env: { ...process.env, PYTHONPATH: `.${sep}${PIPELINE}` },
+  });
+  process.exit(nightLights.status ?? 1);
 }
 
 console.error('No Python interpreter found (tried venv, python3, python, py -3).');

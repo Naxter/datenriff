@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { MapViewState } from '@deck.gl/core';
+import type { AtlasManifest } from '@datenriff/data-contracts';
 import type { SceneData } from '../data/loader';
 
 export interface HoverInfo {
@@ -11,6 +12,7 @@ export interface HoverInfo {
 interface AtlasState {
   status: 'loading' | 'ready' | 'error';
   error?: string;
+  manifest?: AtlasManifest;
   scene?: SceneData;
   modeId: string;
   /** Timeline position for time-enabled modes; 1 = latest step. */
@@ -22,6 +24,7 @@ interface AtlasState {
   view: MapViewState | null;
   /** Bumped when the engine buffers were mutated outside the render loop. */
   sculptureVersion: number;
+  setManifest(manifest: AtlasManifest): void;
   setScene(scene: SceneData): void;
   setError(message: string): void;
   setMode(id: string): void;
@@ -40,6 +43,7 @@ export const useAtlasStore = create<AtlasState>((set) => ({
   hover: null,
   view: null,
   sculptureVersion: 0,
+  setManifest: (manifest) => set({ manifest }),
   setScene: (scene) => set({ scene, status: 'ready' }),
   setError: (error) => set({ error, status: 'error' }),
   setMode: (modeId) => set({ modeId, timeT: 1, hover: null }),
