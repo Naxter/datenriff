@@ -96,18 +96,18 @@ Output:
 ```
 apps/web/public/data/zensus/
 ├── dataset.json        # manifest fragment including provenance (hash, date, commit)
-├── r8/                 # country LOD
+├── r7/                 # country LOD for the mobile quality profile
+├── r8/                 # country LOD for desktop
 │   ├── cells.txt       # canonical H3 cell order
 │   ├── positions.bin   # float32 [lon, lat]
 │   ├── population_2022.f32
 │   └── population_2011.f32
-└── r9/                 # regional LOD (tiling still to come)
+└── r9/                 # regional LOD, tiled by H3 r5 parent + index.json
 ```
 
-Afterwards run `npm run generate:demo` once — it rebuilds
-`apps/web/public/data/manifest.json` and puts the real dataset first, with
-the synthetic demo kept as the second entry. A fresh clone without the
-downloads keeps running on the demo alone.
+Afterwards run `npm run build:manifest` once — it assembles
+`apps/web/public/data/manifest.json` from every pipeline output it finds,
+plus the city labels and the country outline.
 
 ## Notes on the V1.1 metrics
 
@@ -149,6 +149,6 @@ python3 -m unittest discover -s tests -t . -v      # from pipelines/zensus/
 
 - [x] SUM metrics (population 2022/2011) end to end with real data
 - [x] wmean (AGE, RENT) and category metrics (HEATING) in the CLI
-- [x] share metrics (vacancy, share ≥65) in the CLI
+- [x] share metrics in the CLI (share of dwellings built 2014+)
 - [x] r9 (and optional r10) tiling by H3 parent with a bounds index
 - [ ] download automation with hash pinning
