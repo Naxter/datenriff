@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { MorphEngine } from '@datenriff/sculpture-core';
-import { loadScene } from '../data/loader';
-import { availableModes, getMode } from '../modes/modes';
+import { loadManifest, loadScene, resolveDataset } from '../data/loader';
+import { availableModes, datasetServesMode, getMode } from '../modes/modes';
 import { TargetBuilder } from '../sculpture/targets';
 import { SculptureView } from '../sculpture/SculptureView';
 import { useAtlasStore } from '../state/store';
@@ -36,9 +36,38 @@ export default function App() {
     if (url.palette) useAtlasStore.setState({ palette: url.palette });
   }
 
+  const manifest = useAtlasStore((s) => s.manifest);
+  const setManifest = useAtlasStore((s) => s.setManifest);
+
   useEffect(() => {
     let cancelled = false;
-    loadScene()
+    loadManifest()
+      .then((m) => !cancelled && setManifest(m))
+      .catch((e: unknown) => {
+        if (!cancelled) setError(e instanceof Error ? e.message : String(e));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [setManifest, setError]);
+
+  // A mode may live in a different dataset (AFTER DARK is a satellite raster
+  // with its own cell universe), so the scene follows the mode.
+  const wantedDatasetId = useMemo(() => {
+    if (!manifest) return null;
+    const mode = getMode(modeId);
+    const dataset = resolveDataset(manifest, mode, (d) =>
+      datasetServesMode(d, mode),
+    );
+    return dataset?.id ?? null;
+  }, [manifest, modeId]);
+
+  useEffect(() => {
+    if (!manifest || !wantedDatasetId) return;
+    if (scene?.dataset.id === wantedDatasetId) return;
+    let cancelled = false;
+    useAtlasStore.setState({ status: 'loading' });
+    loadScene(manifest, wantedDatasetId)
       .then((s) => !cancelled && setScene(s))
       .catch((e: unknown) => {
         if (!cancelled) setError(e instanceof Error ? e.message : String(e));
@@ -46,21 +75,27 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, [setScene, setError]);
+  }, [manifest, wantedDatasetId, scene, setScene, setError]);
 
-  // a dataset may not carry every mode's metrics yet — fall back gracefully
+  // no dataset can serve the requested mode → fall back to one that works
   useEffect(() => {
-    if (!scene) return;
-    const modes = availableModes(scene.dataset);
+    if (!manifest) return;
+    const modes = availableModes(manifest.datasets);
     if (modes.length > 0 && !modes.some((m) => m.id === modeId)) {
       useAtlasStore.setState({ modeId: modes[0]!.id, timeT: 1 });
     }
-  }, [scene, modeId]);
+  }, [manifest, modeId]);
 
   const ctx = useMemo(() => {
     if (!scene) return null;
     return { engine: new MorphEngine(scene.count), builder: new TargetBuilder(scene) };
   }, [scene]);
+
+  // Between a mode switch and the matching scene arriving, the loaded scene
+  // cannot serve the mode (AFTER DARK → PEOPLE swaps datasets). Everything
+  // below renders from `ready` so that gap never reaches the target builder.
+  const mode = getMode(modeId);
+  const ready = ctx !== null && scene !== undefined && datasetServesMode(scene.dataset, mode);
 
   const reducedMotion = useMemo(
     () => window.matchMedia('(prefers-reduced-motion: reduce)').matches,
@@ -71,7 +106,7 @@ export default function App() {
   // sculpture, so loading doubles as the growth animation.
   const firstMorph = useRef(true);
   useEffect(() => {
-    if (!ctx) return;
+    if (!ctx || !ready) return;
     const target = ctx.builder.build(getMode(modeId), palette);
     if (reducedMotion) {
       ctx.engine.snapTo(target);
@@ -80,13 +115,13 @@ export default function App() {
     }
     firstMorph.current = false;
     bumpSculpture();
-  }, [ctx, modeId, palette, reducedMotion, bumpSculpture]);
+  }, [ctx, ready, modeId, palette, reducedMotion, bumpSculpture]);
 
   // Timeline scrub. Resting at t = 1 is skipped so entering a time-enabled
   // mode doesn't cancel its entry morph.
   const prevTimeT = useRef(1);
   useEffect(() => {
-    if (!ctx) return;
+    if (!ctx || !ready) return;
     const mode = getMode(modeId);
     const wasScrubbed = prevTimeT.current < 1;
     prevTimeT.current = timeT;
@@ -98,24 +133,23 @@ export default function App() {
     if (!a || !b) return;
     ctx.engine.setHeightMix(a, b, timeT);
     bumpSculpture();
-  }, [ctx, modeId, timeT, palette, bumpSculpture]);
+  }, [ctx, ready, modeId, timeT, palette, bumpSculpture]);
 
-  const mode = getMode(modeId);
-  const modeTarget = ctx ? ctx.builder.build(mode, palette) : null;
+  const modeTarget = ready ? ctx.builder.build(mode, palette) : null;
 
   return (
     <div className="atlas">
-      {scene && ctx && <SculptureView scene={scene} engine={ctx.engine} />}
-      {scene && <Header mode={mode} />}
-      {scene && <ModeNav />}
-      {scene && mode.time && <Timeline mode={mode} />}
-      {scene && modeTarget && (
+      {ready && <SculptureView scene={scene} engine={ctx.engine} />}
+      {ready && <Header mode={mode} />}
+      {manifest && <ModeNav />}
+      {ready && mode.time && <Timeline mode={mode} />}
+      {ready && modeTarget && (
         <Legend mode={mode} scene={scene} colorStats={modeTarget.colorStats} />
       )}
-      {scene && ctx && <Tooltip mode={mode} scene={scene} builder={ctx.builder} />}
-      {scene && ctx && <ExportButton builder={ctx.builder} />}
-      {scene && <Attribution scene={scene} />}
-      <Veil visible={status !== 'ready'} error={error} />
+      {ready && <Tooltip mode={mode} scene={scene} builder={ctx.builder} />}
+      {ready && <ExportButton builder={ctx.builder} />}
+      {ready && <Attribution scene={scene} />}
+      <Veil visible={status !== 'ready' || !ready} error={error} />
     </div>
   );
 }

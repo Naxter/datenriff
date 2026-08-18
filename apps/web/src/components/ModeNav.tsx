@@ -5,10 +5,10 @@ import { useAtlasStore } from '../state/store';
 export function ModeNav() {
   const modeId = useAtlasStore((s) => s.modeId);
   const setMode = useAtlasStore((s) => s.setMode);
-  const scene = useAtlasStore((s) => s.scene);
+  const manifest = useAtlasStore((s) => s.manifest);
   const modes = useMemo(
-    () => (scene ? availableModes(scene.dataset) : MODES),
-    [scene],
+    () => (manifest ? availableModes(manifest.datasets) : MODES),
+    [manifest],
   );
   return (
     <nav className="modenav" aria-label="Sculpture modes">

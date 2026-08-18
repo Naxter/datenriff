@@ -8,6 +8,7 @@ import type {
   SculptureDataset,
   SculptureLOD,
   MetricDefinition,
+  SculptureMode,
 } from '@datenriff/data-contracts';
 
 export interface SceneData {
@@ -40,9 +41,48 @@ function metricUrl(lod: SculptureLOD, metric: MetricDefinition): string {
   return lod.metricTemplate.replace('{metric}', `${metric.id}.${metric.storage}`);
 }
 
-export async function loadScene(base = '/data'): Promise<SceneData> {
-  const manifest = await fetchJson<AtlasManifest>(`${base}/manifest.json`);
-  const dataset = manifest.datasets[0];
+export async function loadManifest(base = '/data'): Promise<AtlasManifest> {
+  return await fetchJson<AtlasManifest>(`${base}/manifest.json`);
+}
+
+/** Does this dataset carry every metric the mode needs? */
+export function datasetSupportsMode(
+  dataset: SculptureDataset,
+  mode: SculptureMode,
+  derivedMetrics: (dataset: SculptureDataset, mode: SculptureMode) => boolean,
+): boolean {
+  const has = (id: string) => dataset.metrics.some((m) => m.id === id);
+  if (!has(mode.heightMetric)) return false;
+  if (!has(mode.colorMetric) && !derivedMetrics(dataset, mode)) return false;
+  const scale = mode.colorScale;
+  if (scale.type === 'categorical' && scale.saturationMetric) {
+    return has(scale.saturationMetric);
+  }
+  return true;
+}
+
+/** The dataset a mode should render from: its declared id when that one can
+ *  serve it, otherwise the first that can — so the synthetic demo stands in
+ *  for the census dataset until the pipeline has run. */
+export function resolveDataset(
+  manifest: AtlasManifest,
+  mode: SculptureMode,
+  supports: (dataset: SculptureDataset) => boolean,
+): SculptureDataset | null {
+  const declared = manifest.datasets.find((d) => d.id === mode.dataset);
+  if (declared && supports(declared)) return declared;
+  return manifest.datasets.find(supports) ?? null;
+}
+
+export async function loadScene(
+  manifest: AtlasManifest,
+  datasetId?: string,
+  base = '/data',
+): Promise<SceneData> {
+  void base;
+  const dataset = datasetId
+    ? manifest.datasets.find((d) => d.id === datasetId) ?? manifest.datasets[0]
+    : manifest.datasets[0];
   if (!dataset) throw new Error('Manifest contains no datasets');
   // country LOD = coarsest un-tiled buffer set; finer tiled LODs stream later
   const lod = [...dataset.lods]

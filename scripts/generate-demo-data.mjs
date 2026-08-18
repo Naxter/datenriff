@@ -420,18 +420,25 @@ function writeTiles(baseDir, positions, metrics) {
   return { tileCount: entries.length, count: n };
 }
 
-/** Pipeline output under OUT/zensus, with URLs rebased for the app. */
-function loadRealDataset() {
-  const path = join(OUT, 'zensus', 'dataset.json');
-  if (!existsSync(path)) return null;
-  const dataset = JSON.parse(readFileSync(path, 'utf8'));
-  const rebase = (p) => (p && !p.startsWith('/') ? `/data/zensus/${p}` : p);
-  for (const lod of dataset.lods ?? []) {
-    for (const key of ['positions', 'metricTemplate', 'tileIndex', 'tileTemplate', 'positionsTemplate']) {
-      if (lod[key]) lod[key] = rebase(lod[key]);
+/** Every pipeline output under OUT/<dir>/dataset.json, URLs rebased for the
+ *  app. Each pipeline owns its own cell universe, so they stay separate
+ *  datasets and the app switches scenes per mode. */
+function loadPipelineDatasets() {
+  const dirs = ['zensus', 'afterdark'];
+  const datasets = [];
+  for (const dir of dirs) {
+    const path = join(OUT, dir, 'dataset.json');
+    if (!existsSync(path)) continue;
+    const dataset = JSON.parse(readFileSync(path, 'utf8'));
+    const rebase = (p) => (p && !p.startsWith('/') ? `/data/${dir}/${p}` : p);
+    for (const lod of dataset.lods ?? []) {
+      for (const key of ['positions', 'metricTemplate', 'tileIndex', 'tileTemplate', 'positionsTemplate']) {
+        if (lod[key]) lod[key] = rebase(lod[key]);
+      }
     }
+    datasets.push(dataset);
   }
-  return dataset;
+  return datasets;
 }
 
 function main() {
@@ -540,16 +547,18 @@ function main() {
     },
   };
 
-  // a real pipeline output takes precedence; the demo stays as fallback
-  const real = loadRealDataset();
+  // real pipeline outputs come first; the synthetic demo stays as fallback
+  const pipelines = loadPipelineDatasets();
   const manifest = {
     version: 1,
     generatedAt: new Date().toISOString(),
-    datasets: real ? [real, dataset] : [dataset],
+    datasets: [...pipelines, dataset],
     labels: '/data/cities.json',
     boundary: '/data/boundary.json',
   };
-  if (real) console.log(`Including real dataset "${real.id}" (${real.metrics.length} metrics)`);
+  for (const d of pipelines) {
+    console.log(`Including dataset "${d.id}" (${d.metrics.length} metrics)`);
+  }
 
   writeFileSync(join(OUT, 'manifest.json'), JSON.stringify(manifest, null, 2));
   writeFileSync(
