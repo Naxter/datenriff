@@ -51,6 +51,8 @@ function formatField(
     }
     case 'currencyPerSqm':
       return `${dec1Fmt.format(value)} €/m²`;
+    case 'megawatt':
+      return `${dec1Fmt.format(value)} MW`;
     case 'category': {
       const def = metricForScene(scene, field.metric);
       return def.categories?.[Math.round(value)] ?? '—';

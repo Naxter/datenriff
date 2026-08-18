@@ -18,7 +18,9 @@ const nf = new Intl.NumberFormat('de-DE', { maximumFractionDigits: 0 });
 function formatValue(v: number, unit?: string): string {
   const compact =
     Math.abs(v) >= 10_000 ? `${nf.format(Math.round(v / 1000))}k` : nf.format(v);
-  return unit === '€/m²' ? `${v} €/m²` : compact;
+  if (unit === '€/m²') return `${v} €/m²`;
+  if (unit === 'MW') return `${compact} MW`;
+  return compact;
 }
 
 const cssGradient = (id: string) =>

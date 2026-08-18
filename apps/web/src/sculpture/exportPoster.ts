@@ -206,6 +206,9 @@ const nf = new Intl.NumberFormat('de-DE', { maximumFractionDigits: 0 });
 
 function formatNumber(v: number, unit?: string): string {
   if (unit === '€/m²') return `${v} €/m²`;
+  if (unit === 'MW') {
+    return `${Math.abs(v) >= 10_000 ? `${nf.format(Math.round(v / 1000))}k` : nf.format(v)} MW`;
+  }
   return Math.abs(v) >= 10_000 ? `${nf.format(Math.round(v / 1000))}k` : nf.format(v);
 }
 

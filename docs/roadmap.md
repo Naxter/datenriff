@@ -55,8 +55,11 @@
       annual composites 2012 on with a timeline, or the 8-bit mosaic for a
       demo; the app switches datasets per mode, proving the renderer is not
       a census viewer
-- [ ] pipelines for precipitation, energy registry, land cover and forest
-      (the `rain`/`energy` palettes are prepared)
+- [x] WIND: `pipelines/mastr` range-reads the wind units out of the
+      Marktstammdatenregister export and writes installed MW per cell and
+      year since 1990; the timeline plays the build-up, offshore included
+- [ ] pipelines for precipitation, land cover and forest (the `rain`
+      palette is prepared)
 
 ## Cinematic polish — in progress
 
