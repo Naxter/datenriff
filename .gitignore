@@ -1,0 +1,21 @@
+# Dependencies
+node_modules/
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+
+# Build output
+dist/
+*.tsbuildinfo
+
+# Generated demo data (recreate with: npm run generate:demo)
+apps/web/public/data/
+
+# Pipeline working data (large downloads / intermediate files)
+pipelines/**/work/
+pipelines/**/downloads/
+
+# Tooling
+*.log
+.DS_Store

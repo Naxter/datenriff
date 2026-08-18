@@ -1,0 +1,116 @@
+import { useMemo } from 'react';
+import type { MetricStats, SculptureMode } from '@datenriff/data-contracts';
+import {
+  SEQUENTIAL_CHOICES,
+  legendGradient,
+  resolveDivergingHalfWidth,
+  resolveSequentialDomain,
+} from '@datenriff/color-scales';
+import type { SceneData } from '../data/loader';
+import { metricDefinition } from '../data/loader';
+import { CHANGE_PCT_METRIC } from '../modes/modes';
+import { effectiveColorScale } from '../sculpture/targets';
+import { useAtlasStore } from '../state/store';
+
+const nf = new Intl.NumberFormat('de-DE', { maximumFractionDigits: 0 });
+
+function formatValue(v: number, unit?: string): string {
+  const compact =
+    Math.abs(v) >= 10_000 ? `${nf.format(Math.round(v / 1000))}k` : nf.format(v);
+  return unit === '€/m²' ? `${v} €/m²` : compact;
+}
+
+const cssGradient = (id: string) =>
+  `linear-gradient(to right, ${legendGradient(id).join(', ')})`;
+
+interface Props {
+  mode: SculptureMode;
+  scene: SceneData;
+  colorStats: MetricStats;
+}
+
+export function Legend({ mode, scene, colorStats }: Props) {
+  const palette = useAtlasStore((s) => s.palette);
+  const setPalette = useAtlasStore((s) => s.setPalette);
+  const scale = effectiveColorScale(mode, palette);
+  const isSequential =
+    scale.type === 'linear' || scale.type === 'sqrt' || scale.type === 'log1p';
+
+  const body = useMemo(() => {
+    if (scale.type === 'categorical') {
+      const def = metricDefinition(scene.dataset, mode.colorMetric);
+      const colors = legendGradient(scale.palette);
+      return (
+        <div className="legend__cats">
+          {(def.categories ?? []).map((label, i) => (
+            <div key={label} className="legend__cat">
+              <span className="legend__swatch" style={{ background: colors[i] }} />
+              {label}
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    if (scale.type === 'diverging') {
+      const hw = resolveDivergingHalfWidth(scale, colorStats);
+      return (
+        <>
+          <div className="legend__bar" style={{ background: cssGradient(scale.palette) }} />
+          <div className="legend__range">
+            <span>−{Math.round(hw * 100)} %</span>
+            <span>0</span>
+            <span>+{Math.round(hw * 100)} %</span>
+          </div>
+        </>
+      );
+    }
+
+    const [lo, hi] = resolveSequentialDomain(scale, colorStats);
+    const unit = metricDefinition(scene.dataset, mode.colorMetric).unit;
+    return (
+      <>
+        <div className="legend__bar" style={{ background: cssGradient(scale.palette) }} />
+        <div className="legend__range">
+          <span>{formatValue(lo, unit)}</span>
+          <span>{formatValue(hi, unit)}</span>
+        </div>
+      </>
+    );
+  }, [scale, scene, mode.colorMetric, colorStats]);
+
+  const title =
+    mode.colorMetric === CHANGE_PCT_METRIC
+      ? 'Population change'
+      : metricDefinition(scene.dataset, mode.colorMetric).label;
+
+  const choices = useMemo(() => {
+    const base = mode.colorScale.palette;
+    return [base, ...SEQUENTIAL_CHOICES.filter((p) => p !== base)].slice(0, 6);
+  }, [mode.colorScale.palette]);
+
+  return (
+    <div className="legend">
+      <p className="legend__title">{title}</p>
+      {body}
+      {isSequential && (
+        <div className="legend__palettes" role="group" aria-label="Colour ramp">
+          {choices.map((id) => {
+            const active = scale.palette === id;
+            return (
+              <button
+                key={id}
+                type="button"
+                title={id}
+                aria-pressed={active}
+                className={`legend__dot${active ? ' legend__dot--active' : ''}`}
+                style={{ background: cssGradient(id) }}
+                onClick={() => setPalette(id === mode.colorScale.palette ? null : id)}
+              />
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}

@@ -1,0 +1,32 @@
+{
+  "name": "@datenriff/web",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "predev": "node ../../scripts/ensure-demo-data.mjs",
+    "dev": "vite",
+    "prebuild": "node ../../scripts/ensure-demo-data.mjs",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@datenriff/color-scales": "*",
+    "@datenriff/data-contracts": "*",
+    "@datenriff/sculpture-core": "*",
+    "@deck.gl/core": "^9.2.0",
+    "@deck.gl/layers": "^9.2.0",
+    "@deck.gl/react": "^9.2.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "zustand": "^5.0.2"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.5.0",
+    "typescript": "^5.9.2",
+    "vite": "^6.3.5"
+  }
+}
