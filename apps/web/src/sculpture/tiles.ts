@@ -2,6 +2,7 @@
 // colours tiles off the main thread; this manager decides which tiles the
 // camera needs, keeps a small cache and exposes ready tiles to the view.
 
+import { WebMercatorViewport, type MapViewState } from '@deck.gl/core';
 import type {
   LonLatBounds,
   MetricStats,
@@ -26,6 +27,7 @@ import type {
 export interface ReadyTile {
   key: string;
   tileId: string;
+  bounds: LonLatBounds;
   count: number;
   positions: Float32Array;
   heights: Float32Array;
@@ -38,7 +40,11 @@ interface TileLodRuntime {
 }
 
 export interface TileQuery {
-  bounds: LonLatBounds;
+  /** Ground region the fine tiles should cover (the near field of the
+   *  pitched view, see `tileZone`); the far field stays with the country LOD. */
+  zone: LonLatBounds;
+  /** Camera target — tiles load nearest-first from here. */
+  focus: [number, number];
   zoom: number;
   mode: SculptureMode;
   palette: string | null;
@@ -46,21 +52,62 @@ export interface TileQuery {
   enabled: boolean;
 }
 
-/** Prefetch margin around the viewport, as a fraction of its span. */
-const EXPAND = 0.25;
 /** At most this many tiles kept in memory. */
-const CACHE_CAP = 320;
+const CACHE_CAP = 360;
 /** At most this many tiles requested for one viewport. */
-const REQUEST_CAP = 280;
+const REQUEST_CAP = 300;
 
-function intersects(a: LonLatBounds, b: LonLatBounds): boolean {
+/** Screen fraction (from the top) that stays with the country LOD. In the
+ *  pitched view the upper part of the frame looks hundreds of kilometres
+ *  out, where a fine cell is smaller than a pixel anyway. */
+const FAR_FIELD_TOP = 0.35;
+/** Zone half-extent cap around the focus, in screen widths. */
+const ZONE_CAP = 1.4;
+/** Feather between fine tiles and country LOD, in screen widths. */
+const ZONE_FEATHER = 0.12;
+
+export function intersects(a: LonLatBounds, b: LonLatBounds): boolean {
   return a[0] <= b[2] && a[2] >= b[0] && a[1] <= b[3] && a[3] >= b[1];
 }
 
-function expand(b: LonLatBounds, f: number): LonLatBounds {
-  const dx = (b[2] - b[0]) * f;
-  const dy = (b[3] - b[1]) * f;
-  return [b[0] - dx, b[1] - dy, b[2] + dx, b[3] + dy];
+export interface TileZone {
+  /** Ground box the fine tiles should cover. */
+  zone: LonLatBounds;
+  /** Camera target, lon/lat. */
+  focus: [number, number];
+  /** Feather width in degrees, [lon, lat], for the country LOD's fade. */
+  feather: [number, number];
+}
+
+/** Ground footprint of the near field of the frame: the lower part of the
+ *  screen unprojected onto the plane, boxed, and clamped around the camera
+ *  target so that a grazing angle cannot ask for half the country. The two
+ *  corner unprojection used before produced a box that, under pitch and
+ *  bearing, did not even contain the camera target — tiles then loaded
+ *  around the wrong point while the country LOD had already faded out. */
+export function tileZone(view: MapViewState, width: number, height: number): TileZone {
+  const vp = new WebMercatorViewport({ ...view, width, height });
+  const yCut = height * FAR_FIELD_TOP;
+  const corners = [
+    [0, height],
+    [width, height],
+    [width, yCut],
+    [0, yCut],
+  ].map(([x, y]) => vp.unproject([x!, y!]) as [number, number]);
+  const focus: [number, number] = [view.longitude, view.latitude];
+  const span = (width * 360) / (512 * Math.pow(2, view.zoom));
+  const kx = Math.cos((view.latitude * Math.PI) / 180);
+  const capLon = ZONE_CAP * span;
+  const capLat = ZONE_CAP * span * kx;
+  const lons = corners.map((c) => c[0]).filter(Number.isFinite);
+  const lats = corners.map((c) => c[1]).filter(Number.isFinite);
+  const zone: LonLatBounds = [
+    Math.max(Math.min(...lons, focus[0]), focus[0] - capLon),
+    Math.max(Math.min(...lats, focus[1]), focus[1] - capLat),
+    Math.min(Math.max(...lons, focus[0]), focus[0] + capLon),
+    Math.min(Math.max(...lats, focus[1]), focus[1] + capLat),
+  ];
+  return { zone, focus, feather: [ZONE_FEATHER * span, ZONE_FEATHER * span * kx] };
 }
 
 export class TileManager {
@@ -68,9 +115,13 @@ export class TileManager {
   private readonly worker: Worker;
   private readonly ready = new Map<string, ReadyTile>();
   private readonly inFlight = new Set<string>();
+  private readonly pendingBounds = new Map<string, LonLatBounds>();
   private readonly lastUsed = new Map<string, number>();
   private clock = 0;
   private currentGen = '';
+  /** Keys wanted by the latest query, and the zone they should cover. */
+  private needed = new Set<string>();
+  private zone: LonLatBounds | null = null;
 
   /** Bumped state for the view; called whenever ready tiles change. */
   onChange: (() => void) | null = null;
@@ -120,13 +171,28 @@ export class TileManager {
     return true;
   }
 
-  /** Ready tiles of the current generation, for the active LOD. */
+  /** Ready tiles of the current generation that touch the current zone.
+   *  Tiles left over from an earlier viewport stay cached but are not drawn:
+   *  outside the zone the country LOD is showing, and both at once would
+   *  stack the coarse column over the fine ones. */
   tiles(): ReadyTile[] {
     const result: ReadyTile[] = [];
     for (const tile of this.ready.values()) {
-      if (tile.key.startsWith(this.currentGen)) result.push(tile);
+      if (!tile.key.startsWith(this.currentGen)) continue;
+      if (this.zone && !intersects(tile.bounds, this.zone)) continue;
+      result.push(tile);
     }
     return result;
+  }
+
+  /** Share of the tiles wanted for the current zone that have arrived.
+   *  The view keeps the country LOD up until this is high — fading it out
+   *  earlier leaves bare paper where tiles are still decoding. */
+  coverage(): number {
+    if (this.needed.size === 0) return 0;
+    let have = 0;
+    for (const key of this.needed) if (this.ready.has(key)) have += 1;
+    return have / this.needed.size;
   }
 
   update(q: TileQuery): void {
@@ -137,27 +203,33 @@ export class TileManager {
 
     const scale = effectiveColorScale(q.mode, q.palette);
     this.currentGen = `${lod.resolution}|${q.mode.id}|${scale.palette}|`;
+    this.zone = q.zone;
 
-    const view = expand(q.bounds, EXPAND);
-    const cx = (q.bounds[0] + q.bounds[2]) / 2;
-    const cy = (q.bounds[1] + q.bounds[3]) / 2;
-    const needed = index.tiles
-      .filter((t) => intersects(t.bounds as LonLatBounds, view))
-      .sort((a, b) => {
-        const da = (a.bounds[0] - cx) ** 2 + (a.bounds[1] - cy) ** 2;
-        const db = (b.bounds[0] - cx) ** 2 + (b.bounds[1] - cy) ** 2;
-        return da - db;
-      })
+    // nearest to the camera target first: those are the columns that fill
+    // the frame, the ones out at the zone edge are small on screen
+    const [fx, fy] = q.focus;
+    const kx = Math.cos((fy * Math.PI) / 180);
+    const dist2 = (b: readonly number[]) => {
+      const cx = ((b[0]! + b[2]!) / 2 - fx) * kx;
+      const cy = (b[1]! + b[3]!) / 2 - fy;
+      return cx * cx + cy * cy;
+    };
+    const wanted = index.tiles
+      .filter((t) => intersects(t.bounds as LonLatBounds, q.zone))
+      .sort((a, b) => dist2(a.bounds) - dist2(b.bounds))
       .slice(0, REQUEST_CAP);
 
     this.clock += 1;
-    for (const tile of needed) {
+    this.needed = new Set();
+    for (const tile of wanted) {
       const key = this.currentGen + tile.id;
+      this.needed.add(key);
       this.lastUsed.set(key, this.clock);
       if (this.ready.has(key) || this.inFlight.has(key)) continue;
-      this.request(lod, index, tile.id, key, q.mode, q.palette);
+      this.request(lod, index, tile, key, q.mode, q.palette);
     }
     this.evict();
+    this.onChange?.(); // zone/needed changed even if no tile did
   }
 
   private indexOf(lod: SculptureLOD): TileIndex | null {
@@ -179,12 +251,14 @@ export class TileManager {
   private request(
     lod: SculptureLOD,
     index: TileIndex,
-    tileId: string,
+    tile: TileIndex['tiles'][number],
     key: string,
     mode: SculptureMode,
     palette: string | null,
   ): void {
     if (!lod.tileTemplate || !lod.positionsTemplate) return;
+    const tileId = tile.id;
+    this.pendingBounds.set(key, tile.bounds as LonLatBounds);
     const metricUrl = (metricId: string, storage: string) =>
       lod.tileTemplate!.replace('{tile}', tileId).replace(
         '{metric}',
@@ -215,11 +289,16 @@ export class TileManager {
       colorScale: scale,
       colorStats,
       colorStorage,
-      occlusion: {
-        radiusDeg: (lod.cellRadiusMeters * 2.2) / 111_320,
-        fullShadeMeters: TARGET_MAX_HEIGHT_METERS * 0.04,
-        strength: OCCLUSION_STRENGTH,
-      },
+      // the neighbour search is the slow part of a tile decode; skip it
+      // while occlusion is switched off
+      occlusion:
+        OCCLUSION_STRENGTH > 0
+          ? {
+              radiusDeg: (lod.cellRadiusMeters * 2.2) / 111_320,
+              fullShadeMeters: TARGET_MAX_HEIGHT_METERS * 0.04,
+              strength: OCCLUSION_STRENGTH,
+            }
+          : undefined,
     };
     if (isChange) {
       req.changeUrls = {
@@ -239,16 +318,19 @@ export class TileManager {
 
   private onMessage(msg: TileLoadResponse | TileErrorResponse): void {
     this.inFlight.delete(msg.key);
+    const bounds = this.pendingBounds.get(msg.key);
+    this.pendingBounds.delete(msg.key);
     if (msg.type === 'error') {
       console.error(`tile ${msg.key}:`, msg.message);
       return;
     }
     // stale generation (mode/palette changed while loading) → drop
-    if (!msg.key.startsWith(this.currentGen)) return;
+    if (!msg.key.startsWith(this.currentGen) || !bounds) return;
     const tileId = msg.key.slice(msg.key.lastIndexOf('|') + 1);
     this.ready.set(msg.key, {
       key: msg.key,
       tileId,
+      bounds,
       count: msg.count,
       positions: msg.positions,
       heights: msg.heights,

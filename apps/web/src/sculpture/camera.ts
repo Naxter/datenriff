@@ -20,6 +20,21 @@ export const INITIAL_VIEW_STATE: MapViewState = {
   maxPitch: 68,
 };
 
+/** Zoom levels above the country framing before columns start to shrink. */
+const HEIGHT_FALLOFF_START = 0.3;
+/** Halvings of column height per zoom level beyond that. */
+const HEIGHT_FALLOFF = 0.75;
+
+/** Columns are calibrated for the country view: a 100 km peak reads as a
+ *  needle over 900 km of country. Closing in on a city, that same peak
+ *  would fill the frame from bottom to top, so height eases down with zoom
+ *  — relative to the fitted country zoom, so a 4K window is not already
+ *  "zoomed in" at rest. */
+export function zoomHeightScale(zoom: number, countryZoom: number): number {
+  const over = zoom - countryZoom - HEIGHT_FALLOFF_START;
+  return over <= 0 ? 1 : Math.pow(2, -over * HEIGHT_FALLOFF);
+}
+
 /** Zoom is absolute in Mercator, so a fixed default crops small windows and
  *  wastes paper on large ones. Fit the dataset bounds to the viewport instead:
  *  the crust only resolves into individual needles when the sculpture is big

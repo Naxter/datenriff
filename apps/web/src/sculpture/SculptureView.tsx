@@ -12,18 +12,16 @@ import DeckGL from '@deck.gl/react';
 import {
   FlyToInterpolator,
   MapView,
-  WebMercatorViewport,
   type MapViewState,
   type PickingInfo,
 } from '@deck.gl/core';
 import { ColumnLayer } from '@deck.gl/layers';
 import { type MorphEngine } from '@datenriff/sculpture-core';
-import type { LonLatBounds } from '@datenriff/data-contracts';
 import type { SceneData } from '../data/loader';
 import { getMode } from '../modes/modes';
 import { useAtlasStore } from '../state/store';
 import { readUrlState, writeUrlState } from '../state/url';
-import { CAMERA_FOVY, INITIAL_VIEW_STATE, fitViewState } from './camera';
+import { CAMERA_FOVY, INITIAL_VIEW_STATE, fitViewState, zoomHeightScale } from './camera';
 import {
   CAPTURE_EVENT,
   EXPORT_DPR,
@@ -39,10 +37,17 @@ import {
   labelCharacterSet,
   sculptureRadius,
 } from './layers';
-import { TileManager } from './tiles';
+import type { FadeBox } from './morphColumnLayer';
+import { TileManager, tileZone } from './tiles';
 
 /** Crossfade window above a fine LOD's minZoom. */
 const CROSSFADE_ZOOM_SPAN = 0.5;
+/** Tile coverage of the zone at which the country LOD starts to yield, and
+ *  at which it has fully yielded. */
+const COVERAGE_START = 0.6;
+const COVERAGE_FULL = 0.92;
+/** Minimum spacing between tile queries while the camera moves. */
+const TILE_QUERY_MS = 250;
 
 /** How long a replaced dataset's sculpture takes to sink into the plane. */
 const OUTGOING_MS = 950;
@@ -207,36 +212,50 @@ export function SculptureView({ scene, engine }: Props) {
     fineLod !== null &&
     timeT >= 1 &&
     tileManager.supportsMode(fineLod, mode);
-  // Crossfade only as far as the fine tiles have actually arrived: fading
-  // the country layer out on zoom alone leaves an empty frame while the
-  // first tiles are still decoding (very visible when a camera story flies
-  // straight to a city).
-  const readyTiles = tileManager?.tiles().length ?? 0;
-  const fineOpacity =
-    fineUsable && readyTiles > 0
-      ? clamp01((viewState.zoom - fineLod.minZoom) / CROSSFADE_ZOOM_SPAN)
-      : 0;
+  // The fine tiles cover the near field of the frame (`tileZone`); the far
+  // field stays with the country LOD. The country columns inside the zone
+  // step aside only as far as the tiles have actually arrived (coverage):
+  // fading them on zoom alone left bare paper where tiles were still
+  // decoding — most visible when a camera story flew straight to a city.
+  const zoneInfo = useMemo(
+    () => tileZone(viewState, window.innerWidth, window.innerHeight),
+    [viewState],
+  );
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const coverage = useMemo(() => tileManager?.coverage() ?? 0, [tileManager, tilesVersion]);
+  const zoomRamp = fineUsable
+    ? clamp01((viewState.zoom - fineLod.minZoom) / CROSSFADE_ZOOM_SPAN)
+    : 0;
+  const fineOpacity = zoomRamp * clamp01((coverage - COVERAGE_START) / (COVERAGE_FULL - COVERAGE_START));
+  const fadeBox: FadeBox | null =
+    fineOpacity > 0
+      ? {
+          bounds: [
+            zoneInfo.zone[0] + zoneInfo.feather[0],
+            zoneInfo.zone[1] + zoneInfo.feather[1],
+            zoneInfo.zone[2] - zoneInfo.feather[0],
+            zoneInfo.zone[3] - zoneInfo.feather[1],
+          ],
+          margin: zoneInfo.feather,
+          opacity: 1 - fineOpacity,
+        }
+      : null;
 
+  // Throttled, not debounced: a camera flight moves the view every frame,
+  // and a debounce would postpone every tile request until it has landed.
+  // Firing every ~250 ms lets the destination's tiles start streaming while
+  // the camera is still descending (plan §73).
+  const lastTileQuery = useRef(0);
   useEffect(() => {
     if (!fineUsable || !tileManager || !quality.streamTiles) return;
-    const timer = setTimeout(() => {
-      const vp = new WebMercatorViewport({
-        ...viewState,
-        width: window.innerWidth,
-        height: window.innerHeight,
-      });
-      const [w, s] = vp.unproject([0, window.innerHeight]);
-      const [e, n] = vp.unproject([window.innerWidth, 0]);
-      tileManager.update({
-        bounds: [w!, s!, e!, n!] as LonLatBounds,
-        zoom: viewState.zoom,
-        mode,
-        palette,
-        enabled: true,
-      });
-    }, 180);
+    const run = () => {
+      lastTileQuery.current = performance.now();
+      tileManager.update({ ...zoneInfo, zoom: viewState.zoom, mode, palette, enabled: true });
+    };
+    const wait = Math.max(0, TILE_QUERY_MS - (performance.now() - lastTileQuery.current));
+    const timer = setTimeout(run, wait);
     return () => clearTimeout(timer);
-  }, [tileManager, fineUsable, viewState, mode, palette, quality.streamTiles]);
+  }, [tileManager, fineUsable, zoneInfo, viewState.zoom, mode, palette, quality.streamTiles]);
 
   useEffect(() => {
     writeUrlState(modeId, timeT, palette, viewState);
@@ -244,6 +263,11 @@ export function SculptureView({ scene, engine }: Props) {
   }, [modeId, timeT, palette, viewState, setView]);
 
   const radius = sculptureRadius(scene);
+
+  // columns ease down in height as the camera closes in past the country
+  // framing (a 100 km needle would otherwise fill a city frame)
+  const countryZoom = fitViewState(scene.lod.bounds, window.innerWidth, window.innerHeight).zoom;
+  const heightScale = zoomHeightScale(viewState.zoom, countryZoom);
 
   // New object identity → deck re-uploads the attributes. That now happens
   // only when an endpoint buffer actually changed (a new mode, a scrub),
@@ -290,6 +314,7 @@ export function SculptureView({ scene, engine }: Props) {
           } as never,
           diskResolution: 6,
           radius: fineRadius,
+          elevationScale: heightScale,
           extruded: true,
           flatShading: true,
           pickable: false,
@@ -303,8 +328,7 @@ export function SculptureView({ scene, engine }: Props) {
         }),
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tileManager, fineLod, fineOpacity, tilesVersion, readyTiles]);
+  }, [tileManager, fineLod, fineOpacity, tilesVersion, heightScale]);
 
   // The sinking sculpture's endpoints are set once by fadeOut; only its mix
   // moves, so its data descriptor is built once per outgoing scene.
@@ -328,6 +352,7 @@ export function SculptureView({ scene, engine }: Props) {
         data: outgoingData,
         mixAmount: outgoingMix,
         radius: outgoing!.radius,
+        elevationScale: heightScale,
         pickable: false,
       })
     : undefined;
@@ -342,12 +367,13 @@ export function SculptureView({ scene, engine }: Props) {
     // the on-screen size is about right already
     labelScale: exporting ? 1.15 : 1,
     mixAmount,
-    sculptureOpacity: 1 - fineOpacity,
+    fadeBox,
+    elevationScale: heightScale,
     outgoingLayer,
     fineLayers,
-    // stays pickable while the fine tiles fade in: tiles carry no metric
-    // values, so hover keeps reading the country cell underneath
-    pickable: !exporting && fineOpacity < 0.98,
+    // stays pickable: the country layer still draws the far field, and the
+    // tiles carry no metric values, so hover reads the country cell
+    pickable: !exporting,
     onHover: (info: PickingInfo) =>
       setHover(info.index >= 0 ? { x: info.x, y: info.y, index: info.index } : null),
   });
