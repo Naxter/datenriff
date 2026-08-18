@@ -36,7 +36,8 @@ export const PEAKEDNESS = 0.55;
 export const COLUMN_TAPER = 0.35;
 
 /** Ambient occlusion strength. Prototype: `?ao=`. */
-export const OCCLUSION_STRENGTH = 0.3;
+// kept low: the shadow pass already darkens the crevices
+export const OCCLUSION_STRENGTH = 0.16;
 
 /** Warm stone tone of the plinth walls. */
 export const PLINTH_COLOR: [number, number, number] = [151, 138, 124];

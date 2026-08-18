@@ -22,7 +22,7 @@ import type { SceneData } from '../data/loader';
 import { getMode } from '../modes/modes';
 import { useAtlasStore } from '../state/store';
 import { readUrlState, writeUrlState } from '../state/url';
-import { CAMERA_FOVY, INITIAL_VIEW_STATE } from './camera';
+import { CAMERA_FOVY, INITIAL_VIEW_STATE, fitViewState } from './camera';
 import {
   CAPTURE_EVENT,
   EXPORT_HEIGHT,
@@ -52,10 +52,12 @@ export function SculptureView({ scene, engine }: Props) {
   const palette = useAtlasStore((s) => s.palette);
   const sculptureVersion = useAtlasStore((s) => s.sculptureVersion);
 
-  const [viewState, setViewState] = useState<MapViewState>(() => ({
-    ...INITIAL_VIEW_STATE,
-    ...readUrlState().view,
-  }));
+  const [viewState, setViewState] = useState<MapViewState>(() => {
+    const shared = readUrlState().view;
+    // a shared URL wins; otherwise fit the country to this window
+    if (shared) return { ...INITIAL_VIEW_STATE, ...shared };
+    return fitViewState(scene.lod.bounds, window.innerWidth, window.innerHeight);
+  });
   const [frameVersion, setFrameVersion] = useState(0);
   const [exporting, setExporting] = useState(false);
   const deckRef = useRef<{ deck?: { canvas?: HTMLCanvasElement | null } } | null>(null);
@@ -203,16 +205,22 @@ export function SculptureView({ scene, engine }: Props) {
     labelScale: exporting ? 2.2 : 1,
     sculptureOpacity: 1 - fineOpacity,
     fineLayers,
-    pickable: !exporting && fineOpacity === 0,
+    // stays pickable while the fine tiles fade in: tiles carry no metric
+    // values, so hover keeps reading the country cell underneath
+    pickable: !exporting && fineOpacity < 0.98,
     onHover: (info: PickingInfo) =>
       setHover(info.index >= 0 ? { x: info.x, y: info.y, index: info.index } : null),
   });
 
-  // Ambient + key + fill only. deck 9.1's shadow pass corrupts texture
-  // bindings once several texture-using layers coexist (the label font
-  // atlas ends up in the shadow sampler slot); real soft shadows are the
-  // prototype's shadow-mapping approach, still to be ported.
-  const effects = useMemo(() => [createLighting(false)], []);
+  // Shadows stay on permanently: swapping LightingEffect instances leaves
+  // deck 9.1's pipeline cache holding stale shadow bindings. Texture-using
+  // layers (labels, outline) opt out via `shadowEnabled: false`.
+  // `?shadows=0` turns them off — software renderers (headless CI, machines
+  // without a GPU) cannot complete the shadow pass at all.
+  const effects = useMemo(() => {
+    const enabled = new URLSearchParams(window.location.search).get('shadows') !== '0';
+    return [createLighting(enabled)];
+  }, []);
 
   const finishCapture = () => {
     if (!exporting) return;
