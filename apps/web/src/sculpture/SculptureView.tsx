@@ -29,8 +29,9 @@ import {
   currentFormat,
   deliverCapture,
 } from './exportBridge';
-import { createLighting } from './lighting';
-import { detectQuality, shadowsEnabled } from './quality';
+import { createLighting, tuneLighting } from './lighting';
+import { labelTierCap, shadowsEnabled } from './quality';
+import { resolveReducedMotion } from '../state/settings';
 import {
   createColumnLayer,
   createSculptureLayers,
@@ -75,7 +76,8 @@ export function SculptureView({ scene, engine }: Props) {
   const sculptureVersion = useAtlasStore((s) => s.sculptureVersion);
   const storyStop = useAtlasStore((s) => s.storyStop);
 
-  const quality = useMemo(() => detectQuality(), []);
+  const quality = useAtlasStore((s) => s.quality);
+  const settings = useAtlasStore((s) => s.settings);
 
   const [viewState, setViewState] = useState<MapViewState>(() => {
     const shared = readUrlState().view;
@@ -104,10 +106,7 @@ export function SculptureView({ scene, engine }: Props) {
   // kept as `outgoing` and sunk back into the plane while the new one grows
   // (App starts that growth), so the two cross-morph instead of the frame
   // going blank. Reduced motion skips the sink and just drops the old one.
-  const reducedMotion = useMemo(
-    () => window.matchMedia('(prefers-reduced-motion: reduce)').matches,
-    [],
-  );
+  const reducedMotion = useMemo(() => resolveReducedMotion(settings), [settings]);
   const outgoingRef = useRef<Outgoing | null>(null);
   const [outgoing, setOutgoing] = useState<Outgoing | null>(null);
   const [outgoingMix, setOutgoingMix] = useState(0);
@@ -290,9 +289,9 @@ export function SculptureView({ scene, engine }: Props) {
   const visibleLabels = useMemo(() => {
     const zoom = viewState.zoom;
     const byZoom = zoom > 7 ? 3 : zoom > 6.2 ? 2 : 1;
-    const maxTier = Math.min(byZoom, quality.maxLabelTier);
+    const maxTier = Math.min(byZoom, labelTierCap(quality, settings.labels));
     return scene.cities.filter((c) => c.tier <= maxTier);
-  }, [scene.cities, viewState.zoom, quality.maxLabelTier]);
+  }, [scene.cities, viewState.zoom, quality, settings.labels]);
 
   const characterSet = useMemo(() => labelCharacterSet(scene.cities), [scene.cities]);
 
@@ -403,12 +402,34 @@ export function SculptureView({ scene, engine }: Props) {
       setHover(info.index >= 0 ? { x: info.x, y: info.y, index: info.index } : null),
   });
 
-  // Shadows stay on permanently: swapping LightingEffect instances leaves
-  // deck 9.1's pipeline cache holding stale shadow bindings. Texture-using
-  // layers (labels, outline) opt out via `shadowEnabled: false`.
-  // `?shadows=0` turns them off — software renderers (headless CI, machines
-  // without a GPU) cannot complete the shadow pass at all.
-  const effects = useMemo(() => [createLighting(shadowsEnabled(quality))], [quality]);
+  // One LightingEffect for the life of the page. Swapping instances leaves
+  // deck 9.1's pipeline cache holding stale shadow bindings ("texture
+  // value" errors, blank frame), so strength and angle are tuned on the
+  // existing effect in place (`tuneLighting`), and switching shadows off
+  // just sets their ink to zero. Only switching them *on* after starting
+  // without needs the shadow pass created — that reloads the page (the URL
+  // carries the view). Texture-using layers (labels) opt out via
+  // `shadowEnabled: false`. `?shadows=0` forces off — software renderers
+  // cannot complete the shadow pass at all.
+  const shadowsWanted = shadowsEnabled(quality, settings.shadows);
+  const effectHasShadows = useRef(shadowsWanted);
+  const effects = useMemo(
+    () => [
+      createLighting(effectHasShadows.current, settings.shadowStrength, settings.lightElevation),
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+  useEffect(() => {
+    tuneLighting(
+      effects[0]!,
+      shadowsWanted ? settings.shadowStrength : 0,
+      settings.lightElevation,
+    );
+  }, [effects, shadowsWanted, settings.shadowStrength, settings.lightElevation]);
+  useEffect(() => {
+    if (shadowsWanted && !effectHasShadows.current) window.location.reload();
+  }, [shadowsWanted]);
 
   const finishCapture = () => {
     if (!exporting) return;

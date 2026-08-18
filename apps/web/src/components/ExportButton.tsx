@@ -25,7 +25,7 @@ export function ExportButton({ builder }: Props) {
   }, []);
 
   return (
-    <div className="export">
+    <>
       <button
         type="button"
         className="export__go"
@@ -37,6 +37,6 @@ export function ExportButton({ builder }: Props) {
         Export
       </button>
       {open && <ExportDialog builder={builder} onClose={() => setOpen(false)} />}
-    </div>
+    </>
   );
 }
