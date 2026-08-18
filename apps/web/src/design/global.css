@@ -332,6 +332,59 @@ body {
   gap: 14px;
 }
 
+/* settings rows */
+
+.settings {
+  width: min(92vw, 520px);
+  gap: 14px;
+}
+
+.settings__row {
+  display: grid;
+  grid-template-columns: 130px 1fr auto;
+  align-items: center;
+  gap: 16px;
+}
+
+.settings__label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.settings__segment {
+  display: flex;
+  gap: 16px;
+  grid-column: 2 / span 2;
+}
+
+.settings__segment .export__format {
+  font-size: 11px;
+  padding: 6px 0;
+}
+
+.settings__slider {
+  width: 100%;
+  accent-color: var(--ink);
+}
+
+.settings__value {
+  min-width: 44px;
+  text-align: right;
+  font-size: 12px;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.settings__note {
+  margin: -6px 0 0;
+  font-size: 11px;
+  color: var(--ink-faint);
+  grid-column: 1 / -1;
+}
+
 .dialog .export__format {
   font-size: 12px;
   padding: 6px 0;

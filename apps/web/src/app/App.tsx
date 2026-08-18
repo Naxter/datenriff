@@ -2,18 +2,18 @@ import { useEffect, useMemo, useRef } from 'react';
 import { MorphEngine } from '@datenriff/sculpture-core';
 import { loadManifest, loadScene, resolveDataset } from '../data/loader';
 import { availableModes, datasetServesMode, getMode } from '../modes/modes';
-import { detectQuality } from '../sculpture/quality';
 import { TargetBuilder } from '../sculpture/targets';
 import { SculptureView } from '../sculpture/SculptureView';
 import { useAtlasStore } from '../state/store';
 import { readUrlState } from '../state/url';
+import { resolveReducedMotion } from '../state/settings';
 import { Header } from '../components/Header';
 import { ModeNav } from '../components/ModeNav';
 import { Timeline } from '../components/Timeline';
 import { Legend } from '../components/Legend';
 import { Tooltip } from '../components/Tooltip';
 import { Attribution } from '../components/Attribution';
-import { ExportButton } from '../components/ExportButton';
+import { Toolbar } from '../components/Toolbar';
 import { StoryPlayer } from '../components/StoryPlayer';
 import { Veil } from '../components/Veil';
 import { INTRO_GROWTH_MS, introEligible, runIntro } from './intro';
@@ -29,10 +29,8 @@ export default function App() {
   const setError = useAtlasStore((s) => s.setError);
   const bumpSculpture = useAtlasStore((s) => s.bumpSculpture);
 
-  const reducedMotion = useMemo(
-    () => window.matchMedia('(prefers-reduced-motion: reduce)').matches,
-    [],
-  );
+  const settings = useAtlasStore((s) => s.settings);
+  const reducedMotion = useMemo(() => resolveReducedMotion(settings), [settings]);
 
   // restore shared URL state before anything renders from it, and decide
   // about the opening sequence before the first growth morph can fire
@@ -51,8 +49,9 @@ export default function App() {
   const manifest = useAtlasStore((s) => s.manifest);
   const setManifest = useAtlasStore((s) => s.setManifest);
 
-  // GPU budget: decides country LOD, DPR, shadows, labels, tile streaming
-  const quality = useMemo(() => detectQuality(), []);
+  // GPU budget: decides country LOD, DPR, shadows, labels, tile streaming;
+  // follows the viewer's quality setting
+  const quality = useAtlasStore((s) => s.quality);
 
   useEffect(() => {
     let cancelled = false;
@@ -82,7 +81,7 @@ export default function App() {
   // view cross-morphs (old sinks into the plane, new grows out of it).
   useEffect(() => {
     if (!manifest || !wantedDatasetId) return;
-    if (scene?.dataset.id === wantedDatasetId) return;
+    if (scene?.dataset.id === wantedDatasetId && scene.profileId === quality.id) return;
     let cancelled = false;
     useAtlasStore.setState(scene ? { sceneLoading: true } : { status: 'loading' });
     loadScene(manifest, wantedDatasetId, quality)
@@ -182,7 +181,7 @@ export default function App() {
         <Legend mode={shownMode} scene={scene} colorStats={shownTarget.colorStats} />
       )}
       {shown && <Tooltip mode={shownMode} scene={scene} builder={ctx.builder} />}
-      {ready && <ExportButton builder={ctx.builder} />}
+      {ready && <Toolbar builder={ctx.builder} />}
       {ready && <StoryPlayer mode={mode} />}
       {scene && <Attribution scene={scene} />}
       <Veil

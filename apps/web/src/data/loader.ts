@@ -16,6 +16,8 @@ export interface SceneData {
   manifest: AtlasManifest;
   dataset: SculptureDataset;
   lod: SculptureLOD;
+  /** Quality profile the country LOD was chosen for. */
+  profileId: QualityProfile['id'];
   /** Tiled fine LODs, loaded viewport-driven by the TileManager. */
   tileLods: SculptureLOD[];
   count: number;
@@ -121,6 +123,7 @@ export async function loadScene(
     manifest,
     dataset,
     lod,
+    profileId: profile.id,
     tileLods,
     count,
     positions,
