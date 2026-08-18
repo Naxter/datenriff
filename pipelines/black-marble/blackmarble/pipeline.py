@@ -1,27 +1,27 @@
-"""NASA Black Marble night-light raster -> H3 -> binary sculpture buffers.
+"""NASA Black Marble night lights -> H3 -> binary sculpture buffers.
 
-    GeoTIFF window over the target bbox
-     -> per-pixel brightness
+    per year: raster pixels over the bbox (clipped to the atlas outline)
+     -> per-pixel radiance / brightness
      -> H3 cell of the pixel centre
-     -> mean per cell (radiance-like intensities average, never sum)
+     -> mean per cell (an intensity: two pixels of 30 do not make 60)
      -> aggregate to coarser resolutions
-     -> stats + binary + dataset.json
+    all years share one cell universe (the union of everything ever lit)
+     -> stats + binary (light_{year}.f32) + dataset.json
 
-Honest naming (plan §19): the openly downloadable Black Marble mosaics are
-8-bit **visualisations**, not calibrated radiance. This pipeline therefore
-writes a metric called `light_brightness` with no physical unit. Calibrated
-VNP46A3 radiance needs an Earthdata login token; point `--input` at such a
-GeoTIFF and pass `--metric night_radiance --unit "nW/cm2/sr"` instead.
+Two sources:
+
+- `--vnp46 --years 2012-2024`: the calibrated VNP46A4 annual composites
+  (500 m, nW/cm²/sr; Earthdata login, see vnp46.py). This is the real
+  data and gives the timeline.
+- `--input <geotiff> --year 2016`: an 8-bit Black Marble *visualisation*
+  (e.g. the Earth Observatory 3 km mosaic) — a picture, not a measurement,
+  kept for offline demos. Its metric carries no unit.
+
+Every year is written as its own metric `light_{year}`; the app reads the
+years present and shows the latest, with a timeline when there are several.
 
 The binary writer is shared with the census pipeline; install it first
 (`pip install -e pipelines/zensus`).
-
-Example:
-
-    python -m blackmarble.pipeline \\
-        --input downloads/BlackMarble_2016_3km_geo.tif \\
-        --resolutions 7 --label "Night lights 2016" \\
-        --out ../../apps/web/public/data/afterdark
 """
 
 from __future__ import annotations
@@ -137,65 +137,111 @@ def sample_pixels(
                 yield lon, lat, value
 
 
+def year_samples(args: argparse.Namespace, year: int, bbox, rings):
+    """(lon, lat, value) generator for one year from the chosen source."""
+    if args.vnp46:
+        from .vnp46 import DEFAULT_KEEP_QUALITY, sample_year
+
+        keep = (
+            tuple(int(q) for q in args.keep_quality.split(","))
+            if args.keep_quality
+            else DEFAULT_KEEP_QUALITY
+        )
+        return sample_year(
+            year, Path(args.tiles_dir), bbox, args.floor, keep, rings, fetch=not args.no_fetch
+        )
+    return sample_pixels(Path(args.input), bbox, args.floor, rings)
+
+
+def parse_years(spec: str) -> list[int]:
+    """'2012-2015,2020' -> [2012, 2013, 2014, 2015, 2020]."""
+    years: set[int] = set()
+    for part in spec.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        if "-" in part:
+            a, b = part.split("-", 1)
+            years.update(range(int(a), int(b) + 1))
+        else:
+            years.add(int(part))
+    if not years:
+        raise SystemExit("no years given")
+    return sorted(years)
+
+
 def run(args: argparse.Namespace) -> None:
     import h3
 
-    input_path = Path(args.input)
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     resolutions = sorted({int(r) for r in args.resolutions.split(",")}, reverse=True)
     base_res = resolutions[0]
     bbox = tuple(float(v) for v in args.bbox.split(","))  # type: ignore[assignment]
+    years = parse_years(args.years) if args.vnp46 else [int(args.year)]
+    if not args.vnp46 and not args.input:
+        raise SystemExit("either --input <geotiff> or --vnp46 is required")
 
     rings = load_clip_rings(Path(args.clip)) if args.clip else None
     if rings:
         print(f"  clipping to {len(rings)} ring(s) from {Path(args.clip).name}",
               file=sys.stderr)
 
-    print(f"Streaming {input_path.name} → H3 r{base_res} …", file=sys.stderr)
-    samples = (
-        (h3.latlng_to_cell(lat, lon, base_res), value)
-        for lon, lat, value in sample_pixels(input_path, bbox, args.floor, rings)  # type: ignore[arg-type]
-    )
-    means, counts = accumulate_mean(samples)
-    print(f"  {len(means):,} lit r{base_res} cells", file=sys.stderr)
-    if not means:
-        raise SystemExit("No lit pixels in the bbox — check --bbox and --floor")
+    # per year: mean per base cell; the universe is the union over all years
+    per_year: dict[int, tuple[dict, dict]] = {}
+    for year in years:
+        print(f"Year {year}: streaming → H3 r{base_res} …", file=sys.stderr)
+        samples = (
+            (h3.latlng_to_cell(lat, lon, base_res), value)
+            for lon, lat, value in year_samples(args, year, bbox, rings)  # type: ignore[arg-type]
+        )
+        means, counts = accumulate_mean(samples)
+        print(f"  {len(means):,} lit r{base_res} cells", file=sys.stderr)
+        if not means:
+            raise SystemExit(f"{year}: no lit pixels in the bbox — check --bbox and --floor")
+        per_year[year] = (means, counts)
 
     metric_entries: list[dict] = []
     lod_fragments: list[dict] = []
     country_res = min(resolutions)
 
     for res in resolutions:
-        if res == base_res:
-            values: dict[str, float | None] = dict(means)
-            weights = counts
-        else:
-            values, weights = aggregate_mean_to_parent(
-                means, counts, lambda c, r=res: h3.cell_to_parent(c, r)
-            )
+        values_by_year: dict[int, dict] = {}
+        for year, (means, counts) in per_year.items():
+            if res == base_res:
+                values_by_year[year] = dict(means)
+            else:
+                values_by_year[year], _ = aggregate_mean_to_parent(
+                    means, counts, lambda c, r=res: h3.cell_to_parent(c, r)
+                )
+        universe = sorted(set().union(*(v.keys() for v in values_by_year.values())))
         res_dir = out / f"r{res}"
         res_dir.mkdir(parents=True, exist_ok=True)
-        universe = sorted(values)
         (res_dir / "cells.txt").write_text("\n".join(universe), encoding="utf-8")
         positions = [(round(lon, 6), round(lat, 6)) for lon, lat in
                      ((h3.cell_to_latlng(cell)[1], h3.cell_to_latlng(cell)[0])
                       for cell in universe)]
         write_positions(res_dir / "positions.bin", positions)
-        aligned = [values.get(cell) for cell in universe]
-        write_f32(res_dir / f"{args.metric}.f32", aligned)
-        stats = compute_stats(aligned)
-        if res == country_res:
-            metric_entries.append(
-                {
-                    "id": args.metric,
-                    "label": args.label,
-                    "unit": args.unit,
-                    "storage": "f32",
-                    "aggregation": "weightedMean",
-                    "stats": stats,
-                }
-            )
+        stats_by_metric: dict[str, dict] = {}
+        for year, values in values_by_year.items():
+            metric_id = f"{args.metric_prefix}_{year}"
+            # a cell lit in some other year but not this one is dark, not
+            # unknown: below the floor, like every pixel the floor dropped
+            aligned = [values.get(cell, 0.0) for cell in universe]
+            write_f32(res_dir / f"{metric_id}.f32", aligned)
+            stats = compute_stats(aligned)
+            stats_by_metric[metric_id] = stats
+            if res == country_res:
+                metric_entries.append(
+                    {
+                        "id": metric_id,
+                        "label": f"{args.label} {year}",
+                        "unit": args.unit,
+                        "storage": "f32",
+                        "aggregation": "weightedMean",
+                        "stats": stats,
+                    }
+                )
         lod_fragments.append(
             {
                 "resolution": res,
@@ -205,26 +251,37 @@ def run(args: argparse.Namespace) -> None:
                 "minZoom": 0 if res == country_res else 7.0,
                 "positions": f"r{res}/positions.bin",
                 "metricTemplate": f"r{res}/{{metric}}",
+                "metricStats": stats_by_metric,
             }
         )
-        print(f"  r{res}: {len(universe):,} cells", file=sys.stderr)
+        print(f"  r{res}: {len(universe):,} cells, {len(values_by_year)} year(s)", file=sys.stderr)
 
+    if args.vnp46:
+        source_url = "https://ladsweb.modaps.eosdis.nasa.gov/archive/allData/5000/VNP46A4/"
+        source_hash = None
+        licence = "NASA Black Marble (VNP46A4), free to use with attribution"
+        spatial = 500
+    else:
+        source_url = args.source_url
+        source_hash = f"sha256:{sha256_of(Path(args.input))}"
+        licence = "NASA Earth Observatory, free to use with attribution"
+        spatial = args.spatial_resolution
     fragment = {
         "id": args.dataset_id,
         "title": args.dataset_title,
-        "spatialResolution": args.spatial_resolution,
+        "spatialResolution": spatial,
         "metrics": metric_entries,
         "lods": lod_fragments,
         "source": {
             "label": args.attribution,
             "url": "https://www.earthdata.nasa.gov/data/projects/black-marble",
-            "license": "NASA Earth Observatory, free to use with attribution",
-            "referenceDate": args.reference_date,
+            "license": licence,
+            "referenceDate": args.reference_date or f"{years[-1]}-01-01",
             "provenance": {
-                "sourceUrl": args.source_url,
-                "sourceHash": f"sha256:{sha256_of(input_path)}",
+                "sourceUrl": source_url,
+                "sourceHash": source_hash,
                 "downloadDate": args.download_date,
-                "pipelineVersion": "blackmarble-pipeline 0.1.0",
+                "pipelineVersion": "blackmarble-pipeline 0.2.0",
                 "gitCommit": git_commit(),
                 "generatedAt": _dt.datetime.now(_dt.timezone.utc)
                 .isoformat(timespec="seconds")
@@ -241,8 +298,22 @@ def run(args: argparse.Namespace) -> None:
 
 
 def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--input", required=True, help="Black Marble GeoTIFF")
+    parser = argparse.ArgumentParser(description=__doc__,
+                                     formatter_class=argparse.RawDescriptionHelpFormatter)
+    src = parser.add_argument_group("source")
+    src.add_argument("--input", help="Black Marble visualisation GeoTIFF (8-bit)")
+    src.add_argument("--year", default="2016", help="year the GeoTIFF shows")
+    src.add_argument("--vnp46", action="store_true",
+                     help="read VNP46A4 annual tiles instead of a GeoTIFF")
+    src.add_argument("--years", default="2012-2024",
+                     help="VNP46A4 years, e.g. 2012-2024 or 2016,2020,2024")
+    src.add_argument("--tiles-dir", default="downloads/vnp46a4",
+                     help="where VNP46A4 .h5 tiles are (or get downloaded to)")
+    src.add_argument("--no-fetch", action="store_true",
+                     help="fail instead of downloading missing tiles")
+    src.add_argument("--keep-quality", default=None,
+                     help="VNP46A4 quality values to keep (default 0,2: "
+                          "persistent + gap-filled; 1 = ephemeral is dropped)")
     parser.add_argument("--out", required=True, help="Output dataset directory")
     parser.add_argument(
         "--bbox",
@@ -250,16 +321,19 @@ def main(argv: list[str] | None = None) -> None:
         help="west,south,east,north in WGS84 (default: Germany)",
     )
     parser.add_argument(
-        "--resolutions", default="7", help="comma-separated H3 resolutions, finest first"
+        "--resolutions", default="8,7", help="comma-separated H3 resolutions, finest first"
     )
-    parser.add_argument("--metric", default="light_brightness")
-    parser.add_argument("--label", default="Night-light brightness")
-    parser.add_argument("--unit", default=None)
+    parser.add_argument("--metric-prefix", default="light",
+                        help="metrics are written as <prefix>_<year>")
+    parser.add_argument("--label", default="Night light")
+    parser.add_argument("--unit", default=None,
+                        help='e.g. "nW/cm²/sr" for VNP46A4; none for a visualisation')
     parser.add_argument(
         "--floor",
         type=float,
         default=2.0,
-        help="drop pixels at or below this brightness (sensor floor / unlit)",
+        help="drop pixels at or below this value (sensor floor / unlit); "
+             "~15 for the 8-bit mosaic, ~0.5 nW/cm²/sr for VNP46A4",
     )
     parser.add_argument(
         "--clip",
@@ -269,7 +343,7 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--dataset-id", default="afterdark")
     parser.add_argument("--dataset-title", default="After Dark")
     parser.add_argument("--spatial-resolution", type=int, default=3000)
-    parser.add_argument("--reference-date", default="2016-01-01")
+    parser.add_argument("--reference-date", default=None)
     parser.add_argument("--attribution", default="Data: NASA Black Marble")
     parser.add_argument("--source-url")
     parser.add_argument("--download-date")

@@ -34,7 +34,7 @@ export function ExportDialog({ builder, onClose }: Props) {
   const posterContext = useCallback((): PosterContext | null => {
     const s = useAtlasStore.getState();
     if (!s.scene) return null;
-    const mode = getMode(s.modeId);
+    const mode = getMode(s.modeId, s.scene.dataset);
     return {
       scene: s.scene,
       mode,

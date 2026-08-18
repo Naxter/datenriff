@@ -56,8 +56,9 @@ export const PALETTES: Record<string, Palette> = {
   // paper → moss → deep forest green
   moss: seq('#EDF0E6', '#C6DBBC', '#8FBF92', '#4F9C69', '#23704C', '#0F4A34'),
   rain: seq('#EAE8F2', '#A9B6E3', '#7D7ED1', '#8A5BB8', '#C0509B'),
-  // dark-canvas ramp for nighttime radiance
-  afterdark: seq('#16111E', '#3A2E55', '#7A5390', '#C7788D', '#F0B45F', '#FBE9C0'),
+  // nighttime radiance on paper: unlit stays paper, towns glow amber, city
+  // cores burn through to plum
+  afterdark: seq('#F1E9DE', '#F2CF8E', '#E9A24C', '#D2542A', '#8E2A5C', '#3D1B4A'),
 
   // properties
   change: div('#1F3F7A', '#9AA8DE', '#F2EBE0', '#F0A0BF', '#B81D74'),

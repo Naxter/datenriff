@@ -170,7 +170,7 @@ export function SculptureView({ scene, engine }: Props) {
     };
   }, [scene]);
 
-  const mode = getMode(modeId);
+  const mode = getMode(modeId, scene.dataset);
 
   // Each mode is composed for an angle. On mode switch the camera eases
   // there (deck's FlyTo-style transition) unless the URL pinned a view.
