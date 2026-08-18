@@ -18,6 +18,7 @@ import {
   TARGET_MAX_HEIGHT_METERS,
   effectiveColorScale,
 } from './targets';
+import { focusKey, type FocusGeometry } from './focus';
 import type {
   TileErrorResponse,
   TileLoadRequest,
@@ -48,6 +49,8 @@ export interface TileQuery {
   zoom: number;
   mode: SculptureMode;
   palette: string | null;
+  /** Region in focus; tiles dim everything outside it like the country LOD. */
+  region?: FocusGeometry | null;
   /** Timeline scrubbing keeps the country LOD in charge. */
   enabled: boolean;
 }
@@ -202,7 +205,7 @@ export class TileManager {
     if (!index) return;
 
     const scale = effectiveColorScale(q.mode, q.palette);
-    this.currentGen = `${lod.resolution}|${q.mode.id}|${scale.palette}|`;
+    this.currentGen = `${lod.resolution}|${q.mode.id}|${scale.palette}|${focusKey(q.region ?? null)}|`;
     this.zone = q.zone;
 
     // nearest to the camera target first: those are the columns that fill
@@ -226,7 +229,7 @@ export class TileManager {
       this.needed.add(key);
       this.lastUsed.set(key, this.clock);
       if (this.ready.has(key) || this.inFlight.has(key)) continue;
-      this.request(lod, index, tile, key, q.mode, q.palette);
+      this.request(lod, index, tile, key, q.mode, q.palette, q.region ?? null);
     }
     this.evict();
     this.onChange?.(); // zone/needed changed even if no tile did
@@ -255,6 +258,7 @@ export class TileManager {
     key: string,
     mode: SculptureMode,
     palette: string | null,
+    focus: FocusGeometry | null,
   ): void {
     if (!lod.tileTemplate || !lod.positionsTemplate) return;
     const tileId = tile.id;
@@ -289,6 +293,7 @@ export class TileManager {
       colorScale: scale,
       colorStats,
       colorStorage,
+      focus,
       // the neighbour search is the slow part of a tile decode; skip it
       // while occlusion is switched off
       occlusion:
