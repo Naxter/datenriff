@@ -53,6 +53,8 @@ export const PALETTES: Record<string, Palette> = {
   glacier: seq('#EBF0F4', '#C3D4E2', '#8FB0CE', '#5E7FB3', '#3D5490', '#22336B'),
   ember: seq('#F5EDE0', '#EFD08A', '#E8A24C', '#D66233', '#A82E2C', '#6E1420'),
   noir: seq('#EEE8E0', '#CFC8BE', '#A39B8F', '#6F675C', '#403A32', '#191511'),
+  // paper → moss → deep forest green
+  moss: seq('#EDF0E6', '#C6DBBC', '#8FBF92', '#4F9C69', '#23704C', '#0F4A34'),
   rain: seq('#EAE8F2', '#A9B6E3', '#7D7ED1', '#8A5BB8', '#C0509B'),
   // dark-canvas ramp for nighttime radiance
   afterdark: seq('#16111E', '#3A2E55', '#7A5390', '#C7788D', '#F0B45F', '#FBE9C0'),
@@ -98,7 +100,7 @@ export const PALETTES: Record<string, Palette> = {
 };
 
 /** Ramps the user may pick as an override for sequential modes. */
-export const SEQUENTIAL_CHOICES = ['population', 'glacier', 'ember', 'noir', 'age', 'rent'];
+export const SEQUENTIAL_CHOICES = ['population', 'glacier', 'moss', 'ember', 'noir', 'age', 'rent'];
 
 export function getPalette(id: string): Palette {
   const p = PALETTES[id];

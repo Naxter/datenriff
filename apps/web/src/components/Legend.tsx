@@ -86,7 +86,7 @@ export function Legend({ mode, scene, colorStats }: Props) {
 
   const choices = useMemo(() => {
     const base = mode.colorScale.palette;
-    return [base, ...SEQUENTIAL_CHOICES.filter((p) => p !== base)].slice(0, 6);
+    return [base, ...SEQUENTIAL_CHOICES.filter((p) => p !== base)].slice(0, 7);
   }, [mode.colorScale.palette]);
 
   return (
