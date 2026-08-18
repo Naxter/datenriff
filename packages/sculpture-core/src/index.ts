@@ -7,6 +7,7 @@ export {
   buildChangeAbs,
   computeStats,
 } from './metrics.js';
+export { computeOcclusion, applyOcclusion } from './occlusion.js';
 export {
   MorphEngine,
   cubicInOut,

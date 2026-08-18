@@ -10,12 +10,17 @@
 const QUERY = new URLSearchParams(location.search);
 const TARGET_MAX_HEIGHT = Number(QUERY.get('h') ?? 100_000);
 // every cell also extends downwards, so the country reads as one slab
-const BASE_DEPTH = Number(QUERY.get('base') ?? 18_000);
+const BASE_DEPTH = Number(QUERY.get('base') ?? 5_000);
 // column silhouette: 1 = straight bar, 0 = needle tapering to a point.
 // Only the part above ground tapers; the plinth stays a solid slab.
-const TAPER = Number(QUERY.get('taper') ?? 1);
+const TAPER = Number(QUERY.get('taper') ?? 0.35);
 // column thickness multiplier, for thinner needles
-const THIN = Number(QUERY.get('thin') ?? 1);
+const THIN = Number(QUERY.get('thin') ?? 0.8);
+// height anchor: 0 = p99.5 (carpet of equal towers), 1 = maximum (flat crust
+// with isolated spires). Geometric blend in between.
+const PEAKEDNESS = Number(QUERY.get('peak') ?? 0.55);
+// ambient occlusion strength; cells shaded by taller neighbours
+const AO = Number(QUERY.get('ao') ?? 0.45);
 const FRAME_HEIGHT_M = Number(QUERY.get('frame') ?? 1_250_000);
 const FOVY_DEG = 24;
 let pitchDeg = Number(QUERY.get('pitch') ?? 58);
@@ -136,6 +141,46 @@ function buildPrism() {
   return new Float32Array(verts);
 }
 
+/** Cheap AO: share of neighbours taller than this cell. Mirrors
+ * packages/sculpture-core/src/occlusion.ts — keep in sync. */
+function occlusion(positions, heights, cellRadiusMeters) {
+  const n = heights.length;
+  const out = new Float32Array(n);
+  const radiusDeg = (cellRadiusMeters * 2.2) / 111_320;
+  const buckets = new Map();
+  const key = (c, r) => `${c}:${r}`;
+  const colOf = (lon) => Math.floor(lon / radiusDeg);
+  const rowOf = (lat) => Math.floor(lat / radiusDeg);
+  for (let i = 0; i < n; i++) {
+    const k = key(colOf(positions[i * 2]), rowOf(positions[i * 2 + 1]));
+    let b = buckets.get(k);
+    if (!b) buckets.set(k, (b = []));
+    b.push(i);
+  }
+  const fullShade = 4_000;
+  for (let i = 0; i < n; i++) {
+    const own = heights[i];
+    const c = colOf(positions[i * 2]);
+    const r = rowOf(positions[i * 2 + 1]);
+    let taller = 0;
+    let count = 0;
+    for (let dc = -1; dc <= 1; dc++) {
+      for (let dr = -1; dr <= 1; dr++) {
+        const b = buckets.get(key(c + dc, r + dr));
+        if (!b) continue;
+        for (const j of b) {
+          if (j === i) continue;
+          count++;
+          const rise = heights[j] - own;
+          if (rise > 0) taller += rise > fullShade ? 1 : rise / fullShade;
+        }
+      }
+    }
+    out[i] = count > 0 ? taller / count : 0;
+  }
+  return out;
+}
+
 const VS = `#version 300 es
 layout(location=0) in vec3 unitPos;
 layout(location=1) in vec3 normal;
@@ -210,7 +255,9 @@ void main() {
   float below = uBase > 0.0 ? clamp(-vWorldZ / uBase, 0.0, 1.0) : 0.0;
   float grey = dot(vColor.rgb, vec3(0.34, 0.42, 0.24));
   vec3 rock = mix(vColor.rgb, mix(vec3(grey), vec3(0.62, 0.55, 0.47), 0.72), 0.85);
-  vec3 albedo = mix(vColor.rgb, rock * mix(1.0, 0.66, below), smoothstep(0.0, 0.02, below));
+  // the tapered columns expose the slab's shoulders, so the top of the
+  // plinth keeps the data colour and only the deeper wall turns to rock
+  vec3 albedo = mix(vColor.rgb, rock * mix(1.0, 0.66, below), smoothstep(0.08, 0.34, below));
   vec3 lit = albedo * sideShade *
     (0.64 * mix(0.94, 1.0, shadow)
      + 0.48 * key * mix(0.42, 1.0, shadow) * vec3(1.00, 0.95, 0.88)
@@ -276,14 +323,17 @@ async function main() {
 
   // linear heights calibrated at p99.5
   const p995 = metricDef.stats.p995;
-  const hScale = TARGET_MAX_HEIGHT / p995;
+  // geometric blend between the p99.5 anchor and the maximum — see
+  // packages/sculpture-core/src/metrics.ts (keep in sync)
+  const anchor = p995 * Math.pow((metricDef.stats.max || p995) / p995, PEAKEDNESS);
+  const hScale = TARGET_MAX_HEIGHT / anchor;
   const heights = new Float32Array(n);
   for (let i = 0; i < n; i++) heights[i] = values[i] * hScale;
 
   // sqrt colour scale clipped at p99.5
   const colors = new Uint8Array(n * 4);
   const span = Math.sqrt(p995);
-  const gamma = Number(QUERY.get('gamma') ?? 1.5);
+  const gamma = Number(QUERY.get('gamma') ?? 2.4);
   for (let i = 0; i < n; i++) {
     const t = Math.pow(Math.min(1, Math.sqrt(Math.max(0, values[i])) / span), gamma);
     const x = t * (RAMP.length - 1);
@@ -294,6 +344,18 @@ async function main() {
     colors[o + 1] = 255 * (RAMP[k][1] + (RAMP[k + 1][1] - RAMP[k][1]) * f);
     colors[o + 2] = 255 * (RAMP[k][2] + (RAMP[k + 1][2] - RAMP[k][2]) * f);
     colors[o + 3] = 255;
+  }
+
+  // ambient occlusion: low cells among tall neighbours sit in shade
+  if (AO > 0) {
+    const occ = occlusion(positions, heights, lod.cellRadiusMeters);
+    for (let i = 0; i < n; i++) {
+      const shade = 1 - AO * occ[i];
+      const o = i * 4;
+      colors[o] *= shade;
+      colors[o + 1] *= shade;
+      colors[o + 2] *= shade;
+    }
   }
 
   const canvas = document.getElementById('gl');

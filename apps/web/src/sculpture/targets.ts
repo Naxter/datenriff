@@ -8,8 +8,10 @@ import type {
 } from '@datenriff/data-contracts';
 import { PALETTES, applyColorScale } from '@datenriff/color-scales';
 import {
+  applyOcclusion,
   buildChangePct,
   computeElevations,
+  computeOcclusion,
   computeStats,
   elevationScaleFor,
   type MorphTarget,
@@ -23,7 +25,18 @@ export const TARGET_MAX_HEIGHT_METERS = 100_000;
 
 /** Depth of the plinth below the terrain, so the country reads as an island.
  *  Keep in sync with the prototype's `?base=`. */
-export const PLINTH_DEPTH_METERS = 18_000;
+export const PLINTH_DEPTH_METERS = 5_000;
+
+/** Height anchor between the p99.5 quantile (0) and the maximum (1). Higher
+ *  values flatten the plain and leave isolated spires — the editorial look.
+ *  Keep in sync with the prototype's `?peak=`. */
+export const PEAKEDNESS = 0.55;
+
+/** Tip width as a fraction of the column base. Prototype: `?taper=`. */
+export const COLUMN_TAPER = 0.35;
+
+/** Ambient occlusion strength. Prototype: `?ao=`. */
+export const OCCLUSION_STRENGTH = 0.3;
 
 /** Warm stone tone of the plinth walls. */
 export const PLINTH_COLOR: [number, number, number] = [151, 138, 124];
@@ -75,6 +88,17 @@ export class TargetBuilder {
     return entry;
   }
 
+  /** Occlusion depends on the height field, so it is cached per mode. */
+  private occlusion(heights: Float32Array): Float32Array {
+    const radiusDeg = ((this.scene.lod.cellRadiusMeters || 500) * 2.2) / 111_320;
+    return computeOcclusion(
+      this.scene.positions,
+      heights,
+      radiusDeg,
+      TARGET_MAX_HEIGHT_METERS * 0.04,
+    );
+  }
+
   build(mode: SculptureMode, palette: string | null = null): ModeTarget {
     const colorScale = effectiveColorScale(mode, palette);
     const key = `${mode.id}|${colorScale.palette}`;
@@ -86,6 +110,7 @@ export class TargetBuilder {
       height.stats,
       TARGET_MAX_HEIGHT_METERS,
       mode.heightScale.calibrationQuantile ?? 0.995,
+      PEAKEDNESS,
     );
     const heights = computeElevations(toF32(height.values), scale);
 
@@ -96,6 +121,7 @@ export class TargetBuilder {
         ? (this.scene.metrics.get(colorScale.saturationMetric) as Uint8Array)
         : undefined;
     applyColorScale(colorScale, color.values, color.stats, colors, saturation);
+    applyOcclusion(colors, this.occlusion(heights), OCCLUSION_STRENGTH);
 
     const target: ModeTarget = { heights, colors, colorStats: color.stats };
 
