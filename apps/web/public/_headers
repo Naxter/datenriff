@@ -1,0 +1,17 @@
+# Binary data assets are content-addressed by dataset run; cache them hard.
+# Cloudflare Pages compresses these with Brotli/gzip on the edge, which is
+# where the plan's "static + CDN + Brotli" lands without a build step.
+/data/*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+
+# Hashed Vite bundles never change under the same name.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# The manifest is the mutable entry point.
+/data/manifest.json
+  Cache-Control: public, max-age=300, must-revalidate
+
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin

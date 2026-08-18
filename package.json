@@ -17,10 +17,12 @@
     "typecheck": "npm run build:packages && npm run typecheck -w @datenriff/web",
     "test:packages": "npm run build:packages && node --test packages/color-scales/test/*.test.mjs packages/sculpture-core/test/*.test.mjs",
     "test:pipeline": "node scripts/test-pipeline.mjs",
-    "test": "npm run test:packages && npm run test:pipeline"
+    "test": "npm run test:packages && npm run test:pipeline",
+    "deploy": "npm run build && wrangler pages deploy apps/web/dist --project-name datenriff"
   },
   "devDependencies": {
     "playwright": "^1.62.1",
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.2",
+    "wrangler": "^4.124.0"
   }
 }
