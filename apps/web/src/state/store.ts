@@ -9,7 +9,12 @@ import type { FocusGeometry } from '../sculpture/focus';
 export interface HoverInfo {
   x: number;
   y: number;
+  /** Country-LOD cell under the pointer (for the place name and fallback). */
   index: number;
+  /** When a fine tile cell was picked: its own metric values by id. */
+  fine?: Record<string, number>;
+  /** Position of the picked fine cell. */
+  lonLat?: [number, number];
 }
 
 /** 'title': title alone, sculpture held flat · 'reveal': sculpture rising,

@@ -294,6 +294,28 @@ export function SculptureView({ scene, engine }: Props) {
 
   const radius = sculptureRadius(scene);
 
+  // country cell nearest to a fine cell (place name, fallback values); a
+  // linear scan over 272k positions is ~1 ms, fine for a hover
+  const nearestCountryCell = useMemo(
+    () => (lon: number, lat: number) => {
+      const p = scene.positions;
+      const kx = Math.cos((lat * Math.PI) / 180);
+      let best = 0;
+      let bestD = Infinity;
+      for (let i = 0; i < scene.count; i++) {
+        const dx = (p[2 * i]! - lon) * kx;
+        const dy = p[2 * i + 1]! - lat;
+        const d = dx * dx + dy * dy;
+        if (d < bestD) {
+          bestD = d;
+          best = i;
+        }
+      }
+      return best;
+    },
+    [scene],
+  );
+
   // columns ease down in height as the camera closes in past the country
   // framing (a 100 km needle would otherwise fill a city frame)
   const countryZoom = fitViewState(scene.lod.bounds, window.innerWidth, window.innerHeight).zoom;
@@ -371,7 +393,20 @@ export function SculptureView({ scene, engine }: Props) {
           elevationScale: heightScale,
           extruded: true,
           flatShading: true,
-          pickable: false,
+          // picked ahead of the country layer: the tooltip then reads this
+          // cell's own values (the country cell beneath only names the place)
+          pickable: true,
+          onHover: (info: PickingInfo) => {
+            if (info.index < 0) {
+              setHover(null);
+              return;
+            }
+            const fine: Record<string, number> = {};
+            for (const [id, arr] of Object.entries(tile.values)) fine[id] = arr[info.index]!;
+            const lon = tile.positions[info.index * 2]!;
+            const lat = tile.positions[info.index * 2 + 1]!;
+            setHover({ x: info.x, y: info.y, index: nearestCountryCell(lon, lat), fine, lonLat: [lon, lat] });
+          },
           opacity: fineOpacity,
           material: {
             ambient: 0.64,
@@ -382,7 +417,7 @@ export function SculptureView({ scene, engine }: Props) {
         }),
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tileManager, fineLod, fineOpacity, tilesVersion, heightScale]);
+  }, [tileManager, fineLod, fineOpacity, tilesVersion, heightScale, nearestCountryCell]);
 
   // The sinking sculpture's endpoints are set once by fadeOut; only its mix
   // moves, so its data descriptor is built once per outgoing scene.

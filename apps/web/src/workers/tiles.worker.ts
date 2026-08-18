@@ -31,6 +31,9 @@ export interface TileLoadRequest {
   occlusion?: { radiusDeg: number; fullShadeMeters: number; strength: number };
   /** Region in focus; cells outside step back (see sculpture/focus.ts). */
   focus?: FocusGeometry | null;
+  /** Metric ids of the height and colour buffers, for the tooltip. */
+  heightMetric: string;
+  colorMetric: string;
 }
 
 export interface TileLoadResponse {
@@ -40,6 +43,9 @@ export interface TileLoadResponse {
   positions: Float32Array;
   heights: Float32Array;
   colors: Uint8Array;
+  /** Raw metric values the tile was built from, by metric id, so the
+   *  tooltip can read a fine cell instead of the country cell beneath. */
+  values: Record<string, Float32Array | Uint8Array>;
 }
 
 export interface TileErrorResponse {
@@ -101,9 +107,13 @@ async function load(req: TileLoadRequest): Promise<void> {
 
   if (req.focus) applyFocus(heights, colors, focusMask(positions, req.focus));
 
+  const values: Record<string, Float32Array | Uint8Array> = { [req.heightMetric]: heightValues };
+  if (colorValues !== heightValues) values[req.colorMetric] = colorValues;
+  const transfer = [positions.buffer, heights.buffer, colors.buffer, heightValues.buffer];
+  if (colorValues !== heightValues) transfer.push(colorValues.buffer);
   scope.postMessage(
-    { type: 'tile', key: req.key, count, positions, heights, colors },
-    [positions.buffer, heights.buffer, colors.buffer],
+    { type: 'tile', key: req.key, count, positions, heights, colors, values },
+    transfer,
   );
 }
 
