@@ -63,7 +63,6 @@ export function SculptureView({ scene, engine }: Props) {
     if (shared) return { ...INITIAL_VIEW_STATE, ...shared };
     return fitViewState(scene.lod.bounds, window.innerWidth, window.innerHeight);
   });
-  const [frameVersion, setFrameVersion] = useState(0);
   const [exporting, setExporting] = useState(false);
   const deckRef = useRef<{ deck?: { canvas?: HTMLCanvasElement | null } } | null>(null);
   // The poster frame has its own aspect, so it gets its own fit: same
@@ -81,11 +80,13 @@ export function SculptureView({ scene, engine }: Props) {
     return () => window.removeEventListener(CAPTURE_EVENT, onCapture);
   }, []);
 
-  // advance the morph engine; re-upload only when buffers changed
+  // Advance the blend. Only `mixAmount` changes per frame — the attribute
+  // buffers stay put, so this re-renders without re-uploading anything.
+  const [mixAmount, setMixAmount] = useState(1);
   useEffect(() => {
     let raf = 0;
     const loop = (now: number) => {
-      if (engine.tick(now)) setFrameVersion((v) => v + 1);
+      if (engine.tick(now)) setMixAmount(engine.mixAmount);
       raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);
@@ -171,7 +172,9 @@ export function SculptureView({ scene, engine }: Props) {
 
   const radius = sculptureRadius(scene);
 
-  // new object identity → deck re-uploads the mutated binary attributes
+  // New object identity → deck re-uploads the attributes. That now happens
+  // only when an endpoint buffer actually changed (a new mode, a scrub),
+  // not on every frame of a transition.
   const data = useMemo(
     () => ({
       length: scene.count,
@@ -179,10 +182,12 @@ export function SculptureView({ scene, engine }: Props) {
         getPosition: { value: scene.positions, size: 2 },
         getElevation: { value: engine.heights, size: 1 },
         getFillColor: { value: engine.colors, size: 4 },
+        getElevationTo: { value: engine.heightsTo, size: 1 },
+        getFillColorTo: { value: engine.colorsTo, size: 4 },
       },
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [scene, engine, frameVersion, sculptureVersion],
+    [scene, engine, engine.bufferVersion, sculptureVersion],
   );
 
   const visibleLabels = useMemo(() => {
@@ -236,6 +241,7 @@ export function SculptureView({ scene, engine }: Props) {
     // poster labels: the frame is 1920 CSS px, roughly a laptop window, so
     // the on-screen size is about right already
     labelScale: exporting ? 1.15 : 1,
+    mixAmount,
     sculptureOpacity: 1 - fineOpacity,
     fineLayers,
     // stays pickable while the fine tiles fade in: tiles carry no metric
