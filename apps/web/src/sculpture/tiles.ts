@@ -33,6 +33,8 @@ export interface ReadyTile {
   positions: Float32Array;
   heights: Float32Array;
   colors: Uint8Array;
+  /** Raw metric values by id (height, colour / derived change). */
+  values: Record<string, Float32Array | Uint8Array>;
 }
 
 interface TileLodRuntime {
@@ -294,6 +296,8 @@ export class TileManager {
       colorStats,
       colorStorage,
       focus,
+      heightMetric: mode.heightMetric,
+      colorMetric: mode.colorMetric,
       // the neighbour search is the slow part of a tile decode; skip it
       // while occlusion is switched off
       occlusion:
@@ -340,6 +344,7 @@ export class TileManager {
       positions: msg.positions,
       heights: msg.heights,
       colors: msg.colors,
+      values: msg.values,
     });
     this.lastUsed.set(msg.key, this.clock);
     this.onChange?.();

@@ -79,19 +79,23 @@ export function Tooltip({ mode, scene, builder }: Props) {
           scene.dataset.metrics.some((m) => m.id === field.metric),
       )
       .map((field) => {
-        const { values } = builder.resolveMetric(field.metric);
+        // a picked fine cell brings its own values; anything it lacks
+        // (rare: a tooltip metric that is neither height nor colour) falls
+        // back to the country cell beneath
+        const fine = hover.fine?.[field.metric];
+        const value = fine !== undefined ? fine : builder.resolveMetric(field.metric).values[hover.index]!;
         return {
           label: field.label,
-          value: formatField(field, values[hover.index]!, scene),
+          value: formatField(field, value, scene),
         };
       });
-    return { place, rows };
+    return { place, rows, fine: hover.fine !== undefined };
   }, [hover, mode, scene, builder]);
 
   if (!hover || !content) return null;
 
   return (
-    <div className="tooltip" style={{ left: hover.x, top: hover.y }}>
+    <div className="tooltip" style={{ left: hover.x, top: hover.y }} data-fine={content.fine ? '1' : undefined}>
       {content.place && <p className="tooltip__place">{content.place.toUpperCase()}</p>}
       {content.rows.map((row) => (
         <div key={row.label} className="tooltip__row">
