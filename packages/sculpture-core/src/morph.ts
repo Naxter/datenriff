@@ -1,9 +1,11 @@
 // Mode switches and timeline scrubs never swap the sculpture hard: heights
-// and colours interpolate over ~1s. The engine owns one pair of live
-// buffers that the render layer reads every frame; transitions mutate them
-// in place, so nothing is allocated per frame. CPU interpolation is fine
-// at country-LOD counts; a shader-based mix can replace the internals
-// later without changing this API.
+// and colours blend over ~1s.
+//
+// The engine keeps the two endpoint buffers and the eased progress; the
+// blend itself happens on the GPU (see sculpture/morphColumnLayer.ts), so a
+// transition uploads two static buffers once and then moves a single
+// uniform per frame instead of rewriting 1.4 M floats. `mixAmount` is the
+// value the shader reads.
 
 export type Easing = (t: number) => number;
 
@@ -21,39 +23,70 @@ export interface MorphTarget {
 
 export class MorphEngine {
   readonly count: number;
+  /** Start of the blend — the `from` attribute buffers. */
   readonly heights: Float32Array;
   readonly colors: Uint8Array;
+  /** End of the blend — the `to` attribute buffers. */
+  readonly heightsTo: Float32Array;
+  readonly colorsTo: Uint8Array;
 
-  private readonly fromHeights: Float32Array;
-  private readonly fromColors: Float32Array;
-  private target: MorphTarget | null = null;
+  /** Eased progress the shader mixes with; 1 = fully at `to`. */
+  mixAmount = 1;
+
   private startTime = 0;
   private duration = 900;
   private easing: Easing = cubicInOut;
   private animating = false;
+  /** Bumped whenever the endpoint buffers change and need re-uploading. */
+  private version = 0;
 
   constructor(count: number) {
     this.count = count;
     this.heights = new Float32Array(count);
     this.colors = new Uint8Array(count * 4);
-    this.fromHeights = new Float32Array(count);
-    // colour interpolation runs in float space to avoid rounding drift
-    this.fromColors = new Float32Array(count * 4);
+    this.heightsTo = new Float32Array(count);
+    this.colorsTo = new Uint8Array(count * 4);
   }
 
   get isAnimating(): boolean {
     return this.animating;
   }
 
+  /** Changes on every endpoint swap; the view keys its buffers on it. */
+  get bufferVersion(): number {
+    return this.version;
+  }
+
   start(target: MorphTarget, nowMs: number, duration = 900, easing: Easing = cubicInOut): void {
     this.assertTarget(target);
-    this.fromHeights.set(this.heights);
-    this.fromColors.set(this.colors);
-    this.target = target;
+    // freeze the state currently on screen as the new `from`
+    this.captureCurrentAsFrom();
+    this.heightsTo.set(target.heights);
+    this.colorsTo.set(target.colors);
+    this.mixAmount = 0;
     this.startTime = nowMs;
     this.duration = Math.max(1, duration);
     this.easing = easing;
     this.animating = true;
+    this.version += 1;
+  }
+
+  /** Collapse the running blend into the `from` buffers so a new
+   *  transition starts from what the viewer actually sees. */
+  private captureCurrentAsFrom(): void {
+    const t = this.mixAmount;
+    if (t <= 0) return;
+    const h = this.heights;
+    const ht = this.heightsTo;
+    const c = this.colors;
+    const ct = this.colorsTo;
+    if (t >= 1) {
+      h.set(ht);
+      c.set(ct);
+      return;
+    }
+    for (let i = 0; i < h.length; i++) h[i] = h[i]! + (ht[i]! - h[i]!) * t;
+    for (let i = 0; i < c.length; i++) c[i] = c[i]! + (ct[i]! - c[i]!) * t;
   }
 
   /** Jump without animation (initial load, prefers-reduced-motion). */
@@ -61,46 +94,43 @@ export class MorphEngine {
     this.assertTarget(target);
     this.heights.set(target.heights);
     this.colors.set(target.colors);
-    this.target = null;
+    this.heightsTo.set(target.heights);
+    this.colorsTo.set(target.colors);
+    this.mixAmount = 1;
     this.animating = false;
+    this.version += 1;
   }
 
-  /** Advance the transition; true while buffers still change. */
+  /** Advance the transition; true while `mixAmount` still changes. */
   tick(nowMs: number): boolean {
-    if (!this.animating || !this.target) return false;
+    if (!this.animating) return false;
     const raw = (nowMs - this.startTime) / this.duration;
     if (raw >= 1) {
-      this.snapTo(this.target);
-      return true; // final frame still needs an upload
+      this.mixAmount = 1;
+      this.animating = false;
+      return true; // one last frame at the end state
     }
-    const t = this.easing(raw < 0 ? 0 : raw);
-    const { heights: th, colors: tc } = this.target;
-    const fh = this.fromHeights;
-    const fc = this.fromColors;
-    const h = this.heights;
-    const c = this.colors;
-    for (let i = 0; i < h.length; i++) {
-      h[i] = fh[i]! + (th[i]! - fh[i]!) * t;
-    }
-    for (let i = 0; i < c.length; i++) {
-      c[i] = fc[i]! + (tc[i]! - fc[i]!) * t;
-    }
+    this.mixAmount = this.easing(raw < 0 ? 0 : raw);
     return true;
   }
 
   /** Timeline scrub: heights = mix(a, b, t), applied immediately.
-   * Cancels a running transition; colours stay untouched. */
+   *  Colours stay as they are, so scrubbing years keeps the mode's palette. */
   setHeightMix(a: Float32Array, b: Float32Array, t: number): void {
     if (a.length !== this.count || b.length !== this.count) {
       throw new Error('Mix buffers differ in length from engine');
     }
     const tc = t < 0 ? 0 : t > 1 ? 1 : t;
+    // collapse any running blend, then park both endpoints on the scrubbed
+    // state — the scrub is driven by the slider, not by time
+    this.captureCurrentAsFrom();
     const h = this.heights;
-    for (let i = 0; i < h.length; i++) {
-      h[i] = a[i]! + (b[i]! - a[i]!) * tc;
-    }
-    this.target = null;
+    for (let i = 0; i < h.length; i++) h[i] = a[i]! + (b[i]! - a[i]!) * tc;
+    this.heightsTo.set(h);
+    this.colorsTo.set(this.colors);
+    this.mixAmount = 1;
     this.animating = false;
+    this.version += 1;
   }
 
   private assertTarget(target: MorphTarget): void {

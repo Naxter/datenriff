@@ -2,6 +2,7 @@
 // both render the identical sculpture.
 
 import { ColumnLayer, SolidPolygonLayer, TextLayer } from '@deck.gl/layers';
+import { MorphColumnLayer } from './morphColumnLayer';
 import type { Layer, PickingInfo } from '@deck.gl/core';
 import { hexColumnRadius } from '@datenriff/sculpture-core';
 import type { CityLabel } from '@datenriff/data-contracts';
@@ -46,6 +47,8 @@ export interface SculptureLayerOptions {
   scene: SceneData;
   /** ColumnLayer binary data descriptor; identity change triggers re-upload. */
   data: unknown;
+  /** Eased blend between the from/to attribute pairs, moved by the engine. */
+  mixAmount?: number;
   radius: number;
   labels: CityLabel[];
   characterSet: string[];
@@ -85,10 +88,12 @@ export function createSculptureLayers(o: SculptureLayerOptions): Layer[] {
       ...SHADOW_OFF,
       material: { ambient: 1, diffuse: 0, shininess: 1, specularColor: [0, 0, 0] },
     }),
-    new ColumnLayer({
+    new MorphColumnLayer({
       id: 'sculpture',
       // binary attribute objects are supported but typed loosely
       data: o.data as never,
+      // both endpoints live on the GPU; only this uniform moves per frame
+      mixAmount: o.mixAmount ?? 1,
       diskResolution: 6,
       radius: o.radius,
       extruded: true,

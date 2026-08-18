@@ -47,25 +47,41 @@ test('computeStats ignores NaN and sorts quantiles', () => {
   assert.ok(s.p95 >= 940 && s.p95 <= 960);
 });
 
-test('MorphEngine interpolates and converges to the target', () => {
+test('MorphEngine exposes both endpoints and an eased mix', () => {
   const engine = new MorphEngine(2);
-  engine.snapTo({ heights: new Float32Array([0, 100]), colors: new Uint8Array([0, 0, 0, 255, 200, 200, 200, 255]) });
-  const target = { heights: new Float32Array([100, 0]), colors: new Uint8Array([100, 100, 100, 255, 0, 0, 0, 255]) };
+  engine.snapTo({ heights: new Float32Array([0, 0]), colors: new Uint8Array(8) });
+  const target = {
+    heights: new Float32Array([100, 200]),
+    colors: new Uint8Array([255, 0, 0, 255, 0, 255, 0, 255]),
+  };
+  engine.start(target, 1000, 1000);
+  assert.equal(engine.mixAmount, 0, 'starts at the from state');
+  assert.deepEqual([...engine.heightsTo], [100, 200], 'to buffer holds the target');
+  assert.deepEqual([...engine.heights], [0, 0], 'from buffer holds the old state');
 
-  engine.start(target, 1000, 100);
-  assert.ok(engine.isAnimating);
+  engine.tick(1500);
+  assert.ok(engine.mixAmount > 0 && engine.mixAmount < 1, 'mid-transition');
+  // endpoints stay untouched — only the uniform moves
+  assert.deepEqual([...engine.heights], [0, 0]);
+  assert.deepEqual([...engine.heightsTo], [100, 200]);
 
-  engine.tick(1050); // halfway (eased)
-  assert.ok(engine.heights[0] > 0 && engine.heights[0] < 100);
-  assert.ok(engine.heights[1] > 0 && engine.heights[1] < 100);
+  engine.tick(2000);
+  assert.equal(engine.mixAmount, 1);
+  assert.ok(!engine.isAnimating, 'transition finished');
+  assert.ok(!engine.tick(2100), 'idle engine reports no change');
+});
 
-  const busy = engine.tick(1200); // past the end
-  assert.ok(busy, 'final frame still reports a change');
-  assert.ok(!engine.isAnimating);
-  assert.deepEqual([...engine.heights], [100, 0]);
-  assert.deepEqual([...engine.colors], [100, 100, 100, 255, 0, 0, 0, 255]);
-
-  assert.ok(!engine.tick(1300), 'idle engine reports no change');
+test('MorphEngine.start from mid-transition keeps what is on screen', () => {
+  const engine = new MorphEngine(1);
+  engine.snapTo({ heights: new Float32Array([0]), colors: new Uint8Array(4) });
+  engine.start({ heights: new Float32Array([100]), colors: new Uint8Array(4) }, 0, 1000);
+  engine.tick(500); // eased past the midpoint
+  const shown = engine.heights[0] + (engine.heightsTo[0] - engine.heights[0]) * engine.mixAmount;
+  engine.start({ heights: new Float32Array([300]), colors: new Uint8Array(4) }, 500, 1000);
+  assert.ok(
+    Math.abs(engine.heights[0] - shown) < 1e-5,
+    'the new transition starts from the visible state, not from zero',
+  );
 });
 
 test('MorphEngine.setHeightMix scrubs between two buffers', () => {
@@ -74,6 +90,8 @@ test('MorphEngine.setHeightMix scrubs between two buffers', () => {
   const b = new Float32Array([100, 300]);
   engine.setHeightMix(a, b, 0.5);
   assert.deepEqual([...engine.heights], [50, 200]);
+  assert.equal(engine.mixAmount, 1, 'scrub parks the shader at the end state');
+  assert.deepEqual([...engine.heightsTo], [50, 200], 'both endpoints hold the scrub');
   engine.setHeightMix(a, b, 2); // clamped
   assert.deepEqual([...engine.heights], [100, 300]);
 });
