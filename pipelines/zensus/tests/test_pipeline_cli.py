@@ -18,7 +18,7 @@ def install_stubs():
 
     def latlng_to_cell(lat, lon, res):
         # res 10: 1-unit buckets of the fake lon/lat; coarser: wider buckets
-        size = {10: 1, 9: 2, 8: 4}[res]
+        size = {10: 1, 9: 2, 8: 4, 5: 8}[res]
         return f"c{res}_{int(lon // size) * size}_{int(lat // size) * size}"
 
     def cell_to_parent(cell, res):
@@ -130,6 +130,48 @@ class TestPipelineCli(unittest.TestCase):
         ids = {m["id"] for m in manifest["metrics"]}
         self.assertEqual(ids, {"population", "age_mean"})
         self.assertTrue(manifest["source"]["provenance"]["sourceHash"].startswith("sha256:"))
+
+    def test_r9_is_tiled_by_parent_with_index(self):
+        self.run_cli(
+            [
+                "--input", str(self.population_csv()),
+                "--metric", "population",
+                "--out", str(self.out),
+            ]
+        )
+        r9 = self.out / "r9"
+        index = json.loads((r9 / "index.json").read_text(encoding="utf-8"))
+        self.assertEqual(index["resolution"], 9)
+        self.assertIn("population", index["metrics"])
+        self.assertGreater(len(index["tiles"]), 0)
+
+        universe = (r9 / "cells.txt").read_text().split()
+        whole = read_f32(r9 / "population.f32")
+        by_cell = dict(zip(universe, whole))
+
+        total_cells = 0
+        for tile in index["tiles"]:
+            positions = read_f32(r9 / "tiles" / f"{tile['id']}.positions.bin")
+            values = read_f32(r9 / "tiles" / f"{tile['id']}.population.f32")
+            self.assertEqual(len(values), tile["count"])
+            self.assertEqual(len(positions), tile["count"] * 2)
+            total_cells += tile["count"]
+        self.assertEqual(total_cells, len(universe), "tiles partition the universe")
+
+        # tile values must match the whole-LOD buffer for the same cells
+        h3 = sys.modules["h3"]
+        first = index["tiles"][0]
+        tile_values = read_f32(r9 / "tiles" / f"{first['id']}.population.f32")
+        member_values = [
+            by_cell[c] for c in universe if h3.cell_to_parent(c, 5) == first["id"]
+        ]
+        self.assertEqual(list(tile_values), member_values)
+
+        # manifest advertises the tiled LOD
+        manifest = json.loads((self.out / "dataset.json").read_text(encoding="utf-8"))
+        lod9 = next(l for l in manifest["lods"] if l["resolution"] == 9)
+        self.assertEqual(lod9["tileIndex"], "r9/index.json")
+        self.assertIn("{tile}", lod9["tileTemplate"])
 
     def test_share_rule_pools_parts_and_suppresses_small_denominators(self):
         vacancy = self.write_csv(

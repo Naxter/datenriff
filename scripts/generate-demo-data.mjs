@@ -3,7 +3,7 @@
 // fake metrics, written in the same binary layout as the real census
 // pipeline. Deterministic and dependency-free, so the app runs without the
 // multi-GB downloads.
-// Usage: node scripts/generate-demo-data.mjs [outDir] [--coarse]
+// Usage: node scripts/generate-demo-data.mjs [outDir] [--coarse] [--no-tiles]
 
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
@@ -12,9 +12,14 @@ import { fileURLToPath } from 'node:url';
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2);
 const OUT = args.find((a) => !a.startsWith('--')) ?? join(ROOT, 'apps', 'web', 'public', 'data');
-// lattice grain, matched to H3 average cell areas: 8 ≈ 0.74 km², 7 ≈ 5.16 km²
+// lattice grain, matched to H3 average cell areas: 8 ≈ 0.74 km², 7 ≈ 5.16 km², 9 ≈ 0.105 km²
 const RES = args.includes('--coarse') ? 7 : 8;
-const HEX_RADIUS_BY_RES = { 7: 1409, 8: 533 };
+const HEX_RADIUS_BY_RES = { 7: 1409, 8: 533, 9: 201 };
+// finer tiled LOD for the zoomed-in view (population only, ~3.4M cells)
+const TILE_RES = 9;
+const WITH_TILES = !args.includes('--no-tiles') && !args.includes('--coarse');
+/** Tile bucket edge in km — groups the fine lattice like an H3 parent would. */
+const TILE_KM = 26;
 
 // Rough Germany outline (lon, lat). Only used for the demo silhouette; the
 // real pipeline derives cells from the official grids.
@@ -159,10 +164,10 @@ const toKm = (lon, lat) => [
 // Hex lattice: nearest-neighbour distance D, area/cell = sqrt(3)/2*D^2,
 // radius R = D/sqrt(3).
 const HEX_RADIUS_M = HEX_RADIUS_BY_RES[RES];
-const D_M = Math.sqrt(3) * HEX_RADIUS_M;
-const ROW_M = (D_M * Math.sqrt(3)) / 2;
 
-function buildLattice() {
+function buildLattice(hexRadiusM) {
+  const dM = Math.sqrt(3) * hexRadiusM;
+  const rowM = (dM * Math.sqrt(3)) / 2;
   const positions = [];
   const minLat = 47.2;
   const maxLat = 55.1;
@@ -171,13 +176,13 @@ function buildLattice() {
   const yMin = (minLat - LAT0) * M_PER_DEG_LAT;
   const yMax = (maxLat - LAT0) * M_PER_DEG_LAT;
   let row = 0;
-  for (let y = yMin; y <= yMax; y += ROW_M, row++) {
+  for (let y = yMin; y <= yMax; y += rowM, row++) {
     const lat = LAT0 + y / M_PER_DEG_LAT;
     const mPerDegLon = 111_320 * Math.cos((lat * Math.PI) / 180);
     const xMin = (minLon - LON0) * M_PER_DEG_LON0;
     const xMax = (maxLon - LON0) * M_PER_DEG_LON0;
-    const offset = row % 2 === 0 ? 0 : D_M / 2;
-    for (let x = xMin + offset; x <= xMax; x += D_M) {
+    const offset = row % 2 === 0 ? 0 : dM / 2;
+    for (let x = xMin + offset; x <= xMax; x += dM) {
       const lon = LON0 + x / mPerDegLon;
       if (pointInPolygon(lon, lat, GERMANY)) {
         positions.push(lon, lat);
@@ -198,7 +203,7 @@ function isEast(lon, lat) {
   );
 }
 
-function generate(positions) {
+function generate(positions, res = RES) {
   const n = positions.length / 2;
   const rand = mulberry32(20220515);
 
@@ -217,7 +222,7 @@ function generate(positions) {
   const cityCutoff2 = citySMetro.map((s) => (5 * s) ** 2);
 
   // fine per-cell jitter; more at fine resolution where single villages show
-  const jitterSigma = RES >= 8 ? 0.32 : 0.2;
+  const jitterSigma = res >= 9 ? 0.4 : res >= 8 ? 0.32 : 0.2;
 
   for (let i = 0; i < n; i++) {
     const lon = positions[i * 2];
@@ -358,11 +363,68 @@ function stats(arr, { sum = false } = {}) {
   return s;
 }
 
+/** Tiled fine LOD: cells bucketed on a km grid, one buffer set per tile. */
+function writeTiles(baseDir, positions, metrics) {
+  const n = positions.length / 2;
+  const groups = new Map();
+  for (let i = 0; i < n; i++) {
+    const [x, y] = toKm(positions[i * 2], positions[i * 2 + 1]);
+    const id = `t${Math.floor(x / TILE_KM)}_${Math.floor(y / TILE_KM)}`;
+    let g = groups.get(id);
+    if (!g) groups.set(id, (g = []));
+    g.push(i);
+  }
+
+  const tilesDir = join(baseDir, 'tiles');
+  mkdirSync(tilesDir, { recursive: true });
+  const entries = [];
+  for (const [id, indices] of groups) {
+    const pos = new Float32Array(indices.length * 2);
+    let minLon = 180, maxLon = -180, minLat = 90, maxLat = -90;
+    indices.forEach((src, k) => {
+      const lon = positions[src * 2];
+      const lat = positions[src * 2 + 1];
+      pos[k * 2] = lon;
+      pos[k * 2 + 1] = lat;
+      if (lon < minLon) minLon = lon;
+      if (lon > maxLon) maxLon = lon;
+      if (lat < minLat) minLat = lat;
+      if (lat > maxLat) maxLat = lat;
+    });
+    writeFileSync(join(tilesDir, `${id}.positions.bin`), Buffer.from(pos.buffer));
+    for (const [name, arr] of Object.entries(metrics)) {
+      const slice = new Float32Array(indices.length);
+      indices.forEach((src, k) => { slice[k] = arr[src]; });
+      writeFileSync(join(tilesDir, `${id}.${name}.f32`), Buffer.from(slice.buffer));
+    }
+    const round4 = (v) => Math.round(v * 10000) / 10000;
+    entries.push({
+      id,
+      count: indices.length,
+      bounds: [round4(minLon), round4(minLat), round4(maxLon), round4(maxLat)],
+    });
+  }
+
+  const index = {
+    resolution: TILE_RES,
+    cellRadiusMeters: HEX_RADIUS_BY_RES[TILE_RES],
+    metrics: Object.fromEntries(
+      Object.entries(metrics).map(([name, arr]) => [
+        name.replace(/\.f32$/, ''),
+        stats(arr, { sum: name.startsWith('population') }),
+      ]),
+    ),
+    tiles: entries.sort((a, b) => (a.id < b.id ? -1 : 1)),
+  };
+  writeFileSync(join(baseDir, 'index.json'), JSON.stringify(index));
+  return { tileCount: entries.length, count: n };
+}
+
 function main() {
   console.log('Building hex lattice …');
-  const positions = buildLattice();
+  const positions = buildLattice(HEX_RADIUS_M);
   const n = positions.length / 2;
-  console.log(`  ${n.toLocaleString('en')} cells (${(D_M | 0)} m spacing)`);
+  console.log(`  ${n.toLocaleString('en')} cells (${(Math.sqrt(3) * HEX_RADIUS_M) | 0} m spacing)`);
 
   console.log('Generating synthetic metrics …');
   const m = generate(positions);
@@ -392,6 +454,34 @@ function main() {
     if (lat > maxLat) maxLat = lat;
   }
   const bounds = [minLon, minLat, maxLon, maxLat].map((v) => Math.round(v * 100) / 100);
+
+  // finer, tiled LOD for the zoomed-in view: population only, so the other
+  // modes fall back to the country LOD when zoomed in
+  let fineLod = null;
+  if (WITH_TILES) {
+    console.log('Building fine lattice for tiles …');
+    const finePositions = buildLattice(HEX_RADIUS_BY_RES[TILE_RES]);
+    const fineN = finePositions.length / 2;
+    console.log(`  ${fineN.toLocaleString('en')} cells`);
+    const fine = generate(finePositions, TILE_RES);
+    const fineDir = join(OUT, 'demo', `r${TILE_RES}`);
+    mkdirSync(fineDir, { recursive: true });
+    const { tileCount } = writeTiles(fineDir, finePositions, {
+      population_2022: fine.pop2022,
+      population_2011: fine.pop2011,
+    });
+    console.log(`  ${tileCount} tiles written`);
+    fineLod = {
+      resolution: TILE_RES,
+      count: fineN,
+      bounds,
+      cellRadiusMeters: HEX_RADIUS_BY_RES[TILE_RES],
+      minZoom: 6.4,
+      tileIndex: `/data/demo/r${TILE_RES}/index.json`,
+      tileTemplate: `/data/demo/r${TILE_RES}/tiles/{tile}.{metric}`,
+      positionsTemplate: `/data/demo/r${TILE_RES}/tiles/{tile}.positions.bin`,
+    };
+  }
 
   const metric = (id, label, unit, storage, aggregation, extra = {}, arr, statOpts) => ({
     id, label, unit, storage, aggregation, ...extra, stats: stats(arr, statOpts),
@@ -423,6 +513,7 @@ function main() {
         positions: `/data/demo/r${RES}/positions.bin`,
         metricTemplate: `/data/demo/r${RES}/{metric}`,
       },
+      ...(fineLod ? [fineLod] : []),
     ],
     source: {
       label: 'Synthetic demo data — not real census values',

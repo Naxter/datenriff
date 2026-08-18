@@ -57,9 +57,29 @@ export interface SculptureLOD {
   positions?: string;
   /** Un-tiled: URL template, `{metric}` → "<id>.<storage>". */
   metricTemplate?: string;
-  /** Tiled: URL template with `{parent}` = parent cell index. */
+  /** Tiled: URL of the TileIndex JSON. */
+  tileIndex?: string;
+  /** Tiled: URL template, `{tile}` → tile id, `{metric}` → "<id>.<storage>". */
   tileTemplate?: string;
+  /** Tiled: URL template, `{tile}` → tile id, for the positions buffer. */
+  positionsTemplate?: string;
   tileParentResolution?: number;
+}
+
+/** One tile of a tiled LOD. */
+export interface TileIndexEntry {
+  id: string;
+  count: number;
+  bounds: LonLatBounds;
+}
+
+/** index.json of a tiled LOD. Stats are per LOD — finer cells have their
+ * own value distribution, so colour and height calibrate against these. */
+export interface TileIndex {
+  resolution: number;
+  cellRadiusMeters: number;
+  metrics: Record<string, MetricStats>;
+  tiles: TileIndexEntry[];
 }
 
 export interface AttributionDefinition {
