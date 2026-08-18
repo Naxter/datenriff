@@ -174,12 +174,21 @@ export interface TooltipDefinition {
   fields: TooltipFieldDefinition[];
 }
 
+/** Camera preset a mode is composed for. Angles only — position and zoom
+ *  come from fitting the dataset bounds to the viewport. */
+export interface CameraPreset {
+  pitch: number;
+  bearing: number;
+}
+
 /** A curated view of a dataset: which metric drives height, which colour. */
 export interface SculptureMode {
   id: string;
   label: string;
   subtitle: string;
   dataset: string;
+  /** Composition angle; the view morphs there on mode switch. */
+  camera?: CameraPreset;
   heightMetric: string;
   colorMetric: string;
   heightScale: HeightScaleDefinition;

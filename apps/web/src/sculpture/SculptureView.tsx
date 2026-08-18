@@ -10,6 +10,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import DeckGL from '@deck.gl/react';
 import {
+  FlyToInterpolator,
   MapView,
   WebMercatorViewport,
   type MapViewState,
@@ -25,6 +26,7 @@ import { readUrlState, writeUrlState } from '../state/url';
 import { CAMERA_FOVY, INITIAL_VIEW_STATE, fitViewState } from './camera';
 import {
   CAPTURE_EVENT,
+  EXPORT_DPR,
   EXPORT_HEIGHT,
   EXPORT_WIDTH,
   captureIsPending,
@@ -102,6 +104,31 @@ export function SculptureView({ scene, engine }: Props) {
   }, [scene]);
 
   const mode = getMode(modeId);
+
+  // Each mode is composed for an angle. On mode switch the camera eases
+  // there (deck's FlyTo-style transition) unless the URL pinned a view.
+  const pinnedView = useRef(readUrlState().view !== undefined);
+  const lastCameraMode = useRef<string | null>(null);
+  useEffect(() => {
+    if (lastCameraMode.current === null) {
+      lastCameraMode.current = modeId;
+      if (!pinnedView.current && mode.camera) {
+        setViewState((v) => ({ ...v, ...mode.camera }));
+      }
+      return;
+    }
+    if (lastCameraMode.current === modeId) return;
+    lastCameraMode.current = modeId;
+    pinnedView.current = false;
+    const target = mode.camera ?? { pitch: INITIAL_VIEW_STATE.pitch, bearing: INITIAL_VIEW_STATE.bearing };
+    setViewState((v) => ({
+      ...v,
+      ...target,
+      transitionDuration: 900,
+      transitionInterpolator: new FlyToInterpolator({ speed: 1.4 }),
+    }));
+  }, [modeId, mode.camera]);
+
   const fineLod = tileManager?.activeLod(viewState.zoom) ?? null;
   const fineUsable =
     tileManager !== null &&
@@ -201,8 +228,8 @@ export function SculptureView({ scene, engine }: Props) {
     radius,
     labels: visibleLabels,
     characterSet,
-    // 4K frame: labels keep their poster proportion
-    labelScale: exporting ? 2.2 : 1,
+    // poster frame is 1920 CSS px at 2× — labels scale with the frame height
+    labelScale: exporting ? EXPORT_HEIGHT / window.innerHeight * 1.15 : 1,
     sculptureOpacity: 1 - fineOpacity,
     fineLayers,
     // stays pickable while the fine tiles fade in: tiles carry no metric
@@ -225,13 +252,15 @@ export function SculptureView({ scene, engine }: Props) {
   const finishCapture = () => {
     if (!exporting) return;
     const canvas = deckRef.current?.deck?.canvas;
-    if (!canvas || canvas.width !== EXPORT_WIDTH || canvas.height !== EXPORT_HEIGHT) {
+    const pw = EXPORT_WIDTH * EXPORT_DPR;
+    const ph = EXPORT_HEIGHT * EXPORT_DPR;
+    if (!canvas || canvas.width !== pw || canvas.height !== ph) {
       return; // resize has not landed yet; a later frame will match
     }
     // must copy synchronously — the drawing buffer is cleared after the task
     const copy = document.createElement('canvas');
-    copy.width = EXPORT_WIDTH;
-    copy.height = EXPORT_HEIGHT;
+    copy.width = pw;
+    copy.height = ph;
     copy.getContext('2d')?.drawImage(canvas, 0, 0);
     setExporting(false);
     if (captureIsPending()) deliverCapture(copy);
@@ -274,7 +303,7 @@ export function SculptureView({ scene, engine }: Props) {
         onAfterRender={finishCapture}
         // MSAA: thin needles alias badly without it
         deviceProps={{ webgl: { antialias: true } }}
-        useDevicePixels={exporting ? 1 : Math.min(window.devicePixelRatio || 1, 2)}
+        useDevicePixels={exporting ? EXPORT_DPR : Math.min(window.devicePixelRatio || 1, 2)}
         style={{ background: 'transparent' }}
       />
     </div>

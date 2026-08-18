@@ -1,6 +1,6 @@
-// 4K poster export: the live view is captured at 3840×2160 (see
-// exportBridge), then title, legend and attribution are composed on a 2D
-// canvas — the interactive UI never appears in the file.
+// 4K poster export: the live view is captured at 1920×1080 CSS px rendered
+// at 2× (see exportBridge), then title, legend and attribution are composed
+// on a 3840×2160 canvas — the interactive UI never appears in the file.
 
 import type { MetricStats, SculptureMode } from '@datenriff/data-contracts';
 import {
@@ -11,8 +11,11 @@ import {
 import type { SceneData } from '../data/loader';
 import { metricDefinition } from '../data/loader';
 import { CHANGE_PCT_METRIC } from '../modes/modes';
-import { EXPORT_HEIGHT as H, EXPORT_WIDTH as W } from './exportBridge';
+import { EXPORT_DPR, EXPORT_HEIGHT, EXPORT_WIDTH } from './exportBridge';
 import { effectiveColorScale } from './targets';
+
+const W = EXPORT_WIDTH * EXPORT_DPR;
+const H = EXPORT_HEIGHT * EXPORT_DPR;
 
 const PAPER = '#f7f0ea';
 const INK = '#221c15';

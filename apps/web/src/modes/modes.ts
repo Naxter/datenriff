@@ -3,8 +3,9 @@
 
 import type { SculptureDataset, SculptureMode } from '@datenriff/data-contracts';
 
-const DEMO_ATTRIBUTION = {
-  label: 'Demo: synthetische Daten — Zensus-Pipeline siehe pipelines/zensus',
+const CENSUS_ATTRIBUTION = {
+  label: 'Data: Destatis, Zensus 2022',
+  url: 'https://www.destatis.de/DE/Themen/Gesellschaft-Umwelt/Bevoelkerung/Zensus2022/_inhalt.html',
   referenceDate: '2022-05-15',
 };
 
@@ -24,7 +25,7 @@ export const MODES: SculptureMode[] = [
     tooltip: {
       fields: [{ metric: 'population_2022', label: 'Population', format: 'integer' }],
     },
-    attribution: DEMO_ATTRIBUTION,
+    attribution: CENSUS_ATTRIBUTION,
   },
   {
     id: 'change',
@@ -42,7 +43,7 @@ export const MODES: SculptureMode[] = [
         { metric: CHANGE_PCT_METRIC, label: 'Change 2011–2022', format: 'percent' },
       ],
     },
-    attribution: DEMO_ATTRIBUTION,
+    attribution: CENSUS_ATTRIBUTION,
   },
   {
     id: 'age',
@@ -59,7 +60,7 @@ export const MODES: SculptureMode[] = [
         { metric: 'age_mean', label: 'Average age', format: 'decimal1' },
       ],
     },
-    attribution: DEMO_ATTRIBUTION,
+    attribution: CENSUS_ATTRIBUTION,
   },
   {
     id: 'rent',
@@ -76,7 +77,7 @@ export const MODES: SculptureMode[] = [
         { metric: 'rent', label: 'Net cold rent', format: 'currencyPerSqm' },
       ],
     },
-    attribution: DEMO_ATTRIBUTION,
+    attribution: CENSUS_ATTRIBUTION,
   },
   {
     id: 'heating',
@@ -93,7 +94,7 @@ export const MODES: SculptureMode[] = [
         { metric: 'heating_category', label: 'Dominant source', format: 'category' },
       ],
     },
-    attribution: DEMO_ATTRIBUTION,
+    attribution: CENSUS_ATTRIBUTION,
   },
 ];
 
@@ -114,6 +115,9 @@ MODES.push({
   dataset: 'afterdark',
   heightMetric: 'light_brightness',
   colorMetric: 'light_brightness',
+  // a dense low field: a steeper, more frontal view keeps the cities from
+  // stacking into one wall the way the census poster angle would
+  camera: { pitch: 50, bearing: -8 },
   heightScale: { type: 'linear' },
   colorScale: { type: 'sqrt', clip: 0.995, palette: 'afterdark', gamma: 1.35 },
   tooltip: {

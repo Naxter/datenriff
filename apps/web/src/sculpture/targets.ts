@@ -23,10 +23,6 @@ import { CHANGE_PCT_METRIC } from '../modes/modes';
 /** Composition height of the p99.5 peak, tuned against the prototype. */
 export const TARGET_MAX_HEIGHT_METERS = 100_000;
 
-/** Depth of the plinth below the terrain, so the country reads as an island.
- *  Keep in sync with the prototype's `?base=`. */
-export const PLINTH_DEPTH_METERS = 5_000;
-
 /** Height anchor between the p99.5 quantile (0) and the maximum (1). Higher
  *  values flatten the plain and leave isolated spires — the editorial look.
  *  Keep in sync with the prototype's `?peak=`. */
@@ -36,11 +32,9 @@ export const PEAKEDNESS = 0.55;
 export const COLUMN_TAPER = 0.35;
 
 /** Ambient occlusion strength. Prototype: `?ao=`. */
-// kept low: the shadow pass already darkens the crevices
-export const OCCLUSION_STRENGTH = 0.16;
-
-/** Warm stone tone of the plinth walls. */
-export const PLINTH_COLOR: [number, number, number] = [151, 138, 124];
+// Off: real cast shadows on the ground plane do this job; baked occlusion
+// only greyed the low cells. Kept as a knob for datasets without shadows.
+export const OCCLUSION_STRENGTH = 0;
 
 /** Apply a user ramp override; only sequential scales are overridable. */
 export function effectiveColorScale(

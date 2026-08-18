@@ -4,9 +4,7 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "predev": "node ../../scripts/ensure-demo-data.mjs",
     "dev": "vite",
-    "prebuild": "node ../../scripts/ensure-demo-data.mjs",
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit"
