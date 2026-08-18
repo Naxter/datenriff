@@ -40,6 +40,7 @@ import {
 } from './layers';
 import type { FadeBox } from './morphColumnLayer';
 import { TileManager, tileZone } from './tiles';
+import { focusBounds, focusKey } from './focus';
 
 /** Crossfade window above a fine LOD's minZoom. */
 const CROSSFADE_ZOOM_SPAN = 0.5;
@@ -196,6 +197,30 @@ export function SculptureView({ scene, engine }: Props) {
     }));
   }, [modeId, mode.camera]);
 
+  // a new focus flies the camera to its region (mode angles kept)
+  const focus = useAtlasStore((s) => s.focus);
+  const lastFocusKey = useRef<string | null>(null);
+  useEffect(() => {
+    const key = focusKey(focus);
+    if (lastFocusKey.current === null) {
+      lastFocusKey.current = key;
+      if (!focus) return;
+    }
+    if (lastFocusKey.current === key) return;
+    lastFocusKey.current = key;
+    const bounds = focus ? focusBounds(focus) : scene.lod.bounds;
+    const fit = fitViewState(bounds, window.innerWidth, window.innerHeight);
+    setViewState((v) => ({
+      ...v,
+      longitude: fit.longitude,
+      latitude: fit.latitude,
+      // a state fills the frame; a city radius fits loosely
+      zoom: focus?.kind === 'city' ? fit.zoom - 0.4 : fit.zoom,
+      transitionDuration: 1400,
+      transitionInterpolator: new FlyToInterpolator({ speed: 1.3 }),
+    }));
+  }, [focus, scene.lod.bounds]);
+
   // camera stories fly the view to each stop in turn
   useEffect(() => {
     if (!storyStop) return;
@@ -255,17 +280,17 @@ export function SculptureView({ scene, engine }: Props) {
     if (!fineUsable || !tileManager || !quality.streamTiles) return;
     const run = () => {
       lastTileQuery.current = performance.now();
-      tileManager.update({ ...zoneInfo, zoom: viewState.zoom, mode, palette, enabled: true });
+      tileManager.update({ ...zoneInfo, zoom: viewState.zoom, mode, palette, region: focus, enabled: true });
     };
     const wait = Math.max(0, TILE_QUERY_MS - (performance.now() - lastTileQuery.current));
     const timer = setTimeout(run, wait);
     return () => clearTimeout(timer);
-  }, [tileManager, fineUsable, zoneInfo, viewState.zoom, mode, palette, quality.streamTiles]);
+  }, [tileManager, fineUsable, zoneInfo, viewState.zoom, mode, palette, focus, quality.streamTiles]);
 
   useEffect(() => {
-    writeUrlState(modeId, timeT, palette, viewState);
+    writeUrlState(modeId, timeT, palette, viewState, focusKey(focus) || null);
     setView(viewState);
-  }, [modeId, timeT, palette, viewState, setView]);
+  }, [modeId, timeT, palette, viewState, focus, setView]);
 
   const radius = sculptureRadius(scene);
 

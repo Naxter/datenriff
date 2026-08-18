@@ -3,14 +3,17 @@
 import { useCallback, useEffect } from 'react';
 import type { TargetBuilder } from '../sculpture/targets';
 import { useAtlasStore } from '../state/store';
+import type { SceneData } from '../data/loader';
 import { ExportButton } from './ExportButton';
+import { FocusButton } from './FocusButton';
 import { SettingsDialog } from './SettingsDialog';
 
 interface Props {
   builder: TargetBuilder;
+  scene: SceneData;
 }
 
-export function Toolbar({ builder }: Props) {
+export function Toolbar({ builder, scene }: Props) {
   const open = useAtlasStore((s) => s.settingsOpen);
   const setOpen = useAtlasStore((s) => s.setSettingsOpen);
   const close = useCallback(() => setOpen(false), [setOpen]);
@@ -31,6 +34,7 @@ export function Toolbar({ builder }: Props) {
   return (
     <div className="export">
       <ExportButton builder={builder} />
+      <FocusButton scene={scene} />
       <button
         type="button"
         className="export__go"

@@ -18,6 +18,7 @@ import { StoryPlayer } from '../components/StoryPlayer';
 import { Veil } from '../components/Veil';
 import { INTRO_GROWTH_MS, introEligible, runIntro } from './intro';
 import { timeSegment } from '../modes/time';
+import { resolveFocus } from '../data/focusData';
 
 export default function App() {
   const status = useAtlasStore((s) => s.status);
@@ -46,6 +47,7 @@ export default function App() {
   }
   const introPhase = useAtlasStore((s) => s.introPhase);
   const setIntroPhase = useAtlasStore((s) => s.setIntroPhase);
+  const focus = useAtlasStore((s) => s.focus);
 
   const manifest = useAtlasStore((s) => s.manifest);
   const setManifest = useAtlasStore((s) => s.setManifest);
@@ -120,6 +122,18 @@ export default function App() {
   if (ready) shownModeId.current = modeId;
   const shownMode = getMode(shownModeId.current, scene?.dataset);
 
+  // a shared ?focus= is resolved once the data to resolve it against exists
+  const urlFocusApplied = useRef(false);
+  useEffect(() => {
+    if (!scene || !manifest || urlFocusApplied.current) return;
+    urlFocusApplied.current = true;
+    const wanted = readUrlState().focus;
+    if (!wanted) return;
+    void resolveFocus(wanted, manifest, scene).then((f) => {
+      if (f) useAtlasStore.getState().setFocus(f);
+    });
+  }, [scene, manifest]);
+
   // Opening sequence: the timers start once the first scene is on screen
   // and must survive the title → reveal step, hence the coarse dependency.
   const introOn = introPhase === 'title' || introPhase === 'reveal';
@@ -135,7 +149,7 @@ export default function App() {
   const firstMorph = useRef(true);
   useEffect(() => {
     if (!ctx || !ready || introPhase === 'title') return;
-    const target = ctx.builder.build(getMode(modeId, ctx.builder.dataset), palette);
+    const target = ctx.builder.build(getMode(modeId, ctx.builder.dataset), palette, focus);
     if (reducedMotion) {
       ctx.engine.snapTo(target);
     } else if (ctx.engine.isPristine) {
@@ -147,7 +161,7 @@ export default function App() {
     firstMorph.current = false;
     bumpSculpture();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ctx, ready, modeId, palette, reducedMotion, bumpSculpture, introPhase === 'title']);
+  }, [ctx, ready, modeId, palette, focus, reducedMotion, bumpSculpture, introPhase === 'title']);
 
   // Timeline scrub. Resting at t = 1 is skipped so entering a time-enabled
   // mode doesn't cancel its entry morph.
@@ -158,7 +172,7 @@ export default function App() {
     const wasScrubbed = prevTimeT.current < 1;
     prevTimeT.current = timeT;
     if (!mode.time || (timeT >= 1 && !wasScrubbed)) return;
-    const target = ctx.builder.build(mode, palette);
+    const target = ctx.builder.build(mode, palette, focus);
     const steps = mode.time.steps;
     // piecewise: t sweeps the whole series, the engine mixes the two
     // neighbouring steps (uploaded once per segment, one uniform per frame)
@@ -174,12 +188,12 @@ export default function App() {
       target.timeColors?.get(steps[seg.i + 1]!),
     );
     bumpSculpture();
-  }, [ctx, ready, modeId, timeT, palette, bumpSculpture]);
+  }, [ctx, ready, modeId, timeT, palette, focus, bumpSculpture]);
 
   // `shown` is what the sculpture on screen actually depicts: the current
   // mode once its scene is loaded, else the last mode this scene served.
   const shown = ctx !== null && scene !== undefined && datasetServesMode(scene.dataset, shownMode);
-  const shownTarget = shown ? ctx.builder.build(shownMode, palette) : null;
+  const shownTarget = shown ? ctx.builder.build(shownMode, palette, focus) : null;
 
   return (
     <div className={`atlas${introOn ? ' atlas--intro' : ''}`}>
@@ -191,7 +205,7 @@ export default function App() {
         <Legend mode={shownMode} scene={scene} colorStats={shownTarget.colorStats} />
       )}
       {shown && <Tooltip mode={shownMode} scene={scene} builder={ctx.builder} />}
-      {ready && <Toolbar builder={ctx.builder} />}
+      {ready && <Toolbar builder={ctx.builder} scene={scene} />}
       {ready && <StoryPlayer mode={mode} />}
       {scene && <Attribution scene={scene} />}
       <Veil

@@ -19,6 +19,7 @@ import {
 import type { SceneData } from '../data/loader';
 import { metricForScene } from '../data/loader';
 import { CHANGE_PCT_METRIC } from '../modes/modes';
+import { applyFocus, focusKey, focusMask, type FocusGeometry } from './focus';
 
 /** Composition height of the p99.5 peak, tuned against the prototype. */
 export const TARGET_MAX_HEIGHT_METERS = 100_000;
@@ -102,7 +103,46 @@ export class TargetBuilder {
     );
   }
 
-  build(mode: SculptureMode, palette: string | null = null): ModeTarget {
+  /** Per-cell focus masks, cached per focus. */
+  private readonly masks = new Map<string, Uint8Array>();
+
+  /** A mode target with a region in focus: the base target with everything
+   *  outside the region stepped back (see focus.ts). Cached like the base. */
+  build(mode: SculptureMode, palette: string | null = null, focus: FocusGeometry | null = null): ModeTarget {
+    if (!focus) return this.buildBase(mode, palette);
+    const fkey = focusKey(focus);
+    const key = `${mode.id}|${effectiveColorScale(mode, palette).palette}|${fkey}`;
+    const cached = this.cache.get(key);
+    if (cached) return cached;
+    let mask = this.masks.get(fkey);
+    if (!mask) {
+      mask = focusMask(this.scene.positions, focus);
+      this.masks.set(fkey, mask);
+    }
+    const base = this.buildBase(mode, palette);
+    const dim = (h: Float32Array, c: Uint8Array) => {
+      const heights = new Float32Array(h);
+      const colors = new Uint8Array(c);
+      applyFocus(heights, colors, mask!);
+      return { heights, colors };
+    };
+    const main = dim(base.heights, base.colors);
+    const target: ModeTarget = { ...base, heights: main.heights, colors: main.colors };
+    if (base.timeHeights) {
+      target.timeHeights = new Map();
+      if (base.timeColors) target.timeColors = new Map();
+      for (const [step, h] of base.timeHeights) {
+        const c = base.timeColors?.get(step) ?? base.colors;
+        const d = dim(h, c);
+        target.timeHeights.set(step, d.heights);
+        if (base.timeColors) target.timeColors!.set(step, d.colors);
+      }
+    }
+    this.cache.set(key, target);
+    return target;
+  }
+
+  private buildBase(mode: SculptureMode, palette: string | null = null): ModeTarget {
     const colorScale = effectiveColorScale(mode, palette);
     const key = `${mode.id}|${colorScale.palette}`;
     const cached = this.cache.get(key);

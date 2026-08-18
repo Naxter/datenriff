@@ -136,7 +136,10 @@ the pipelines and git-ignored. The census modes come from the official
 Destatis 100 m grids (Census 2022 and 2011); AFTER DARK comes from NASA
 Black Marble — the calibrated VNP46A4 annual radiance (2012 on, Earthdata
 login) or, for an offline demo, the 8-bit mosaic; WIND comes from the
-Marktstammdatenregister (Bundesnetzagentur, DL-DE-BY-2.0). Attribution and the reference date travel in the
+Marktstammdatenregister (Bundesnetzagentur, DL-DE-BY-2.0). The FOCUS
+control picks cells by the state outlines of BKG VG2500 (© GeoBasis-DE /
+BKG, DL-DE-BY-2.0; `node scripts/fetch-states.mjs`), credited whenever a
+state is in focus. Attribution and the reference date travel in the
 manifest and stay visible in the app, on desktop and mobile alike — for these
 sources the credit is a licence condition, not decoration.
 

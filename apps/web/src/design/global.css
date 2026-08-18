@@ -194,6 +194,118 @@ body {
   opacity: 1;
 }
 
+/* ---------------- focus picker ---------------- */
+
+.focus {
+  position: relative;
+}
+
+.export__go--on {
+  color: var(--ink);
+  border-bottom-color: var(--ink);
+}
+
+.focus__panel {
+  position: absolute;
+  top: calc(100% + 12px);
+  left: 0;
+  z-index: 30;
+  width: min(84vw, 420px);
+  background: var(--paper);
+  border: 1px solid rgba(34, 28, 21, 0.14);
+  box-shadow: 0 24px 60px rgba(34, 28, 21, 0.16);
+  padding: 14px 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: dialog-in 160ms ease;
+}
+
+.focus__search {
+  appearance: none;
+  width: 100%;
+  border: none;
+  border-bottom: 1px solid rgba(34, 28, 21, 0.25);
+  background: none;
+  padding: 6px 0;
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--ink);
+  outline: none;
+}
+
+.focus__search:focus {
+  border-bottom-color: var(--ink);
+}
+
+.focus__lists {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 18px;
+  max-height: 46vh;
+  overflow: auto;
+}
+
+.focus__heading {
+  margin: 4px 0 6px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.focus__item {
+  display: block;
+  width: 100%;
+  appearance: none;
+  background: none;
+  border: none;
+  padding: 4px 0;
+  text-align: left;
+  cursor: pointer;
+  font-family: var(--sans);
+  font-size: 12.5px;
+  color: var(--ink-soft);
+}
+
+.focus__item:hover,
+.focus__item:focus-visible {
+  color: var(--ink);
+  outline: none;
+}
+
+.focus__item--active {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.focus__note {
+  margin: 0;
+  font-size: 11px;
+  color: var(--ink-faint);
+}
+
+.focus__clear {
+  appearance: none;
+  background: none;
+  border: none;
+  border-top: 1px solid rgba(34, 28, 21, 0.12);
+  padding: 10px 0 2px;
+  cursor: pointer;
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  text-align: left;
+}
+
+.focus__clear:hover {
+  color: var(--ink);
+}
+
 /* ---------------- dialogs (export, settings) ---------------- */
 
 .dialog {

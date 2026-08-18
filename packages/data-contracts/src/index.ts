@@ -127,6 +127,8 @@ export interface AtlasManifest {
   datasets: SculptureDataset[];
   labels?: string;
   boundary?: string;
+  /** State outlines for the FOCUS control (BKG VG2500). */
+  states?: string;
 }
 
 export type SequentialScaleType = 'linear' | 'sqrt' | 'log1p';

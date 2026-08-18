@@ -4,6 +4,7 @@ import type { AtlasManifest, CameraStop } from '@datenriff/data-contracts';
 import type { SceneData } from '../data/loader';
 import { detectQuality, type QualityProfile } from '../sculpture/quality';
 import { loadSettings, saveSettings, type Settings } from './settings';
+import type { FocusGeometry } from '../sculpture/focus';
 
 export interface HoverInfo {
   x: number;
@@ -29,6 +30,9 @@ interface AtlasState {
   settings: Settings;
   quality: QualityProfile;
   settingsOpen: boolean;
+  /** Region in focus (a state outline or a city radius); null = whole country. */
+  focus: FocusGeometry | null;
+  focusOpen: boolean;
   modeId: string;
   /** Timeline position for time-enabled modes; 1 = latest step. */
   timeT: number;
@@ -47,6 +51,8 @@ interface AtlasState {
   setIntroPhase(phase: IntroPhase | null): void;
   updateSettings(patch: Partial<Settings>): void;
   setSettingsOpen(open: boolean): void;
+  setFocus(focus: FocusGeometry | null): void;
+  setFocusOpen(open: boolean): void;
   setMode(id: string): void;
   setTimeT(t: number): void;
   setPalette(palette: string | null): void;
@@ -65,6 +71,8 @@ export const useAtlasStore = create<AtlasState>((set) => ({
   settings: initialSettings,
   quality: detectQuality(initialSettings.quality),
   settingsOpen: false,
+  focus: null,
+  focusOpen: false,
   modeId: 'people',
   timeT: 1,
   palette: null,
@@ -83,6 +91,8 @@ export const useAtlasStore = create<AtlasState>((set) => ({
       return { settings, quality: detectQuality(settings.quality) };
     }),
   setSettingsOpen: (settingsOpen) => set({ settingsOpen }),
+  setFocus: (focus) => set({ focus, hover: null }),
+  setFocusOpen: (focusOpen) => set({ focusOpen }),
   setMode: (modeId) => set({ modeId, timeT: 1, hover: null }),
   setTimeT: (timeT) => set({ timeT }),
   setPalette: (palette) => set({ palette }),

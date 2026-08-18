@@ -10,6 +10,7 @@ import {
   computeElevations,
   computeOcclusion,
 } from '@datenriff/sculpture-core';
+import { applyFocus, focusMask, type FocusGeometry } from '../sculpture/focus';
 
 export interface TileLoadRequest {
   type: 'load';
@@ -28,6 +29,8 @@ export interface TileLoadRequest {
   colorStats: MetricStats;
   /** Ambient occlusion: neighbour radius in degrees, shade height, strength. */
   occlusion?: { radiusDeg: number; fullShadeMeters: number; strength: number };
+  /** Region in focus; cells outside step back (see sculpture/focus.ts). */
+  focus?: FocusGeometry | null;
 }
 
 export interface TileLoadResponse {
@@ -95,6 +98,8 @@ async function load(req: TileLoadRequest): Promise<void> {
     );
     applyOcclusion(colors, occ, req.occlusion.strength);
   }
+
+  if (req.focus) applyFocus(heights, colors, focusMask(positions, req.focus));
 
   scope.postMessage(
     { type: 'tile', key: req.key, count, positions, heights, colors },
