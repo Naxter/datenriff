@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { MapViewState } from '@deck.gl/core';
-import type { AtlasManifest } from '@datenriff/data-contracts';
+import type { AtlasManifest, CameraStop } from '@datenriff/data-contracts';
 import type { SceneData } from '../data/loader';
 
 export interface HoverInfo {
@@ -22,6 +22,8 @@ interface AtlasState {
   hover: HoverInfo | null;
   /** Latest camera state; read imperatively (e.g. by the poster export). */
   view: MapViewState | null;
+  /** Current stop of a running camera story, or null. */
+  storyStop: CameraStop | null;
   /** Bumped when the engine buffers were mutated outside the render loop. */
   sculptureVersion: number;
   setManifest(manifest: AtlasManifest): void;
@@ -32,6 +34,7 @@ interface AtlasState {
   setPalette(palette: string | null): void;
   setHover(hover: HoverInfo | null): void;
   setView(view: MapViewState): void;
+  playStory(stop: CameraStop | null): void;
   bumpSculpture(): void;
 }
 
@@ -42,6 +45,7 @@ export const useAtlasStore = create<AtlasState>((set) => ({
   palette: null,
   hover: null,
   view: null,
+  storyStop: null,
   sculptureVersion: 0,
   setManifest: (manifest) => set({ manifest }),
   setScene: (scene) => set({ scene, status: 'ready' }),
@@ -51,5 +55,6 @@ export const useAtlasStore = create<AtlasState>((set) => ({
   setPalette: (palette) => set({ palette }),
   setHover: (hover) => set({ hover }),
   setView: (view) => set({ view }),
+  playStory: (storyStop) => set({ storyStop }),
   bumpSculpture: () => set((s) => ({ sculptureVersion: s.sculptureVersion + 1 })),
 }));

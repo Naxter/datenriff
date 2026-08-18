@@ -109,6 +109,21 @@ Afterwards run `npm run generate:demo` once — it rebuilds
 the synthetic demo kept as the second entry. A fresh clone without the
 downloads keeps running on the demo alone.
 
+## Notes on the V1.1 metrics
+
+- **Vacancy** is published as a *rate*, not as numerator and denominator, so
+  it cannot use the share rule. It aggregates as a dwelling-weighted mean
+  (`--weight-input` the dwellings file).
+- **Built 2014 or later** is a genuine share (`a2014und_spaeter` over
+  `Insgesamt_Wohnungen`). Destatis rounds cell values independently, so a
+  few tiny cells report slightly above 100 %; the mode's colour domain clips
+  them.
+- **Household size** is a population-weighted mean. The exact aggregate
+  would be persons ÷ households (a harmonic mean of the cell means);
+  households are not published per cell, so this is an approximation and the
+  label says "average household size", not a count of households.
+- The building-age archive is **7-Zip** despite its `.zip` name.
+
 ## Rules
 
 - **Suppression is not zero**: special tokens (`–`, `.`, `x`, …) are treated as

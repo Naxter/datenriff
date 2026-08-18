@@ -128,13 +128,21 @@ body {
   border-bottom-color: var(--ink);
 }
 
-/* ---------------- poster export, top left ---------------- */
+/* ---------------- poster export + stories, top left ---------------- */
 
 .export {
   position: absolute;
   left: 40px;
   top: 38px;
   z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.export__go,
+.export__format,
+.stories__item {
   appearance: none;
   background: none;
   border: none;
@@ -150,14 +158,54 @@ body {
   transition: color 160ms ease;
 }
 
-.export:hover:not(:disabled),
-.export:focus-visible {
+.export__go:hover:not(:disabled),
+.export__go:focus-visible,
+.export__format:hover,
+.stories__item:hover,
+.stories__item:focus-visible {
   color: var(--ink);
   outline: none;
 }
 
-.export:disabled {
+.export__go:disabled {
   cursor: progress;
+}
+
+.export__formats {
+  display: flex;
+  gap: 9px;
+}
+
+.export__format {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  opacity: 0.75;
+}
+
+.export__format--active {
+  color: var(--ink);
+  border-bottom-color: var(--ink);
+  opacity: 1;
+}
+
+/* curated camera moves, under the export row */
+.stories {
+  position: absolute;
+  left: 40px;
+  top: 74px;
+  z-index: 10;
+  display: flex;
+  gap: 18px;
+}
+
+.stories__item {
+  font-size: 11px;
+  letter-spacing: 0.16em;
+}
+
+.stories__item--active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
 }
 
 /* ---------------- timeline ---------------- */
@@ -413,6 +461,17 @@ body {
   .export {
     left: 20px;
     top: 18px;
+    gap: 10px;
+  }
+  .export__go {
+    font-size: 10px;
+  }
+  .stories {
+    left: 20px;
+    top: 48px;
+    gap: 12px;
+  }
+  .stories__item {
     font-size: 10px;
   }
   .modenav {

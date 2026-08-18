@@ -3,11 +3,32 @@
 // poster is captured from the app's own canvas, resized to 4K for one
 // frame by SculptureView.
 
-// CSS size of the capture frame; the deck renders it at 2× device pixels
-// and the poster composes at that resolution, so needles stay crisp
-export const EXPORT_WIDTH = 1920;
-export const EXPORT_HEIGHT = 1080;
+// Social formats (plan §101). CSS size of the capture frame; the deck
+// renders it at 2× device pixels and the poster composes at that
+// resolution, so needles stay crisp.
 export const EXPORT_DPR = 2;
+
+export interface ExportFormat {
+  id: string;
+  label: string;
+  width: number;
+  height: number;
+}
+
+export const EXPORT_FORMATS: ExportFormat[] = [
+  { id: '16x9', label: '16:9', width: 1920, height: 1080 },
+  { id: '4x5', label: '4:5', width: 1080, height: 1350 },
+  { id: '1x1', label: '1:1', width: 1440, height: 1440 },
+  { id: '9x16', label: '9:16', width: 1080, height: 1920 },
+];
+
+export const DEFAULT_FORMAT = EXPORT_FORMATS[0]!;
+
+let activeFormat: ExportFormat = DEFAULT_FORMAT;
+
+export function currentFormat(): ExportFormat {
+  return activeFormat;
+}
 
 export const CAPTURE_EVENT = 'atlas-capture';
 
@@ -19,9 +40,13 @@ interface PendingCapture {
 
 let pending: PendingCapture | null = null;
 
-/** Ask the live view for a 4K frame; resolves with a copied canvas. */
-export function requestSculptureCapture(timeoutMs = 60_000): Promise<HTMLCanvasElement> {
+/** Ask the live view for a poster frame; resolves with a copied canvas. */
+export function requestSculptureCapture(
+  format: ExportFormat = DEFAULT_FORMAT,
+  timeoutMs = 60_000,
+): Promise<HTMLCanvasElement> {
   if (pending) return Promise.reject(new Error('Capture already in progress'));
+  activeFormat = format;
   return new Promise<HTMLCanvasElement>((resolve, reject) => {
     pending = {
       resolve,

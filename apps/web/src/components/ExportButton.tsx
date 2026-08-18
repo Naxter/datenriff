@@ -3,7 +3,12 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { getMode } from '../modes/modes';
-import { requestSculptureCapture } from '../sculpture/exportBridge';
+import {
+  DEFAULT_FORMAT,
+  EXPORT_FORMATS,
+  requestSculptureCapture,
+  type ExportFormat,
+} from '../sculpture/exportBridge';
 import { composePoster } from '../sculpture/exportPoster';
 import type { TargetBuilder } from '../sculpture/targets';
 import { useAtlasStore } from '../state/store';
@@ -14,6 +19,7 @@ interface Props {
 
 export function ExportButton({ builder }: Props) {
   const [busy, setBusy] = useState(false);
+  const [format, setFormat] = useState<ExportFormat>(DEFAULT_FORMAT);
 
   const run = useCallback(async () => {
     if (busy) return;
@@ -22,7 +28,7 @@ export function ExportButton({ builder }: Props) {
     const mode = getMode(s.modeId);
     setBusy(true);
     try {
-      const frame = await requestSculptureCapture();
+      const frame = await requestSculptureCapture(format);
       await composePoster(frame, {
         scene: s.scene,
         mode,
@@ -34,7 +40,7 @@ export function ExportButton({ builder }: Props) {
     } finally {
       setBusy(false);
     }
-  }, [busy, builder]);
+  }, [busy, builder, format]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -49,14 +55,29 @@ export function ExportButton({ builder }: Props) {
   }, [run]);
 
   return (
-    <button
-      type="button"
-      className="export"
-      onClick={() => void run()}
-      disabled={busy}
-      title="4K poster PNG (E)"
-    >
-      {busy ? 'Rendering …' : 'Export'}
-    </button>
+    <div className="export">
+      <button
+        type="button"
+        className="export__go"
+        onClick={() => void run()}
+        disabled={busy}
+        title={`Poster PNG, ${format.label} (E)`}
+      >
+        {busy ? 'Rendering …' : 'Export'}
+      </button>
+      <div className="export__formats" role="group" aria-label="Poster format">
+        {EXPORT_FORMATS.map((f) => (
+          <button
+            key={f.id}
+            type="button"
+            className={`export__format${f.id === format.id ? ' export__format--active' : ''}`}
+            aria-pressed={f.id === format.id}
+            onClick={() => setFormat(f)}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }

@@ -59,6 +59,12 @@ export const PALETTES: Record<string, Palette> = {
 
   // properties
   change: div('#1F3F7A', '#9AA8DE', '#F2EBE0', '#F0A0BF', '#B81D74'),
+  // empty flats: pale where lived-in, rust where standing empty
+  vacancy: seq('#EFEAE1', '#DCC9A8', '#C99A6B', '#B06542', '#7E3220'),
+  // building age: old stock cool and quiet, new build bright
+  vintage: seq('#3C4A5C', '#7A8B9C', '#C3C7C2', '#E4C98A', '#F2E3B8'),
+  // household size: singles pale, large households deep green
+  household: seq('#F2EEE4', '#CBD8C2', '#94B58F', '#557F5F', '#2A4A3C'),
   age: seq('#2F8A7D', '#9EC6B6', '#F2EBDF', '#C98FA8', '#77365C'),
   rent: seq('#F2EBDF', '#EFC968', '#E89A3C', '#D95F3B', '#A8232F'),
 

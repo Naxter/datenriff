@@ -27,14 +27,15 @@
 - [x] AGE / RENT / HEATING as modes, on real census data
 - [x] weighted-mean and category metrics in the pipeline CLI
 - [x] share metrics in the pipeline CLI (vacancy, share ≥65)
-- [ ] FAMILIES / HOMES / VACANCY (ETL + mode definition only)
+- [x] FAMILIES / HOMES / VACANCY on real census data (household size,
+      share built 2014+, dwelling-weighted vacancy rate)
 
 ## Change — in progress
 
 - [x] delta metric with small-denominator suppression, diverging scale,
       timeline slider with play, height mix 2011↔2022
 - [x] census 2011 import (80.26 M, aligned to the 2022 cell universe)
-- [ ] GPU morph instead of CPU
+- [x] GPU morph: both endpoints as attributes, one uniform per frame
 
 ## Multi-LOD — in progress
 
@@ -68,7 +69,10 @@
       occlusion, thin plinth, MSAA — calibrated in the prototype
 - [x] camera fits the dataset bounds to the viewport, so the sculpture fills
       the frame at any window size (fixed zoom cropped or shrank it)
-- [ ] GPU morph shader, camera stories, social formats
+- [x] camera stories per mode (plan §98) — curated flights between named
+      places, e.g. CHANGE: Munich → Leipzig → Lusatia
+- [x] social export formats 16:9 / 4:5 / 1:1 / 9:16, type scaled to the
+      frame; portrait crops turn the camera so the country lies diagonally
 
 ## Production — in progress
 
