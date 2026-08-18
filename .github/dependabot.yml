@@ -1,0 +1,17 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      deck:
+        # deck.gl is pinned to 9.1 on purpose (picking regression in 9.3);
+        # keep its updates in one PR so the pin is a deliberate decision
+        patterns: ["@deck.gl/*", "@luma.gl/*"]
+      dev:
+        dependency-type: development
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
