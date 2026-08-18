@@ -41,6 +41,9 @@
 - [x] r9 tiling by H3 parent, viewport tile index with
       bounds, worker-side decode and colour mapping, zoom crossfade,
       prefetch ring, LRU tile cache
+- [x] per-LOD metric stats: p99.5 at r7 is 21k people, at r8 4.8k, at r9
+      1.2k — one shared stat block flattened whichever LOD it did not
+      belong to
 - [ ] r10 tiles in the app (writer supports it via `--write-r10`)
 - [ ] picking/tooltip on fine tiles; per-tile fade-in polish
 
@@ -71,8 +74,9 @@
 
 - [x] CI (typecheck, tests, build), Dependabot, Cloudflare Pages config
       with cache headers
-- [ ] **mobile quality profile** — the last unmet V1 criterion: r7 country
-      LOD, fewer labels, shadows off, reduced DPR. Today mobile only
-      reflows the UI, and it hides the attribution, which the data licences
-      require to stay visible.
+- [x] **mobile quality profile**: r7 country LOD (68k cells instead of
+      272k), shadows off, DPR capped at 1.5, tier-1 labels only, no tile
+      streaming. `?quality=mobile|desktop` forces either. Attribution now
+      stays visible on small screens — the Destatis and NASA terms make the
+      credit a licence condition.
 - [ ] browser/GPU matrix, visual regression

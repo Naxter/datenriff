@@ -7,7 +7,7 @@ import {
   resolveSequentialDomain,
 } from '@datenriff/color-scales';
 import type { SceneData } from '../data/loader';
-import { metricDefinition } from '../data/loader';
+import { metricForScene } from '../data/loader';
 import { CHANGE_PCT_METRIC } from '../modes/modes';
 import { effectiveColorScale } from '../sculpture/targets';
 import { useAtlasStore } from '../state/store';
@@ -38,7 +38,7 @@ export function Legend({ mode, scene, colorStats }: Props) {
 
   const body = useMemo(() => {
     if (scale.type === 'categorical') {
-      const def = metricDefinition(scene.dataset, mode.colorMetric);
+      const def = metricForScene(scene, mode.colorMetric);
       const colors = legendGradient(scale.palette);
       return (
         <div className="legend__cats">
@@ -67,7 +67,7 @@ export function Legend({ mode, scene, colorStats }: Props) {
     }
 
     const [lo, hi] = resolveSequentialDomain(scale, colorStats);
-    const unit = metricDefinition(scene.dataset, mode.colorMetric).unit;
+    const unit = metricForScene(scene, mode.colorMetric).unit;
     return (
       <>
         <div className="legend__bar" style={{ background: cssGradient(scale.palette) }} />
@@ -82,7 +82,7 @@ export function Legend({ mode, scene, colorStats }: Props) {
   const title =
     mode.colorMetric === CHANGE_PCT_METRIC
       ? 'Population change'
-      : metricDefinition(scene.dataset, mode.colorMetric).label;
+      : metricForScene(scene, mode.colorMetric).label;
 
   const choices = useMemo(() => {
     const base = mode.colorScale.palette;

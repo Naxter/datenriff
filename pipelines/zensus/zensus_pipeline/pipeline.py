@@ -77,8 +77,9 @@ from .tiling import (
 )
 
 BASE_RESOLUTION = 10
-COARSE_RESOLUTIONS = (9, 8)
-H3_EDGE_METERS = {8: 461.4, 9: 174.4, 10: 65.9}
+# r7 is the mobile country LOD (~5 km² cells), r8 the desktop one
+COARSE_RESOLUTIONS = (9, 8, 7)
+H3_EDGE_METERS = {7: 1220.6, 8: 461.4, 9: 174.4, 10: 65.9}
 # finer LODs ship as tiles grouped by this H3 parent resolution
 TILED_RESOLUTIONS = frozenset({9, 10})
 TILE_PARENT_RES = 5
@@ -362,7 +363,7 @@ def run(args: argparse.Namespace) -> None:
                 write_tiles(res, res_dir, universe,
                             [(f"{args.metric}.f32", aligned, "f32")],
                             {args.metric: stats})
-            lod_fragments.append(lod_fragment(res, universe))
+            lod_fragments.append(lod_fragment(res, universe, {args.metric: stats}))
 
     elif args.rule == "wmean":
         means, weights = accumulate_weighted(cell_payloads, args.value_column, weight_key)
@@ -386,7 +387,7 @@ def run(args: argparse.Namespace) -> None:
                 write_tiles(res, res_dir, universe,
                             [(f"{args.metric}.f32", aligned, "f32")],
                             {args.metric: stats})
-            lod_fragments.append(lod_fragment(res, universe))
+            lod_fragments.append(lod_fragment(res, universe, {args.metric: stats}))
 
     elif args.rule == "share":
         numerators, denominators = accumulate_share(
@@ -420,7 +421,7 @@ def run(args: argparse.Namespace) -> None:
                 write_tiles(res, res_dir, universe,
                             [(f"{args.metric}.f32", aligned, "f32")],
                             {args.metric: stats})
-            lod_fragments.append(lod_fragment(res, universe))
+            lod_fragments.append(lod_fragment(res, universe, {args.metric: stats}))
 
     else:  # category
         labels = (
@@ -451,6 +452,10 @@ def run(args: argparse.Namespace) -> None:
                     doms.append(round(entry[1] * 255))
             write_u8(res_dir / f"{args.metric}_category.u8", cats)
             write_u8(res_dir / f"{args.metric}_dominance.u8", doms)
+            cat_stats = {
+                f"{args.metric}_category": compute_stats(cats),
+                f"{args.metric}_dominance": compute_stats(doms),
+            }
             if res in TILED_RESOLUTIONS:
                 write_tiles(res, res_dir, universe,
                             [(f"{args.metric}_category.u8", cats, "u8"),
@@ -465,7 +470,7 @@ def run(args: argparse.Namespace) -> None:
                         "storage": "u8",
                         "aggregation": "categoricalDominant",
                         "categories": labels,
-                        "stats": compute_stats(cats),
+                        "stats": cat_stats[f"{args.metric}_category"],
                     }
                 )
                 metric_entries.append(
@@ -474,10 +479,10 @@ def run(args: argparse.Namespace) -> None:
                         "label": f"{args.label or args.metric} dominance",
                         "storage": "u8",
                         "aggregation": "weightedMean",
-                        "stats": compute_stats(doms),
+                        "stats": cat_stats[f"{args.metric}_dominance"],
                     }
                 )
-            lod_fragments.append(lod_fragment(res, universe))
+            lod_fragments.append(lod_fragment(res, universe, cat_stats))
 
     fragment = {
         "id": args.dataset_id,
@@ -520,16 +525,21 @@ def metric_entry(args: argparse.Namespace, storage: str, rule: str, stats: dict)
     }
 
 
-def lod_fragment(res: int, universe: list[str]) -> dict:
+def lod_fragment(res: int, universe: list[str], metric_stats: dict | None = None) -> dict:
     fragment = {
         "resolution": res,
         "count": len(universe),
         "bounds": bounds_of(positions_for(universe)),
         "cellRadiusMeters": H3_EDGE_METERS[res],
-        "minZoom": 0 if res == 8 else (7.0 if res == 9 else 8.5),
+        # r7/r8 are both country LODs — the client picks by quality profile
+        "minZoom": 0 if res <= 8 else (7.0 if res == 9 else 8.5),
         "positions": f"r{res}/positions.bin",
         "metricTemplate": f"r{res}/{{metric}}",
     }
+    if metric_stats:
+        # per-LOD stats: r7 cells pool ~4x the people of r8 cells, so height
+        # and colour must calibrate against the resolution being drawn
+        fragment["metricStats"] = metric_stats
     if res in TILED_RESOLUTIONS:
         fragment.update(
             {

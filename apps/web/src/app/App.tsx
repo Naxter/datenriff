@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import { MorphEngine } from '@datenriff/sculpture-core';
 import { loadManifest, loadScene, resolveDataset } from '../data/loader';
 import { availableModes, datasetServesMode, getMode } from '../modes/modes';
+import { detectQuality } from '../sculpture/quality';
 import { TargetBuilder } from '../sculpture/targets';
 import { SculptureView } from '../sculpture/SculptureView';
 import { useAtlasStore } from '../state/store';
@@ -39,6 +40,9 @@ export default function App() {
   const manifest = useAtlasStore((s) => s.manifest);
   const setManifest = useAtlasStore((s) => s.setManifest);
 
+  // GPU budget: decides country LOD, DPR, shadows, labels, tile streaming
+  const quality = useMemo(() => detectQuality(), []);
+
   useEffect(() => {
     let cancelled = false;
     loadManifest()
@@ -67,7 +71,7 @@ export default function App() {
     if (scene?.dataset.id === wantedDatasetId) return;
     let cancelled = false;
     useAtlasStore.setState({ status: 'loading' });
-    loadScene(manifest, wantedDatasetId)
+    loadScene(manifest, wantedDatasetId, quality)
       .then((s) => !cancelled && setScene(s))
       .catch((e: unknown) => {
         if (!cancelled) setError(e instanceof Error ? e.message : String(e));
@@ -75,7 +79,7 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, [manifest, wantedDatasetId, scene, setScene, setError]);
+  }, [manifest, wantedDatasetId, scene, quality, setScene, setError]);
 
   // no dataset can serve the requested mode → fall back to one that works
   useEffect(() => {

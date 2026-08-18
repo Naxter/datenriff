@@ -4,7 +4,7 @@
 import { useMemo } from 'react';
 import type { SculptureMode, TooltipFieldDefinition } from '@datenriff/data-contracts';
 import type { SceneData } from '../data/loader';
-import { metricDefinition } from '../data/loader';
+import { metricForScene } from '../data/loader';
 import { CHANGE_PCT_METRIC } from '../modes/modes';
 import type { TargetBuilder } from '../sculpture/targets';
 import { useAtlasStore } from '../state/store';
@@ -52,7 +52,7 @@ function formatField(
     case 'currencyPerSqm':
       return `${dec1Fmt.format(value)} €/m²`;
     case 'category': {
-      const def = metricDefinition(scene.dataset, field.metric);
+      const def = metricForScene(scene, field.metric);
       return def.categories?.[Math.round(value)] ?? '—';
     }
   }

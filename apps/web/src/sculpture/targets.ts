@@ -17,7 +17,7 @@ import {
   type MorphTarget,
 } from '@datenriff/sculpture-core';
 import type { SceneData } from '../data/loader';
-import { metricDefinition } from '../data/loader';
+import { metricForScene } from '../data/loader';
 import { CHANGE_PCT_METRIC } from '../modes/modes';
 
 /** Composition height of the p99.5 peak, tuned against the prototype. */
@@ -66,7 +66,7 @@ export class TargetBuilder {
     if (id === CHANGE_PCT_METRIC) return this.changePct();
     const values = this.scene.metrics.get(id);
     if (!values) throw new Error(`Metric buffer missing: ${id}`);
-    const stats = metricDefinition(this.scene.dataset, id).stats;
+    const stats = metricForScene(this.scene, id).stats;
     if (!stats) throw new Error(`Metric stats missing: ${id}`);
     return { values, stats };
   }

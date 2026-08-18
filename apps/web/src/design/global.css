@@ -394,23 +394,60 @@ body {
 }
 
 @media (max-width: 760px) {
+  /* Portrait phones: the UI stacks up the left edge instead of ringing the
+     frame, so nothing overlaps the sculpture or itself. */
   .header {
     right: 20px;
-    top: 20px;
+    left: 20px;
+    top: 18px;
+  }
+  .header__kicker {
+    font-size: 9px;
+    letter-spacing: 0.26em;
+    margin-bottom: 6px;
+  }
+  .header__subtitle {
+    font-size: 12px;
+    margin-top: 8px;
+  }
+  .export {
+    left: 20px;
+    top: 18px;
+    font-size: 10px;
   }
   .modenav {
     left: 20px;
-    bottom: 20px;
-    gap: 14px;
+    right: 20px;
+    bottom: 16px;
+    gap: 12px 16px;
+  }
+  .modenav__item {
+    font-size: 10px;
+    letter-spacing: 0.16em;
   }
   .legend {
+    left: 20px;
     right: 20px;
+    bottom: 74px;
+    width: auto;
   }
+  .legend__palettes {
+    justify-content: flex-start;
+  }
+  /* Attribution stays visible: the Destatis (DL-DE-BY-2.0) and NASA terms
+     make the credit a licence condition, not decoration. */
   .attribution {
-    display: none;
+    left: 20px;
+    bottom: 168px;
+    font-size: 9px;
+    letter-spacing: 0.1em;
   }
   .timeline {
-    bottom: 120px;
+    bottom: 210px;
+    padding: 8px 14px;
+  }
+  .timeline input[type='range'] {
+    width: 140px;
   }
 }
 

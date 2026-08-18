@@ -33,6 +33,7 @@ import {
   deliverCapture,
 } from './exportBridge';
 import { createLighting } from './lighting';
+import { detectQuality, shadowsEnabled } from './quality';
 import { createSculptureLayers, labelCharacterSet, sculptureRadius } from './layers';
 import { TileManager } from './tiles';
 
@@ -53,6 +54,8 @@ export function SculptureView({ scene, engine }: Props) {
   const timeT = useAtlasStore((s) => s.timeT);
   const palette = useAtlasStore((s) => s.palette);
   const sculptureVersion = useAtlasStore((s) => s.sculptureVersion);
+
+  const quality = useMemo(() => detectQuality(), []);
 
   const [viewState, setViewState] = useState<MapViewState>(() => {
     const shared = readUrlState().view;
@@ -141,7 +144,7 @@ export function SculptureView({ scene, engine }: Props) {
     : 0;
 
   useEffect(() => {
-    if (!fineUsable || !tileManager) return;
+    if (!fineUsable || !tileManager || !quality.streamTiles) return;
     const timer = setTimeout(() => {
       const vp = new WebMercatorViewport({
         ...viewState,
@@ -159,7 +162,7 @@ export function SculptureView({ scene, engine }: Props) {
       });
     }, 180);
     return () => clearTimeout(timer);
-  }, [tileManager, fineUsable, viewState, mode, palette]);
+  }, [tileManager, fineUsable, viewState, mode, palette, quality.streamTiles]);
 
   useEffect(() => {
     writeUrlState(modeId, timeT, palette, viewState);
@@ -184,9 +187,10 @@ export function SculptureView({ scene, engine }: Props) {
 
   const visibleLabels = useMemo(() => {
     const zoom = viewState.zoom;
-    const maxTier = zoom > 7 ? 3 : zoom > 6.2 ? 2 : 1;
+    const byZoom = zoom > 7 ? 3 : zoom > 6.2 ? 2 : 1;
+    const maxTier = Math.min(byZoom, quality.maxLabelTier);
     return scene.cities.filter((c) => c.tier <= maxTier);
-  }, [scene.cities, viewState.zoom]);
+  }, [scene.cities, viewState.zoom, quality.maxLabelTier]);
 
   const characterSet = useMemo(() => labelCharacterSet(scene.cities), [scene.cities]);
 
@@ -246,10 +250,7 @@ export function SculptureView({ scene, engine }: Props) {
   // layers (labels, outline) opt out via `shadowEnabled: false`.
   // `?shadows=0` turns them off — software renderers (headless CI, machines
   // without a GPU) cannot complete the shadow pass at all.
-  const effects = useMemo(() => {
-    const enabled = new URLSearchParams(window.location.search).get('shadows') !== '0';
-    return [createLighting(enabled)];
-  }, []);
+  const effects = useMemo(() => [createLighting(shadowsEnabled(quality))], [quality]);
 
   const finishCapture = () => {
     if (!exporting) return;
@@ -309,7 +310,11 @@ export function SculptureView({ scene, engine }: Props) {
         onAfterRender={finishCapture}
         // MSAA: thin needles alias badly without it
         deviceProps={{ webgl: { antialias: true } }}
-        useDevicePixels={exporting ? EXPORT_DPR : Math.min(window.devicePixelRatio || 1, 2)}
+        useDevicePixels={
+          exporting
+            ? EXPORT_DPR
+            : Math.min(window.devicePixelRatio || 1, quality.maxDevicePixelRatio)
+        }
         style={{ background: 'transparent' }}
       />
     </div>
