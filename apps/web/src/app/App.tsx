@@ -67,11 +67,14 @@ export default function App() {
     return dataset?.id ?? null;
   }, [manifest, modeId]);
 
+  // Only the very first scene shows the veil. A later dataset switch keeps
+  // the current sculpture on screen until the new one has arrived, then the
+  // view cross-morphs (old sinks into the plane, new grows out of it).
   useEffect(() => {
     if (!manifest || !wantedDatasetId) return;
     if (scene?.dataset.id === wantedDatasetId) return;
     let cancelled = false;
-    useAtlasStore.setState({ status: 'loading' });
+    useAtlasStore.setState(scene ? { sceneLoading: true } : { status: 'loading' });
     loadScene(manifest, wantedDatasetId, quality)
       .then((s) => !cancelled && setScene(s))
       .catch((e: unknown) => {
@@ -79,6 +82,7 @@ export default function App() {
       });
     return () => {
       cancelled = true;
+      useAtlasStore.setState({ sceneLoading: false });
     };
   }, [manifest, wantedDatasetId, scene, quality, setScene, setError]);
 
@@ -97,26 +101,32 @@ export default function App() {
   }, [scene]);
 
   // Between a mode switch and the matching scene arriving, the loaded scene
-  // cannot serve the mode (AFTER DARK → PEOPLE swaps datasets). Everything
-  // below renders from `ready` so that gap never reaches the target builder.
+  // cannot serve the mode (AFTER DARK → PEOPLE swaps datasets). The sculpture
+  // stays up showing the last mode it could serve; only the target builder
+  // waits for `ready`.
   const mode = getMode(modeId);
   const ready = ctx !== null && scene !== undefined && datasetServesMode(scene.dataset, mode);
+  const shownModeId = useRef(modeId);
+  if (ready) shownModeId.current = modeId;
+  const shownMode = getMode(shownModeId.current);
 
   const reducedMotion = useMemo(
     () => window.matchMedia('(prefers-reduced-motion: reduce)').matches,
     [],
   );
 
-  // Mode/palette morphs. The first one starts from a flat, transparent
-  // sculpture, so loading doubles as the growth animation.
+  // Mode/palette morphs. A fresh engine (first load, new dataset) grows out
+  // of the plane in its own colours; later switches blend between modes.
   const firstMorph = useRef(true);
   useEffect(() => {
     if (!ctx || !ready) return;
     const target = ctx.builder.build(getMode(modeId), palette);
     if (reducedMotion) {
       ctx.engine.snapTo(target);
+    } else if (ctx.engine.isPristine) {
+      ctx.engine.growFromFlat(target, performance.now(), firstMorph.current ? 1600 : 1100);
     } else {
-      ctx.engine.start(target, performance.now(), firstMorph.current ? 1600 : 950);
+      ctx.engine.start(target, performance.now(), 950);
     }
     firstMorph.current = false;
     bumpSculpture();
@@ -140,22 +150,25 @@ export default function App() {
     bumpSculpture();
   }, [ctx, ready, modeId, timeT, palette, bumpSculpture]);
 
-  const modeTarget = ready ? ctx.builder.build(mode, palette) : null;
+  // `shown` is what the sculpture on screen actually depicts: the current
+  // mode once its scene is loaded, else the last mode this scene served.
+  const shown = ctx !== null && scene !== undefined && datasetServesMode(scene.dataset, shownMode);
+  const shownTarget = shown ? ctx.builder.build(shownMode, palette) : null;
 
   return (
     <div className="atlas">
-      {ready && <SculptureView scene={scene} engine={ctx.engine} />}
-      {ready && <Header mode={mode} />}
+      {ctx && scene && <SculptureView scene={scene} engine={ctx.engine} />}
+      {scene && <Header mode={mode} />}
       {manifest && <ModeNav />}
       {ready && mode.time && <Timeline mode={mode} />}
-      {ready && modeTarget && (
-        <Legend mode={mode} scene={scene} colorStats={modeTarget.colorStats} />
+      {shown && shownTarget && (
+        <Legend mode={shownMode} scene={scene} colorStats={shownTarget.colorStats} />
       )}
-      {ready && <Tooltip mode={mode} scene={scene} builder={ctx.builder} />}
+      {shown && <Tooltip mode={shownMode} scene={scene} builder={ctx.builder} />}
       {ready && <ExportButton builder={ctx.builder} />}
       {ready && <StoryPlayer mode={mode} />}
-      {ready && <Attribution scene={scene} />}
-      <Veil visible={status !== 'ready' || !ready} error={error} />
+      {scene && <Attribution scene={scene} />}
+      <Veil visible={status !== 'ready' || !scene} error={error} />
     </div>
   );
 }

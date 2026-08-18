@@ -43,6 +43,47 @@ export function sculptureRadius(scene: SceneData): number {
     : hexColumnRadius(scene.lod.resolution);
 }
 
+const COLUMN_MATERIAL = {
+  ambient: 0.64,
+  diffuse: 0.52,
+  shininess: 110,
+  specularColor: [46, 42, 38] as [number, number, number],
+};
+
+export interface ColumnLayerOptions {
+  id: string;
+  /** ColumnLayer binary data descriptor; identity change triggers re-upload. */
+  data: unknown;
+  /** Eased blend between the from/to attribute pairs, moved by the engine. */
+  mixAmount?: number;
+  radius: number;
+  opacity?: number;
+  pickable: boolean;
+  onHover?: (info: PickingInfo) => void;
+}
+
+/** The morphing column sculpture itself; also used for the sculpture being
+ *  replaced during a dataset switch, which sinks back into the plane. */
+export function createColumnLayer(o: ColumnLayerOptions): Layer {
+  return new MorphColumnLayer({
+    id: o.id,
+    // binary attribute objects are supported but typed loosely
+    data: o.data as never,
+    // both endpoints live on the GPU; only this uniform moves per frame
+    mixAmount: o.mixAmount ?? 1,
+    diskResolution: 6,
+    radius: o.radius,
+    extruded: true,
+    flatShading: true,
+    pickable: o.pickable,
+    opacity: o.opacity ?? 1,
+    visible: (o.opacity ?? 1) > 0.02,
+    extensions: [NEEDLE],
+    material: COLUMN_MATERIAL,
+    onHover: o.onHover,
+  });
+}
+
 export interface SculptureLayerOptions {
   scene: SceneData;
   /** ColumnLayer binary data descriptor; identity change triggers re-upload. */
@@ -56,6 +97,9 @@ export interface SculptureLayerOptions {
   labelScale?: number;
   /** Country LOD fade during the crossfade to a finer tiled LOD. */
   sculptureOpacity?: number;
+  /** The previous dataset's sculpture while it sinks away, drawn under the
+   *  new one. */
+  outgoingLayer?: Layer;
   /** Fine-LOD tile layers, drawn between sculpture and labels. */
   fineLayers?: Layer[];
   pickable: boolean;
@@ -88,26 +132,14 @@ export function createSculptureLayers(o: SculptureLayerOptions): Layer[] {
       ...SHADOW_OFF,
       material: { ambient: 1, diffuse: 0, shininess: 1, specularColor: [0, 0, 0] },
     }),
-    new MorphColumnLayer({
+    o.outgoingLayer,
+    createColumnLayer({
       id: 'sculpture',
-      // binary attribute objects are supported but typed loosely
-      data: o.data as never,
-      // both endpoints live on the GPU; only this uniform moves per frame
-      mixAmount: o.mixAmount ?? 1,
-      diskResolution: 6,
+      data: o.data,
+      mixAmount: o.mixAmount,
       radius: o.radius,
-      extruded: true,
-      flatShading: true,
+      opacity: o.sculptureOpacity,
       pickable: o.pickable,
-      opacity: o.sculptureOpacity ?? 1,
-      visible: (o.sculptureOpacity ?? 1) > 0.02,
-      extensions: [NEEDLE],
-      material: {
-        ambient: 0.64,
-        diffuse: 0.52,
-        shininess: 110,
-        specularColor: [46, 42, 38],
-      },
       onHover: o.onHover,
     }),
     ...(o.fineLayers ?? []),

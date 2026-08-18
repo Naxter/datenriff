@@ -52,6 +52,11 @@ export class MorphEngine {
     return this.animating;
   }
 
+  /** True until the first target arrives — the buffers are still all zero. */
+  get isPristine(): boolean {
+    return this.version === 0;
+  }
+
   /** Changes on every endpoint swap; the view keys its buffers on it. */
   get bufferVersion(): number {
     return this.version;
@@ -87,6 +92,40 @@ export class MorphEngine {
     }
     for (let i = 0; i < h.length; i++) h[i] = h[i]! + (ht[i]! - h[i]!) * t;
     for (let i = 0; i < c.length; i++) c[i] = c[i]! + (ct[i]! - c[i]!) * t;
+  }
+
+  /** Grow a sculpture out of the plane: `from` is flat and transparent but
+   *  already carries the target's colours, so the columns rise in their own
+   *  hue instead of brightening up from black. Used for the first load and
+   *  when a new dataset arrives. */
+  growFromFlat(target: MorphTarget, nowMs: number, duration = 1600, easing: Easing = cubicInOut): void {
+    this.assertTarget(target);
+    this.heights.fill(0);
+    this.colors.set(target.colors);
+    for (let i = 3; i < this.colors.length; i += 4) this.colors[i] = 0;
+    this.heightsTo.set(target.heights);
+    this.colorsTo.set(target.colors);
+    this.mixAmount = 0;
+    this.startTime = nowMs;
+    this.duration = Math.max(1, duration);
+    this.easing = easing;
+    this.animating = true;
+    this.version += 1;
+  }
+
+  /** The reverse: sink what is on screen back into the plane and fade it
+   *  out, keeping its colours. Used for the sculpture being replaced. */
+  fadeOut(nowMs: number, duration = 950, easing: Easing = cubicInOut): void {
+    this.captureCurrentAsFrom();
+    this.heightsTo.fill(0);
+    this.colorsTo.set(this.colors);
+    for (let i = 3; i < this.colorsTo.length; i += 4) this.colorsTo[i] = 0;
+    this.mixAmount = 0;
+    this.startTime = nowMs;
+    this.duration = Math.max(1, duration);
+    this.easing = easing;
+    this.animating = true;
+    this.version += 1;
   }
 
   /** Jump without animation (initial load, prefers-reduced-motion). */

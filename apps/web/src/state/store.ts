@@ -14,6 +14,8 @@ interface AtlasState {
   error?: string;
   manifest?: AtlasManifest;
   scene?: SceneData;
+  /** A further dataset is streaming in while `scene` stays on screen. */
+  sceneLoading: boolean;
   modeId: string;
   /** Timeline position for time-enabled modes; 1 = latest step. */
   timeT: number;
@@ -40,6 +42,7 @@ interface AtlasState {
 
 export const useAtlasStore = create<AtlasState>((set) => ({
   status: 'loading',
+  sceneLoading: false,
   modeId: 'people',
   timeT: 1,
   palette: null,
@@ -48,7 +51,7 @@ export const useAtlasStore = create<AtlasState>((set) => ({
   storyStop: null,
   sculptureVersion: 0,
   setManifest: (manifest) => set({ manifest }),
-  setScene: (scene) => set({ scene, status: 'ready' }),
+  setScene: (scene) => set({ scene, status: 'ready', sceneLoading: false }),
   setError: (error) => set({ error, status: 'error' }),
   setMode: (modeId) => set({ modeId, timeT: 1, hover: null }),
   setTimeT: (timeT) => set({ timeT }),

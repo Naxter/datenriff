@@ -84,6 +84,36 @@ test('MorphEngine.start from mid-transition keeps what is on screen', () => {
   );
 });
 
+test('MorphEngine.growFromFlat rises in the target colours, not from black', () => {
+  const engine = new MorphEngine(2);
+  assert.ok(engine.isPristine);
+  const target = {
+    heights: new Float32Array([100, 200]),
+    colors: new Uint8Array([255, 0, 0, 255, 0, 255, 0, 255]),
+  };
+  engine.growFromFlat(target, 0, 1000);
+  assert.ok(!engine.isPristine);
+  assert.deepEqual([...engine.heights], [0, 0], 'starts flat');
+  assert.deepEqual([...engine.colors], [255, 0, 0, 0, 0, 255, 0, 0], 'from = target rgb, alpha 0');
+  assert.deepEqual([...engine.heightsTo], [100, 200]);
+  assert.deepEqual([...engine.colorsTo], [...target.colors]);
+  assert.equal(engine.mixAmount, 0);
+  engine.tick(1000);
+  assert.equal(engine.mixAmount, 1);
+});
+
+test('MorphEngine.fadeOut sinks the visible state into the plane', () => {
+  const engine = new MorphEngine(1);
+  engine.snapTo({ heights: new Float32Array([100]), colors: new Uint8Array([10, 20, 30, 255]) });
+  engine.fadeOut(0, 1000);
+  assert.deepEqual([...engine.heights], [100], 'from = what was on screen');
+  assert.deepEqual([...engine.colors], [10, 20, 30, 255]);
+  assert.deepEqual([...engine.heightsTo], [0], 'to = flat');
+  assert.deepEqual([...engine.colorsTo], [10, 20, 30, 0], 'to = same hue, transparent');
+  assert.equal(engine.mixAmount, 0);
+  assert.ok(engine.isAnimating);
+});
+
 test('MorphEngine.setHeightMix scrubs between two buffers', () => {
   const engine = new MorphEngine(2);
   const a = new Float32Array([0, 100]);

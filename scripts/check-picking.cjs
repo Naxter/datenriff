@@ -6,7 +6,8 @@
 //
 // Usage: npm run dev, then: node scripts/check-picking.cjs [url]
 // Needs playwright: npm i -D playwright && npx playwright install chromium
-// Slow and timing-sensitive on software rendering; raise PICK_WAIT_MS there.
+// Slow and timing-sensitive on software rendering; raise PICK_WAIT_MS there,
+// or set PICK_GPU=1 to run headless Chromium on the machine's real GPU.
 
 const HOVER_POINTS = [
   [700, 450],
@@ -29,7 +30,10 @@ const HOVER_POINTS = [
   }
 
   const browser = await chromium.launch({
-    args: ['--enable-unsafe-swiftshader', '--use-angle=swiftshader'],
+    args:
+      process.env.PICK_GPU === '1'
+        ? ['--enable-gpu', '--ignore-gpu-blocklist', '--use-angle=d3d11']
+        : ['--enable-unsafe-swiftshader', '--use-angle=swiftshader'],
   });
   const page = await browser.newPage({ viewport: { width: 1400, height: 900 } });
   page.on('pageerror', (err) => console.error('[pageerror]', err.message));
