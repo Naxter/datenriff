@@ -17,7 +17,9 @@
 const path = require('node:path');
 const fs = require('node:fs');
 const { PNG } = require('pngjs');
-const pixelmatch = require('pixelmatch');
+// pixelmatch 7 is ESM-only; require(esm) hands back the namespace
+const pixelmatchModule = require('pixelmatch');
+const pixelmatch = pixelmatchModule.default ?? pixelmatchModule;
 
 const ROOT = path.join(__dirname, '..');
 const OUT = path.join(ROOT, '.visual');
