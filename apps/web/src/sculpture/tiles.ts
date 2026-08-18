@@ -68,6 +68,9 @@ const REQUEST_CAP = 300;
 const FAR_FIELD_TOP = 0.35;
 /** Zone half-extent cap around the focus, in screen widths. */
 const ZONE_CAP = 1.4;
+/** From this zoom on the zone is the whole frame (see tileZone). */
+const DISTRICT_ZOOM = 10;
+const ZONE_CAP_DISTRICT = 4;
 /** Feather between fine tiles and country LOD, in screen widths. */
 const ZONE_FEATHER = 0.12;
 
@@ -92,7 +95,10 @@ export interface TileZone {
  *  around the wrong point while the country LOD had already faded out. */
 export function tileZone(view: MapViewState, width: number, height: number): TileZone {
   const vp = new WebMercatorViewport({ ...view, width, height });
-  const yCut = height * FAR_FIELD_TOP;
+  // at district zoom the whole frame is a handful of tiles: cover it all,
+  // or the country columns show through at the edges as translucent bells
+  const district = view.zoom >= DISTRICT_ZOOM;
+  const yCut = district ? 0 : height * FAR_FIELD_TOP;
   const corners = [
     [0, height],
     [width, height],
@@ -102,17 +108,23 @@ export function tileZone(view: MapViewState, width: number, height: number): Til
   const focus: [number, number] = [view.longitude, view.latitude];
   const span = (width * 360) / (512 * Math.pow(2, view.zoom));
   const kx = Math.cos((view.latitude * Math.PI) / 180);
-  const capLon = ZONE_CAP * span;
-  const capLat = ZONE_CAP * span * kx;
+  const cap = district ? ZONE_CAP_DISTRICT : ZONE_CAP;
+  const capLon = cap * span;
+  const capLat = cap * span * kx;
   const lons = corners.map((c) => c[0]).filter(Number.isFinite);
   const lats = corners.map((c) => c[1]).filter(Number.isFinite);
+  const feather: [number, number] = [ZONE_FEATHER * span, ZONE_FEATHER * span * kx];
+  // padded by two feathers: the country LOD fades over one of them, and
+  // that margin — plus the width of a country column standing just outside
+  // the frame — must lie beyond the frame's corners, not across them
+  const pad: [number, number] = [feather[0] * 2, feather[1] * 2];
   const zone: LonLatBounds = [
-    Math.max(Math.min(...lons, focus[0]), focus[0] - capLon),
-    Math.max(Math.min(...lats, focus[1]), focus[1] - capLat),
-    Math.min(Math.max(...lons, focus[0]), focus[0] + capLon),
-    Math.min(Math.max(...lats, focus[1]), focus[1] + capLat),
+    Math.max(Math.min(...lons, focus[0]) - pad[0], focus[0] - capLon),
+    Math.max(Math.min(...lats, focus[1]) - pad[1], focus[1] - capLat),
+    Math.min(Math.max(...lons, focus[0]) + pad[0], focus[0] + capLon),
+    Math.min(Math.max(...lats, focus[1]) + pad[1], focus[1] + capLat),
   ];
-  return { zone, focus, feather: [ZONE_FEATHER * span, ZONE_FEATHER * span * kx] };
+  return { zone, focus, feather };
 }
 
 export class TileManager {
@@ -124,6 +136,11 @@ export class TileManager {
   private readonly lastUsed = new Map<string, number>();
   private clock = 0;
   private currentGen = '';
+  /** The generation before the current one (another LOD, mode, palette or
+   *  focus). Its ready tiles stand in for current-generation tiles that
+   *  have not arrived yet, so a switch replaces tiles one by one instead of
+   *  dropping to the country LOD and back. */
+  private previousGen = '';
   /** Keys wanted by the latest query, and the zone they should cover. */
   private needed = new Set<string>();
   private zone: LonLatBounds | null = null;
@@ -182,22 +199,50 @@ export class TileManager {
    *  stack the coarse column over the fine ones. */
   tiles(): ReadyTile[] {
     const result: ReadyTile[] = [];
+    const currentIds = new Set<string>();
     for (const tile of this.ready.values()) {
       if (!tile.key.startsWith(this.currentGen)) continue;
       if (this.zone && !intersects(tile.bounds, this.zone)) continue;
       result.push(tile);
+      currentIds.add(tile.tileId);
+    }
+    if (this.previousGen) {
+      // tiles share ids across LODs (same parent), so an old tile steps
+      // aside exactly when its replacement is ready
+      for (const tile of this.ready.values()) {
+        if (!tile.key.startsWith(this.previousGen)) continue;
+        if (currentIds.has(tile.tileId)) continue;
+        if (this.zone && !intersects(tile.bounds, this.zone)) continue;
+        result.push(tile);
+      }
     }
     return result;
   }
 
-  /** Share of the tiles wanted for the current zone that have arrived.
-   *  The view keeps the country LOD up until this is high — fading it out
-   *  earlier leaves bare paper where tiles are still decoding. */
+  /** Share of the tiles wanted for the current zone that have arrived — in
+   *  the current generation or, standing in, the previous one. The view
+   *  keeps the country LOD up until this is high — fading it out earlier
+   *  leaves bare paper where tiles are still decoding. */
   coverage(): number {
     if (this.needed.size === 0) return 0;
     let have = 0;
-    for (const key of this.needed) if (this.ready.has(key)) have += 1;
+    for (const key of this.needed) {
+      if (this.ready.has(key)) {
+        have += 1;
+      } else if (this.previousGen) {
+        const tileId = key.slice(key.lastIndexOf('|') + 1);
+        if (this.ready.has(this.previousGen + tileId)) have += 1;
+      }
+    }
     return have / this.needed.size;
+  }
+
+  /** Once every wanted tile of the current generation is ready, the
+   *  previous generation has nothing left to stand in for. */
+  private retirePrevious(): void {
+    if (!this.previousGen) return;
+    for (const key of this.needed) if (!this.ready.has(key)) return;
+    this.previousGen = '';
   }
 
   update(q: TileQuery): void {
@@ -207,7 +252,11 @@ export class TileManager {
     if (!index) return;
 
     const scale = effectiveColorScale(q.mode, q.palette);
-    this.currentGen = `${lod.resolution}|${q.mode.id}|${scale.palette}|${focusKey(q.region ?? null)}|`;
+    const gen = `${lod.resolution}|${q.mode.id}|${scale.palette}|${focusKey(q.region ?? null)}|`;
+    if (gen !== this.currentGen) {
+      if (this.currentGen) this.previousGen = this.currentGen;
+      this.currentGen = gen;
+    }
     this.zone = q.zone;
 
     // nearest to the camera target first: those are the columns that fill
@@ -230,9 +279,14 @@ export class TileManager {
       const key = this.currentGen + tile.id;
       this.needed.add(key);
       this.lastUsed.set(key, this.clock);
+      // the stand-in stays fresh until its replacement lands
+      if (this.previousGen && !this.ready.has(key)) {
+        this.lastUsed.set(this.previousGen + tile.id, this.clock);
+      }
       if (this.ready.has(key) || this.inFlight.has(key)) continue;
       this.request(lod, index, tile, key, q.mode, q.palette, q.region ?? null);
     }
+    this.retirePrevious();
     this.evict();
     this.onChange?.(); // zone/needed changed even if no tile did
   }
@@ -334,8 +388,12 @@ export class TileManager {
       console.error(`tile ${msg.key}:`, msg.message);
       return;
     }
-    // stale generation (mode/palette changed while loading) → drop
-    if (!msg.key.startsWith(this.currentGen) || !bounds) return;
+    // stale generation (mode/palette changed while loading) → drop; the
+    // previous generation still lands, it stands in until replaced
+    if (!bounds) return;
+    if (!msg.key.startsWith(this.currentGen) && !(this.previousGen && msg.key.startsWith(this.previousGen))) {
+      return;
+    }
     const tileId = msg.key.slice(msg.key.lastIndexOf('|') + 1);
     this.ready.set(msg.key, {
       key: msg.key,
@@ -348,6 +406,7 @@ export class TileManager {
       values: msg.values,
     });
     this.lastUsed.set(msg.key, this.clock);
+    this.retirePrevious();
     this.onChange?.();
   }
 

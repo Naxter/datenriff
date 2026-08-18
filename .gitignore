@@ -20,3 +20,6 @@ pipelines/**/downloads/
 *.log
 .DS_Store
 .idea/
+
+# Local visual-regression baselines (scripts/visual-check.cjs)
+.visual/

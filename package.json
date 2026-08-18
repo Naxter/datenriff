@@ -17,11 +17,15 @@
     "test:packages": "npm run build:packages && node --test packages/color-scales/test/*.test.mjs packages/sculpture-core/test/*.test.mjs",
     "test:pipeline": "node scripts/test-pipeline.mjs",
     "test": "npm run test:packages && npm run test:pipeline",
-    "deploy": "npm run build && wrangler pages deploy apps/web/dist --project-name datenriff",
-    "build:manifest": "node scripts/build-manifest.mjs"
+    "deploy": "npm run build && node scripts/prune-dist.mjs && wrangler pages deploy apps/web/dist --project-name datenriff",
+    "build:manifest": "node scripts/build-manifest.mjs",
+    "visual": "node scripts/visual-check.cjs --gpu",
+    "visual:update": "node scripts/visual-check.cjs --gpu --update"
   },
   "devDependencies": {
+    "pixelmatch": "^7.2.0",
     "playwright": "^1.62.1",
+    "pngjs": "^7.0.0",
     "typescript": "^5.9.2",
     "wrangler": "^4.124.0"
   }

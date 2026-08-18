@@ -531,8 +531,10 @@ def lod_fragment(res: int, universe: list[str], metric_stats: dict | None = None
         "count": len(universe),
         "bounds": bounds_of(positions_for(universe)),
         "cellRadiusMeters": H3_EDGE_METERS[res],
-        # r7/r8 are both country LODs — the client picks by quality profile
-        "minZoom": 0 if res <= 8 else (7.0 if res == 9 else 8.5),
+        # r7/r8 are both country LODs — the client picks by quality profile;
+        # r10 waits for district zoom: below ~10 its 66 m cells are a pixel
+        # wide and read as haze, and one viewport would pull ~150 tiles
+        "minZoom": 0 if res <= 8 else (7.0 if res == 9 else 10.2),
         "positions": f"r{res}/positions.bin",
         "metricTemplate": f"r{res}/{{metric}}",
     }
