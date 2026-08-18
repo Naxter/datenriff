@@ -40,9 +40,10 @@ Then open <http://localhost:8080/prototype/>.
 | AGE | inhabitants | mean age |
 | RENT | dwellings | net cold rent €/m² |
 | HEATING | dwellings | dominant energy carrier |
+| AFTER DARK | night-light brightness | brightness — a NASA satellite raster on the same renderer |
 
-Planned: AFTER DARK (night lights), FAMILIES, HOMES, VACANCY, RAIN, ENERGY,
-LAND, FOREST — see the [roadmap](docs/roadmap.md).
+Planned: FAMILIES, HOMES, VACANCY, RAIN, ENERGY, LAND, FOREST — see the
+[roadmap](docs/roadmap.md).
 
 Colour ramps are an option, not a constant: switch them via the dots below the
 legend or by URL (`?palette=glacier|ember|noir|…`). The prototype takes the
