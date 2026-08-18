@@ -15,6 +15,18 @@ export default defineConfig({
       '@datenriff/color-scales': pkg('color-scales'),
       '@datenriff/sculpture-core': pkg('sculpture-core'),
     },
+    // npm splits luma/deck between the workspace root and apps/web; two
+    // physical copies break `instanceof` checks inside luma ("texture value")
+    dedupe: [
+      '@deck.gl/core',
+      '@deck.gl/layers',
+      '@deck.gl/react',
+      '@luma.gl/core',
+      '@luma.gl/engine',
+      '@luma.gl/webgl',
+      '@luma.gl/shadertools',
+      '@luma.gl/constants',
+    ],
   },
   build: {
     target: 'es2022',
