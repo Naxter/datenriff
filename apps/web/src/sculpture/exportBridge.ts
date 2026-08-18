@@ -25,9 +25,16 @@ export const EXPORT_FORMATS: ExportFormat[] = [
 export const DEFAULT_FORMAT = EXPORT_FORMATS[0]!;
 
 let activeFormat: ExportFormat = DEFAULT_FORMAT;
+let activeDpr = EXPORT_DPR;
 
 export function currentFormat(): ExportFormat {
   return activeFormat;
+}
+
+/** Device pixels per CSS pixel of the capture in progress: 2 for the
+ *  poster, a fraction for the dialog's preview. */
+export function currentDpr(): number {
+  return activeDpr;
 }
 
 export const CAPTURE_EVENT = 'atlas-capture';
@@ -40,13 +47,16 @@ interface PendingCapture {
 
 let pending: PendingCapture | null = null;
 
-/** Ask the live view for a poster frame; resolves with a copied canvas. */
+/** Ask the live view for a poster frame; resolves with a copied canvas.
+ *  `dpr` < EXPORT_DPR gives a quick low-resolution frame for previews. */
 export function requestSculptureCapture(
   format: ExportFormat = DEFAULT_FORMAT,
+  dpr = EXPORT_DPR,
   timeoutMs = 60_000,
 ): Promise<HTMLCanvasElement> {
   if (pending) return Promise.reject(new Error('Capture already in progress'));
   activeFormat = format;
+  activeDpr = dpr;
   return new Promise<HTMLCanvasElement>((resolve, reject) => {
     pending = {
       resolve,
