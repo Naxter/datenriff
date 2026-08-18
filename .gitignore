@@ -19,3 +19,4 @@ pipelines/**/downloads/
 # Tooling
 *.log
 .DS_Store
+.idea/
