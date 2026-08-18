@@ -53,6 +53,10 @@ export interface ModeTarget extends MorphTarget {
   colorStats: MetricStats;
   /** Elevation buffers per time step (same calibration), for scrubbing. */
   timeHeights?: Map<string, Float32Array>;
+  /** Colour buffers per time step, when colour shows the same quantity as
+   *  height (a brightness year, a capacity year); absent when colour is a
+   *  derived property such as the 2011→2022 change. */
+  timeColors?: Map<string, Uint8Array>;
 }
 
 export class TargetBuilder {
@@ -123,10 +127,19 @@ export class TargetBuilder {
     // same calibration for every step, so a shrinking column really shrank
     if (mode.time) {
       target.timeHeights = new Map();
+      const colorFollows = mode.colorMetric === mode.heightMetric;
+      if (colorFollows) target.timeColors = new Map();
       for (const step of mode.time.steps) {
         const metricId = mode.time.metricTemplate.replace('{step}', step);
-        const stepValues = this.resolveMetric(metricId).values;
-        target.timeHeights.set(step, computeElevations(toF32(stepValues), scale));
+        const stepMetric = this.resolveMetric(metricId);
+        target.timeHeights.set(step, computeElevations(toF32(stepMetric.values), scale));
+        if (colorFollows) {
+          // one colour domain (the height metric's stats) for every step
+          const stepColors = new Uint8Array(this.scene.count * 4);
+          applyColorScale(colorScale, stepMetric.values, color.stats, stepColors, saturation);
+          applyOcclusion(stepColors, this.occlusion(heights), OCCLUSION_STRENGTH);
+          target.timeColors!.set(step, stepColors);
+        }
       }
     }
 

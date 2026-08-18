@@ -114,16 +114,38 @@ test('MorphEngine.fadeOut sinks the visible state into the plane', () => {
   assert.ok(engine.isAnimating);
 });
 
-test('MorphEngine.setHeightMix scrubs between two buffers', () => {
+test('MorphEngine.scrub parks the step pair and drives the mix', () => {
   const engine = new MorphEngine(2);
   const a = new Float32Array([0, 100]);
   const b = new Float32Array([100, 300]);
-  engine.setHeightMix(a, b, 0.5);
-  assert.deepEqual([...engine.heights], [50, 200]);
-  assert.equal(engine.mixAmount, 1, 'scrub parks the shader at the end state');
-  assert.deepEqual([...engine.heightsTo], [50, 200], 'both endpoints hold the scrub');
-  engine.setHeightMix(a, b, 2); // clamped
+  engine.scrub(a, b, 0.5);
+  assert.deepEqual([...engine.heights], [0, 100], 'from = step a');
+  assert.deepEqual([...engine.heightsTo], [100, 300], 'to = step b');
+  assert.equal(engine.mixAmount, 0.5, 'the slider drives the uniform');
+  const v = engine.bufferVersion;
+  engine.scrub(a, b, 0.8);
+  assert.equal(engine.bufferVersion, v, 'same pair: no re-upload');
+  assert.equal(engine.mixAmount, 0.8);
+  engine.scrub(a, b, 2); // clamped
+  assert.equal(engine.mixAmount, 1);
+  const c = new Float32Array([5, 5]);
+  engine.scrub(b, c, 0.1);
+  assert.equal(engine.bufferVersion, v + 1, 'new pair: buffers re-uploaded once');
   assert.deepEqual([...engine.heights], [100, 300]);
+  assert.deepEqual([...engine.heightsTo], [5, 5]);
+});
+
+test('MorphEngine.scrub with per-step colours mixes colours too', () => {
+  const engine = new MorphEngine(1);
+  engine.scrub(
+    new Float32Array([1]),
+    new Float32Array([2]),
+    0.25,
+    new Uint8Array([10, 0, 0, 255]),
+    new Uint8Array([20, 0, 0, 255]),
+  );
+  assert.deepEqual([...engine.colors], [10, 0, 0, 255]);
+  assert.deepEqual([...engine.colorsTo], [20, 0, 0, 255]);
 });
 
 test('MorphEngine rejects mismatched targets', () => {
