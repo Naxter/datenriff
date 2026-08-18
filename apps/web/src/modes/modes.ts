@@ -1,7 +1,7 @@
 // A mode is data, not code: adding one means adding an entry here plus the
 // metrics in the dataset. No renderer changes.
 
-import type { SculptureMode } from '@datenriff/data-contracts';
+import type { SculptureDataset, SculptureMode } from '@datenriff/data-contracts';
 
 const DEMO_ATTRIBUTION = {
   label: 'Demo: synthetische Daten — Zensus-Pipeline siehe pipelines/zensus',
@@ -99,4 +99,21 @@ export const MODES: SculptureMode[] = [
 
 export function getMode(id: string): SculptureMode {
   return MODES.find((m) => m.id === id) ?? MODES[0]!;
+}
+
+/** Modes whose metrics the loaded dataset actually carries. */
+export function availableModes(dataset: SculptureDataset): SculptureMode[] {
+  const has = (id: string) => dataset.metrics.some((m) => m.id === id);
+  return MODES.filter((mode) => {
+    if (!has(mode.heightMetric)) return false;
+    if (mode.colorMetric === CHANGE_PCT_METRIC) {
+      return has('population_2022') && has('population_2011');
+    }
+    if (!has(mode.colorMetric)) return false;
+    const scale = mode.colorScale;
+    if (scale.type === 'categorical' && scale.saturationMetric) {
+      return has(scale.saturationMetric);
+    }
+    return true;
+  });
 }

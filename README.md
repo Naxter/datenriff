@@ -121,6 +121,10 @@ comparison and mirrored into `apps/web`.
 
 The bundled demo dataset is synthetic and contains no real census values. It
 is deterministic, so screenshots and visual comparisons are reproducible.
+Running the [census pipeline](pipelines/zensus/README.md) on the official
+Destatis grid downloads switches the app to the real Census 2022/2011 data
+(population, age, homes, rent, heating energy source); the demo stays in the
+manifest as a fallback.
 
 Target sources are Destatis (Census 2022/2011), NASA Black Marble, DWD,
 Marktstammdatenregister and BKG land cover. Attribution and licence come per

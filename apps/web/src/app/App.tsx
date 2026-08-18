@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { MorphEngine } from '@datenriff/sculpture-core';
 import { loadScene } from '../data/loader';
-import { getMode } from '../modes/modes';
+import { availableModes, getMode } from '../modes/modes';
 import { TargetBuilder } from '../sculpture/targets';
 import { SculptureView } from '../sculpture/SculptureView';
 import { useAtlasStore } from '../state/store';
@@ -47,6 +47,15 @@ export default function App() {
       cancelled = true;
     };
   }, [setScene, setError]);
+
+  // a dataset may not carry every mode's metrics yet — fall back gracefully
+  useEffect(() => {
+    if (!scene) return;
+    const modes = availableModes(scene.dataset);
+    if (modes.length > 0 && !modes.some((m) => m.id === modeId)) {
+      useAtlasStore.setState({ modeId: modes[0]!.id, timeT: 1 });
+    }
+  }, [scene, modeId]);
 
   const ctx = useMemo(() => {
     if (!scene) return null;

@@ -125,6 +125,7 @@ def stream_rows(
     encoding: str,
     delimiter: str,
     weight_lookup: dict[str, float] | None = None,
+    extra_missing: frozenset[str] | None = None,
 ) -> Iterator[tuple[float, float, dict]]:
     """Yield (x_3035, y_3035, payload) per row; payload holds parsed floats."""
     fh, reader = open_reader(path, encoding, delimiter)
@@ -149,7 +150,7 @@ def stream_rows(
             else:
                 assert id_col is not None
                 x, y = parse_grid_id(row[id_col]).centroid
-            payload = {c: parse_value(row.get(c)) for c in columns}
+            payload = {c: parse_value(row.get(c), extra_missing) for c in columns}
             if weight_lookup is not None:
                 payload[WEIGHT_KEY] = weight_lookup.get(row_key(row, id_col, x, y))
             yield x, y, payload
@@ -321,8 +322,15 @@ def run(args: argparse.Namespace) -> None:
     else:
         raise SystemExit(f"Unknown rule: {args.rule}")
 
+    extra_missing = (
+        frozenset(t.strip() for t in args.treat_missing.split(","))
+        if args.treat_missing
+        else None
+    )
     print(f"Streaming {input_path.name} ({args.rule}) …", file=sys.stderr)
-    rows = stream_rows(input_path, columns, args.encoding, args.delimiter, weight_lookup)
+    rows = stream_rows(
+        input_path, columns, args.encoding, args.delimiter, weight_lookup, extra_missing
+    )
     cell_payloads = batched_cells(rows, cell_of_batch)
 
     parent_of = lambda cell, res: h3.cell_to_parent(cell, res)  # noqa: E731
@@ -457,6 +465,7 @@ def run(args: argparse.Namespace) -> None:
                         "storage": "u8",
                         "aggregation": "categoricalDominant",
                         "categories": labels,
+                        "stats": compute_stats(cats),
                     }
                 )
                 metric_entries.append(
@@ -465,6 +474,7 @@ def run(args: argparse.Namespace) -> None:
                         "label": f"{args.label or args.metric} dominance",
                         "storage": "u8",
                         "aggregation": "weightedMean",
+                        "stats": compute_stats(doms),
                     }
                 )
             lod_fragments.append(lod_fragment(res, universe))
@@ -563,6 +573,10 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--download-date", help="ISO date the source was downloaded")
     parser.add_argument("--encoding", default="utf-8-sig")
     parser.add_argument("--delimiter", default=";")
+    parser.add_argument(
+        "--treat-missing",
+        help="comma-separated extra missing markers, e.g. \"-1\" for the 2011 grid",
+    )
     parser.add_argument(
         "--write-r10",
         action="store_true",
