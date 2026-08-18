@@ -105,11 +105,21 @@ apps/web/public/data/zensus/
 └── r9/                 # regional LOD, tiled by H3 r5 parent + index.json
 ```
 
-After the last metric run, pack the tiled LOD (one file per tile instead of
+All ten metrics in one go (a Python driver, because the Windows shell mangles
+the umlauts in the heating labels), with the r10 city LOD:
+
+    .venv/Scripts/python run_all_metrics.py --write-r10       # ~6 minutes
+
+After the last metric run, pack the tiled LODs (one file per tile instead of
 one per tile and metric — 1,724 files instead of 19,000; re-run it whenever
 a metric is added):
 
     .venv/Scripts/python -m zensus_pipeline.pack --lod ../../apps/web/public/data/zensus/r9
+    .venv/Scripts/python -m zensus_pipeline.pack --lod ../../apps/web/public/data/zensus/r10
+
+The whole-LOD buffers of r9/r10 stay for the pipeline's own alignment but
+are never fetched by the app; `npm run deploy` prunes them from `dist`
+(`scripts/prune-dist.mjs`).
 
 Then run `npm run build:manifest` once — it assembles
 `apps/web/public/data/manifest.json` from every pipeline output it finds,

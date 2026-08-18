@@ -15,7 +15,8 @@ export const INITIAL_VIEW_STATE: MapViewState = {
   bearing: -18,
   // controller constraints
   minZoom: 4.6,
-  maxZoom: 10.5,
+  // 12 is a district: ~10 km across, where the r10 (100 m) cells resolve
+  maxZoom: 12,
   minPitch: 15,
   maxPitch: 68,
 };
