@@ -413,7 +413,7 @@ body {
   display: grid;
   place-items: center;
   background: var(--paper);
-  transition: opacity 700ms ease;
+  transition: opacity 900ms ease, background-color 900ms ease;
 }
 
 .veil--hidden {
@@ -421,8 +421,41 @@ body {
   pointer-events: none;
 }
 
+/* Opening sequence: the paper clears, the mark stays and grows into the
+   title while the sculpture rises beneath it. Pointer events pass through
+   so a click on the sculpture still skips the intro (App listens). */
+.veil--intro {
+  background: transparent;
+  pointer-events: none;
+}
+
+.veil--intro .veil__mark {
+  transform: translateY(-27vh);
+  /* a paper halo keeps the small lines legible over the rising columns */
+  text-shadow:
+    0 0 2px var(--paper),
+    0 0 8px var(--paper),
+    0 0 18px var(--paper),
+    0 0 30px var(--paper);
+}
+
+.veil--intro .veil__title {
+  font-size: clamp(56px, 8vw, 112px);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  line-height: 0.96;
+}
+
+.veil--intro .veil__sub {
+  font-size: 13px;
+  letter-spacing: 0.42em;
+  margin-top: 16px;
+  color: var(--ink);
+}
+
 .veil__mark {
   text-align: center;
+  transition: transform 900ms cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 
 .veil__title {
@@ -430,6 +463,9 @@ body {
   font-size: 44px;
   margin: 0;
   letter-spacing: 0.01em;
+  transition:
+    font-size 900ms cubic-bezier(0.2, 0.7, 0.2, 1),
+    letter-spacing 900ms ease;
 }
 
 .veil__sub {
@@ -438,6 +474,44 @@ body {
   text-transform: uppercase;
   color: var(--ink-soft);
   margin-top: 10px;
+  transition: font-size 900ms ease, letter-spacing 900ms ease, margin-top 900ms ease;
+}
+
+.veil__tagline {
+  font-size: 15px;
+  color: var(--ink);
+  margin: 26px auto 0;
+  max-width: 34ch;
+  line-height: 1.5;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 800ms ease 900ms, transform 800ms ease 900ms;
+}
+
+.veil--reveal .veil__tagline {
+  opacity: 1;
+  transform: none;
+}
+
+/* the UI stays out until the intro is over; attribution is exempt (licence) */
+.atlas--intro .header,
+.atlas--intro .modenav,
+.atlas--intro .legend,
+.atlas--intro .export,
+.atlas--intro .stories,
+.atlas--intro .timeline,
+.atlas--intro .tooltip {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.header,
+.modenav,
+.legend,
+.export,
+.stories,
+.timeline {
+  transition: opacity 700ms ease;
 }
 
 .veil__error {

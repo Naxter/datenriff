@@ -16,6 +16,7 @@ import { Attribution } from '../components/Attribution';
 import { ExportButton } from '../components/ExportButton';
 import { StoryPlayer } from '../components/StoryPlayer';
 import { Veil } from '../components/Veil';
+import { INTRO_GROWTH_MS, introEligible, runIntro } from './intro';
 
 export default function App() {
   const status = useAtlasStore((s) => s.status);
@@ -28,7 +29,13 @@ export default function App() {
   const setError = useAtlasStore((s) => s.setError);
   const bumpSculpture = useAtlasStore((s) => s.bumpSculpture);
 
-  // restore shared URL state before anything renders from it
+  const reducedMotion = useMemo(
+    () => window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+    [],
+  );
+
+  // restore shared URL state before anything renders from it, and decide
+  // about the opening sequence before the first growth morph can fire
   const urlApplied = useRef(false);
   if (!urlApplied.current) {
     urlApplied.current = true;
@@ -36,7 +43,10 @@ export default function App() {
     if (url.modeId) useAtlasStore.setState({ modeId: getMode(url.modeId).id });
     if (url.timeT !== undefined) useAtlasStore.setState({ timeT: url.timeT });
     if (url.palette) useAtlasStore.setState({ palette: url.palette });
+    if (introEligible(reducedMotion)) useAtlasStore.setState({ introPhase: 'title' });
   }
+  const introPhase = useAtlasStore((s) => s.introPhase);
+  const setIntroPhase = useAtlasStore((s) => s.setIntroPhase);
 
   const manifest = useAtlasStore((s) => s.manifest);
   const setManifest = useAtlasStore((s) => s.setManifest);
@@ -110,27 +120,34 @@ export default function App() {
   if (ready) shownModeId.current = modeId;
   const shownMode = getMode(shownModeId.current);
 
-  const reducedMotion = useMemo(
-    () => window.matchMedia('(prefers-reduced-motion: reduce)').matches,
-    [],
-  );
+  // Opening sequence: the timers start once the first scene is on screen
+  // and must survive the title → reveal step, hence the coarse dependency.
+  const introOn = introPhase === 'title' || introPhase === 'reveal';
+  useEffect(() => {
+    if (!ready || !introOn) return;
+    if (useAtlasStore.getState().introPhase !== 'title') return;
+    return runIntro(setIntroPhase);
+  }, [ready, introOn, setIntroPhase]);
 
   // Mode/palette morphs. A fresh engine (first load, new dataset) grows out
   // of the plane in its own colours; later switches blend between modes.
+  // During the intro's title phase the sculpture is held flat.
   const firstMorph = useRef(true);
   useEffect(() => {
-    if (!ctx || !ready) return;
+    if (!ctx || !ready || introPhase === 'title') return;
     const target = ctx.builder.build(getMode(modeId), palette);
     if (reducedMotion) {
       ctx.engine.snapTo(target);
     } else if (ctx.engine.isPristine) {
-      ctx.engine.growFromFlat(target, performance.now(), firstMorph.current ? 1600 : 1100);
+      const ms = introPhase === 'reveal' ? INTRO_GROWTH_MS : firstMorph.current ? 1600 : 1100;
+      ctx.engine.growFromFlat(target, performance.now(), ms);
     } else {
       ctx.engine.start(target, performance.now(), 950);
     }
     firstMorph.current = false;
     bumpSculpture();
-  }, [ctx, ready, modeId, palette, reducedMotion, bumpSculpture]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ctx, ready, modeId, palette, reducedMotion, bumpSculpture, introPhase === 'title']);
 
   // Timeline scrub. Resting at t = 1 is skipped so entering a time-enabled
   // mode doesn't cancel its entry morph.
@@ -156,7 +173,7 @@ export default function App() {
   const shownTarget = shown ? ctx.builder.build(shownMode, palette) : null;
 
   return (
-    <div className="atlas">
+    <div className={`atlas${introOn ? ' atlas--intro' : ''}`}>
       {ctx && scene && <SculptureView scene={scene} engine={ctx.engine} />}
       {scene && <Header mode={mode} />}
       {manifest && <ModeNav />}
@@ -168,7 +185,11 @@ export default function App() {
       {ready && <ExportButton builder={ctx.builder} />}
       {ready && <StoryPlayer mode={mode} />}
       {scene && <Attribution scene={scene} />}
-      <Veil visible={status !== 'ready' || !scene} error={error} />
+      <Veil
+        visible={status !== 'ready' || !scene}
+        intro={introOn ? introPhase : null}
+        error={error}
+      />
     </div>
   );
 }

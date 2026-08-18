@@ -101,6 +101,8 @@ export interface SculptureLayerOptions {
   characterSet: string[];
   /** Scales label size/offset, e.g. for the 4K poster frame. */
   labelScale?: number;
+  /** Labels fade in last during the opening sequence. */
+  labelOpacity?: number;
   /** Where the country LOD yields to fine tiles, and how far it has faded. */
   fadeBox?: FadeBox | null;
   /** Zoom-dependent height factor, shared by every column layer. */
@@ -162,6 +164,8 @@ export function createSculptureLayers(o: SculptureLayerOptions): Layer[] {
       getText: (d) => d.name.toUpperCase(),
       getSize: (d) => (d.tier === 1 ? 12.5 : 11) * (o.labelScale ?? 1),
       getColor: INK,
+      opacity: o.labelOpacity ?? 1,
+      visible: (o.labelOpacity ?? 1) > 0.01,
       getPixelOffset: [0, -14 * (o.labelScale ?? 1)],
       updateTriggers: { getSize: o.labelScale, getPixelOffset: o.labelScale },
       fontFamily: 'Inter, system-ui, sans-serif',
