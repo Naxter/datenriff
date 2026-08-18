@@ -72,6 +72,12 @@ body {
   margin: 0;
   letter-spacing: 0.02em;
   text-transform: uppercase;
+  transition: opacity 240ms ease;
+}
+
+/* another dataset is streaming in behind the current sculpture */
+.header--loading .header__title {
+  opacity: 0.45;
 }
 
 .header__subtitle {

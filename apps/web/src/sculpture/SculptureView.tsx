@@ -33,17 +33,32 @@ import {
 } from './exportBridge';
 import { createLighting } from './lighting';
 import { detectQuality, shadowsEnabled } from './quality';
-import { createSculptureLayers, labelCharacterSet, sculptureRadius } from './layers';
+import {
+  createColumnLayer,
+  createSculptureLayers,
+  labelCharacterSet,
+  sculptureRadius,
+} from './layers';
 import { TileManager } from './tiles';
 
 /** Crossfade window above a fine LOD's minZoom. */
 const CROSSFADE_ZOOM_SPAN = 0.5;
+
+/** How long a replaced dataset's sculpture takes to sink into the plane. */
+const OUTGOING_MS = 950;
 
 const clamp01 = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v);
 
 interface Props {
   scene: SceneData;
   engine: MorphEngine;
+}
+
+/** The previous dataset's sculpture while it sinks away. */
+interface Outgoing {
+  scene: SceneData;
+  engine: MorphEngine;
+  radius: number;
 }
 
 export function SculptureView({ scene, engine }: Props) {
@@ -80,13 +95,50 @@ export function SculptureView({ scene, engine }: Props) {
     return () => window.removeEventListener(CAPTURE_EVENT, onCapture);
   }, []);
 
-  // Advance the blend. Only `mixAmount` changes per frame — the attribute
+  // A dataset switch hands in a new scene and engine. The old sculpture is
+  // kept as `outgoing` and sunk back into the plane while the new one grows
+  // (App starts that growth), so the two cross-morph instead of the frame
+  // going blank. Reduced motion skips the sink and just drops the old one.
+  const reducedMotion = useMemo(
+    () => window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+    [],
+  );
+  const outgoingRef = useRef<Outgoing | null>(null);
+  const [outgoing, setOutgoing] = useState<Outgoing | null>(null);
+  const [outgoingMix, setOutgoingMix] = useState(0);
+  const previous = useRef<{ scene: SceneData; engine: MorphEngine }>({ scene, engine });
+  useEffect(() => {
+    const prev = previous.current;
+    if (prev.engine === engine) return;
+    previous.current = { scene, engine };
+    if (reducedMotion || prev.engine.isPristine) {
+      outgoingRef.current = null;
+      setOutgoing(null);
+      return;
+    }
+    prev.engine.fadeOut(performance.now(), OUTGOING_MS);
+    const out = { scene: prev.scene, engine: prev.engine, radius: sculptureRadius(prev.scene) };
+    outgoingRef.current = out;
+    setOutgoing(out);
+    setOutgoingMix(0);
+  }, [scene, engine, reducedMotion]);
+
+  // Advance the blends. Only `mixAmount` changes per frame — the attribute
   // buffers stay put, so this re-renders without re-uploading anything.
   const [mixAmount, setMixAmount] = useState(1);
   useEffect(() => {
     let raf = 0;
     const loop = (now: number) => {
       if (engine.tick(now)) setMixAmount(engine.mixAmount);
+      const out = outgoingRef.current;
+      if (out) {
+        if (out.engine.tick(now)) {
+          setOutgoingMix(out.engine.mixAmount);
+        } else if (!out.engine.isAnimating) {
+          outgoingRef.current = null; // sunk completely; release its buffers
+          setOutgoing(null);
+        }
+      }
       raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);
@@ -254,6 +306,32 @@ export function SculptureView({ scene, engine }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tileManager, fineLod, fineOpacity, tilesVersion, readyTiles]);
 
+  // The sinking sculpture's endpoints are set once by fadeOut; only its mix
+  // moves, so its data descriptor is built once per outgoing scene.
+  const outgoingData = useMemo(
+    () =>
+      outgoing && {
+        length: outgoing.scene.count,
+        attributes: {
+          getPosition: { value: outgoing.scene.positions, size: 2 },
+          getElevation: { value: outgoing.engine.heights, size: 1 },
+          getFillColor: { value: outgoing.engine.colors, size: 4 },
+          getElevationTo: { value: outgoing.engine.heightsTo, size: 1 },
+          getFillColorTo: { value: outgoing.engine.colorsTo, size: 4 },
+        },
+      },
+    [outgoing],
+  );
+  const outgoingLayer = outgoingData
+    ? createColumnLayer({
+        id: 'sculpture-outgoing',
+        data: outgoingData,
+        mixAmount: outgoingMix,
+        radius: outgoing!.radius,
+        pickable: false,
+      })
+    : undefined;
+
   const layers = createSculptureLayers({
     scene,
     data,
@@ -265,6 +343,7 @@ export function SculptureView({ scene, engine }: Props) {
     labelScale: exporting ? 1.15 : 1,
     mixAmount,
     sculptureOpacity: 1 - fineOpacity,
+    outgoingLayer,
     fineLayers,
     // stays pickable while the fine tiles fade in: tiles carry no metric
     // values, so hover keeps reading the country cell underneath
