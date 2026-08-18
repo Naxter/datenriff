@@ -9,9 +9,17 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import DeckGL from '@deck.gl/react';
-import { MapView, type MapViewState, type PickingInfo } from '@deck.gl/core';
+import {
+  MapView,
+  WebMercatorViewport,
+  type MapViewState,
+  type PickingInfo,
+} from '@deck.gl/core';
+import { ColumnLayer } from '@deck.gl/layers';
 import { type MorphEngine } from '@datenriff/sculpture-core';
+import type { LonLatBounds } from '@datenriff/data-contracts';
 import type { SceneData } from '../data/loader';
+import { getMode } from '../modes/modes';
 import { useAtlasStore } from '../state/store';
 import { readUrlState, writeUrlState } from '../state/url';
 import { CAMERA_FOVY, INITIAL_VIEW_STATE } from './camera';
@@ -24,9 +32,12 @@ import {
 } from './exportBridge';
 import { createLighting } from './lighting';
 import { createSculptureLayers, labelCharacterSet, sculptureRadius } from './layers';
+import { TileManager } from './tiles';
 
-/** Delay before shadows return once the camera rests. */
-const SHADOW_IDLE_DELAY_MS = 220;
+/** Crossfade window above a fine LOD's minZoom. */
+const CROSSFADE_ZOOM_SPAN = 0.5;
+
+const clamp01 = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v);
 
 interface Props {
   scene: SceneData;
@@ -46,9 +57,7 @@ export function SculptureView({ scene, engine }: Props) {
     ...readUrlState().view,
   }));
   const [frameVersion, setFrameVersion] = useState(0);
-  const [idle, setIdle] = useState(true);
   const [exporting, setExporting] = useState(false);
-  const idleTimer = useRef<ReturnType<typeof setTimeout>>();
   const deckRef = useRef<{ deck?: { canvas?: HTMLCanvasElement | null } } | null>(null);
   // mercator zoom is absolute scale — compensate so the sculpture keeps its
   // on-screen proportion in the larger poster frame
@@ -74,6 +83,53 @@ export function SculptureView({ scene, engine }: Props) {
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
   }, [engine]);
+
+  // Fine-LOD tiles, loaded viewport-driven in a worker. The manager owns a
+  // Worker, so it is created in the effect — StrictMode's mount/unmount
+  // cycle would otherwise terminate the worker of a memoized instance.
+  const [tilesVersion, setTilesVersion] = useState(0);
+  const [tileManager, setTileManager] = useState<TileManager | null>(null);
+  useEffect(() => {
+    const manager = new TileManager(scene);
+    manager.onChange = () => setTilesVersion((v) => v + 1);
+    setTileManager(manager);
+    return () => {
+      manager.destroy();
+      setTileManager((current) => (current === manager ? null : current));
+    };
+  }, [scene]);
+
+  const mode = getMode(modeId);
+  const fineLod = tileManager?.activeLod(viewState.zoom) ?? null;
+  const fineUsable =
+    tileManager !== null &&
+    fineLod !== null &&
+    timeT >= 1 &&
+    tileManager.supportsMode(fineLod, mode);
+  const fineOpacity = fineUsable
+    ? clamp01((viewState.zoom - fineLod.minZoom) / CROSSFADE_ZOOM_SPAN)
+    : 0;
+
+  useEffect(() => {
+    if (!fineUsable || !tileManager) return;
+    const timer = setTimeout(() => {
+      const vp = new WebMercatorViewport({
+        ...viewState,
+        width: window.innerWidth,
+        height: window.innerHeight,
+      });
+      const [w, s] = vp.unproject([0, window.innerHeight]);
+      const [e, n] = vp.unproject([window.innerWidth, 0]);
+      tileManager.update({
+        bounds: [w!, s!, e!, n!] as LonLatBounds,
+        zoom: viewState.zoom,
+        mode,
+        palette,
+        enabled: true,
+      });
+    }, 180);
+    return () => clearTimeout(timer);
+  }, [tileManager, fineUsable, viewState, mode, palette]);
 
   useEffect(() => {
     writeUrlState(modeId, timeT, palette, viewState);
@@ -104,6 +160,39 @@ export function SculptureView({ scene, engine }: Props) {
 
   const characterSet = useMemo(() => labelCharacterSet(scene.cities), [scene.cities]);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const fineLayers = useMemo(() => {
+    if (fineOpacity <= 0 || !fineLod || !tileManager) return [];
+    const fineRadius = fineLod.cellRadiusMeters * 1.15;
+    return tileManager.tiles().map(
+      (tile) =>
+        new ColumnLayer({
+          id: `tile-${tile.key}`,
+          data: {
+            length: tile.count,
+            attributes: {
+              getPosition: { value: tile.positions, size: 2 },
+              getElevation: { value: tile.heights, size: 1 },
+              getFillColor: { value: tile.colors, size: 4 },
+            },
+          } as never,
+          diskResolution: 6,
+          radius: fineRadius,
+          extruded: true,
+          flatShading: true,
+          pickable: false,
+          opacity: fineOpacity,
+          material: {
+            ambient: 0.64,
+            diffuse: 0.52,
+            shininess: 110,
+            specularColor: [46, 42, 38],
+          },
+        }),
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tileManager, fineLod, fineOpacity, tilesVersion]);
+
   const layers = createSculptureLayers({
     scene,
     data,
@@ -112,12 +201,18 @@ export function SculptureView({ scene, engine }: Props) {
     characterSet,
     // 4K frame: labels keep their poster proportion
     labelScale: exporting ? 2.2 : 1,
-    pickable: !exporting,
+    sculptureOpacity: 1 - fineOpacity,
+    fineLayers,
+    pickable: !exporting && fineOpacity === 0,
     onHover: (info: PickingInfo) =>
       setHover(info.index >= 0 ? { x: info.x, y: info.y, index: info.index } : null),
   });
 
-  const effects = useMemo(() => [createLighting(idle || exporting)], [idle, exporting]);
+  // Ambient + key + fill only. deck 9.1's shadow pass corrupts texture
+  // bindings once several texture-using layers coexist (the label font
+  // atlas ends up in the shadow sampler slot); real soft shadows are the
+  // prototype's shadow-mapping approach, still to be ported.
+  const effects = useMemo(() => [createLighting(false)], []);
 
   const finishCapture = () => {
     if (!exporting) return;
@@ -165,9 +260,6 @@ export function SculptureView({ scene, engine }: Props) {
         onViewStateChange={({ viewState: next }) => {
           if (exporting) return; // the 4K resize echoes the capture viewState
           setViewState(next as MapViewState);
-          setIdle(false);
-          clearTimeout(idleTimer.current);
-          idleTimer.current = setTimeout(() => setIdle(true), SHADOW_IDLE_DELAY_MS);
         }}
         layers={layers}
         effects={effects}

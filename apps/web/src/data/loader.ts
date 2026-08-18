@@ -14,6 +14,8 @@ export interface SceneData {
   manifest: AtlasManifest;
   dataset: SculptureDataset;
   lod: SculptureLOD;
+  /** Tiled fine LODs, loaded viewport-driven by the TileManager. */
+  tileLods: SculptureLOD[];
   count: number;
   positions: Float32Array;
   metrics: Map<string, Float32Array | Uint8Array>;
@@ -42,10 +44,14 @@ export async function loadScene(base = '/data'): Promise<SceneData> {
   const manifest = await fetchJson<AtlasManifest>(`${base}/manifest.json`);
   const dataset = manifest.datasets[0];
   if (!dataset) throw new Error('Manifest contains no datasets');
-  const lod = dataset.lods[0];
+  // country LOD = coarsest un-tiled buffer set; finer tiled LODs stream later
+  const lod = [...dataset.lods]
+    .filter((l) => l.positions && l.metricTemplate)
+    .sort((a, b) => a.resolution - b.resolution)[0];
   if (!lod?.positions || !lod.metricTemplate) {
     throw new Error('Dataset has no un-tiled country LOD');
   }
+  const tileLods = dataset.lods.filter((l) => l.tileIndex);
 
   const [positionsBuf, cities, boundary, ...metricBufs] = await Promise.all([
     fetchBuffer(lod.positions),
@@ -72,7 +78,17 @@ export async function loadScene(base = '/data'): Promise<SceneData> {
     metrics.set(m.id, arr);
   });
 
-  return { manifest, dataset, lod, count, positions, metrics, cities, boundary: boundary.rings };
+  return {
+    manifest,
+    dataset,
+    lod,
+    tileLods,
+    count,
+    positions,
+    metrics,
+    cities,
+    boundary: boundary.rings,
+  };
 }
 
 export function metricDefinition(dataset: SculptureDataset, id: string): MetricDefinition {

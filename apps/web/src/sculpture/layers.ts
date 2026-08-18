@@ -27,6 +27,10 @@ export interface SculptureLayerOptions {
   characterSet: string[];
   /** Scales label size/offset, e.g. for the 4K poster frame. */
   labelScale?: number;
+  /** Country LOD fade during the crossfade to a finer tiled LOD. */
+  sculptureOpacity?: number;
+  /** Fine-LOD tile layers, drawn between sculpture and labels. */
+  fineLayers?: Layer[];
   pickable: boolean;
   onHover?: (info: PickingInfo) => void;
 }
@@ -78,6 +82,8 @@ export function createSculptureLayers(o: SculptureLayerOptions): Layer[] {
       extruded: true,
       flatShading: true,
       pickable: o.pickable,
+      opacity: o.sculptureOpacity ?? 1,
+      visible: (o.sculptureOpacity ?? 1) > 0.02,
       material: {
         ambient: 0.64,
         diffuse: 0.52,
@@ -86,6 +92,7 @@ export function createSculptureLayers(o: SculptureLayerOptions): Layer[] {
       },
       onHover: o.onHover,
     }),
+    ...(o.fineLayers ?? []),
     new TextLayer<CityLabel>({
       id: 'labels',
       data: o.labels,
