@@ -11,6 +11,11 @@ const QUERY = new URLSearchParams(location.search);
 const TARGET_MAX_HEIGHT = Number(QUERY.get('h') ?? 100_000);
 // every cell also extends downwards, so the country reads as one slab
 const BASE_DEPTH = Number(QUERY.get('base') ?? 18_000);
+// column silhouette: 1 = straight bar, 0 = needle tapering to a point.
+// Only the part above ground tapers; the plinth stays a solid slab.
+const TAPER = Number(QUERY.get('taper') ?? 1);
+// column thickness multiplier, for thinner needles
+const THIN = Number(QUERY.get('thin') ?? 1);
 const FRAME_HEIGHT_M = Number(QUERY.get('frame') ?? 1_250_000);
 const FOVY_DEG = 24;
 let pitchDeg = Number(QUERY.get('pitch') ?? 58);
@@ -44,7 +49,10 @@ const dataUrl = (p) => new URL(`../apps/web/public${p}`, import.meta.url);
 async function loadData() {
   const manifest = await (await fetch(dataUrl('/data/manifest.json'))).json();
   const dataset = manifest.datasets[0];
-  const lod = dataset.lods[0];
+  // coarsest un-tiled LOD; finer LODs ship as viewport tiles the app streams
+  const lod = [...dataset.lods]
+    .filter((l) => l.positions && l.metricTemplate)
+    .sort((a, b) => a.resolution - b.resolution)[0];
   const positions = new Float32Array(
     await (await fetch(dataUrl(lod.positions))).arrayBuffer(),
   );
@@ -138,6 +146,7 @@ uniform mat4 uVP;
 uniform mat4 uLightVP;
 uniform float uRadius;
 uniform float uBase;
+uniform float uTaper;
 out vec3 vNormal;
 out vec4 vColor;
 out vec4 vShadowCoord;
@@ -146,7 +155,10 @@ out float vHeight;
 void main() {
   // columns start at -uBase, so the whole country carries a plinth
   float z = mix(-uBase, iHeight, unitPos.z);
-  vec3 p = vec3(iCenter + unitPos.xy * uRadius, z);
+  // taper only above the ground line, so the plinth keeps its full width
+  float up = iHeight > 1.0 ? clamp(z / iHeight, 0.0, 1.0) : 0.0;
+  float widthScale = mix(1.0, uTaper, up);
+  vec3 p = vec3(iCenter + unitPos.xy * uRadius * widthScale, z);
   vNormal = normal;
   vColor = iColor;
   // world z interpolates linearly, so the ground line stays exact on the walls
@@ -213,8 +225,11 @@ layout(location=3) in float iHeight;
 uniform mat4 uLightVP;
 uniform float uRadius;
 uniform float uBase;
+uniform float uTaper;
 void main() {
-  vec3 p = vec3(iCenter + unitPos.xy * uRadius, mix(-uBase, iHeight, unitPos.z));
+  float z = mix(-uBase, iHeight, unitPos.z);
+  float up = iHeight > 1.0 ? clamp(z / iHeight, 0.0, 1.0) : 0.0;
+  vec3 p = vec3(iCenter + unitPos.xy * uRadius * mix(1.0, uTaper, up), z);
   gl_Position = uLightVP * vec4(p, 1.0);
 }`;
 
@@ -322,7 +337,7 @@ async function main() {
   instance(3, heights, 1, gl.FLOAT, false);
   instance(4, colors, 4, gl.UNSIGNED_BYTE, true);
 
-  const radius = lod.cellRadiusMeters * 1.15;
+  const radius = lod.cellRadiusMeters * 1.15 * THIN;
   const keyDir = norm([-3, -5, -4.2]);
   const fillDir = norm([4, 2, -1.2]);
 
@@ -367,6 +382,7 @@ async function main() {
     gl.uniformMatrix4fv(loc(depthProg, 'uLightVP'), false, new Float32Array(lightVP));
     gl.uniform1f(loc(depthProg, 'uRadius'), radius);
     gl.uniform1f(loc(depthProg, 'uBase'), BASE_DEPTH);
+    gl.uniform1f(loc(depthProg, 'uTaper'), TAPER);
     gl.enable(gl.POLYGON_OFFSET_FILL);
     gl.polygonOffset(2, 4);
     gl.drawArraysInstanced(gl.TRIANGLES, 0, 48, n);
@@ -402,6 +418,7 @@ async function main() {
     gl.uniformMatrix4fv(loc(mainProg, 'uLightVP'), false, new Float32Array(lightVP));
     gl.uniform1f(loc(mainProg, 'uRadius'), radius);
     gl.uniform1f(loc(mainProg, 'uBase'), BASE_DEPTH);
+    gl.uniform1f(loc(mainProg, 'uTaper'), TAPER);
     gl.uniform3fv(loc(mainProg, 'uKeyDir'), keyDir);
     gl.uniform3fv(loc(mainProg, 'uFillDir'), fillDir);
     gl.uniform1f(loc(mainProg, 'uShadowsOn'), SHADOWS ? 1 : 0);
