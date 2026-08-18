@@ -76,7 +76,7 @@ flowchart TB
 | Height | always linear; calibrated per sculpture as `targetMax / p99.5` |
 | Colour | sqrt/log1p for quantities, diverging for change, categorical plus dominance; ramps switchable as an option |
 | Basemap | none — off-white canvas with a subtle country outline |
-| Lighting | ambient + warm key + cool fill; shadows only while the camera is idle |
+| Lighting | ambient + warm key + cool fill; one stable effect, shadows cast onto a paper-coloured ground plane |
 | Camera | pitch ≈ 58, bearing ≈ −18, fovy ≈ 24 |
 | Hosting | static-first: Vite build + binary assets + CDN; a backend only for live data |
 | Preprocessing | Python; standard library core plus pyproj and h3 |
@@ -87,23 +87,34 @@ aesthetic lives on empty paper.
 ## Front-end layers
 
 ```
-React UI (Header, ModeNav, Timeline, Legend, Tooltip, Attribution)
-   │  zustand store: modeId, timeT, palette, hover
+React UI (Header, ModeNav, Timeline, Legend, Tooltip, Stories, Export)
+   │  zustand store: manifest, scene, modeId, timeT, palette, hover, story
    ▼
-TargetBuilder (apps/web/src/sculpture/targets.ts)
-   │  metric buffers → elevations (metres) + RGBA colours, cached per mode+palette
+QualityProfile (sculpture/quality.ts)
+   │  picks country LOD (r8 desktop / r7 mobile), DPR, shadows, labels, tiles
+   ▼
+TargetBuilder (sculpture/targets.ts)
+   │  metric buffers → elevations (metres) + RGBA colours, per mode+palette
    ▼
 MorphEngine (@datenriff/sculpture-core)
-   │  mutates a pair of live buffers (mode morphs, timeline mix)
+   │  holds both endpoints and an eased mixAmount
    ▼
-deck.gl ColumnLayer (binary attributes; re-upload only for changed frames)
+MorphColumnLayer (patched deck.gl ColumnLayer)
+   │  elevation = mix(from, to, mixAmount) on the GPU
+   ▼
+TileManager + worker  →  fine r9 tiles, decoded and coloured off-thread
 ```
 
 Elevations are precomputed per mode in metres, with the same calibration
-across all time steps, so the engine can interpolate the buffers of two modes
-directly. The CPU interpolates today — negligible at country LOD sizes — and a
-shader mix (`height_from`/`height_to` + `u_mix`) can replace the internals
-later without changing the API.
+across all time steps, so two modes can be blended directly. The blend itself
+runs on the GPU: both endpoints are uploaded as attributes and a single
+uniform moves per frame, instead of rewriting every buffer.
+
+Calibration is per LOD, not per dataset. Coarser cells pool more people, so
+p99.5 at r7 is ~21,000 inhabitants where r8 sees ~4,800 and r9 ~1,200 —
+using one shared stat block flattens whichever resolution it does not belong
+to. `SculptureLOD.metricStats` carries the numbers for each resolution, and
+the tiled LODs carry theirs in the tile index.
 
 ## Prototype
 
