@@ -12,6 +12,7 @@ import { Timeline } from '../components/Timeline';
 import { Legend } from '../components/Legend';
 import { Tooltip } from '../components/Tooltip';
 import { Attribution } from '../components/Attribution';
+import { ExportButton } from '../components/ExportButton';
 import { Veil } from '../components/Veil';
 
 export default function App() {
@@ -103,6 +104,7 @@ export default function App() {
         <Legend mode={mode} scene={scene} colorStats={modeTarget.colorStats} />
       )}
       {scene && ctx && <Tooltip mode={mode} scene={scene} builder={ctx.builder} />}
+      {scene && ctx && <ExportButton builder={ctx.builder} />}
       {scene && <Attribution scene={scene} />}
       <Veil visible={status !== 'ready'} error={error} />
     </div>

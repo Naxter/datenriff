@@ -10,19 +10,20 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import DeckGL from '@deck.gl/react';
 import { MapView, type MapViewState, type PickingInfo } from '@deck.gl/core';
-import { ColumnLayer, PathLayer, TextLayer } from '@deck.gl/layers';
-import { hexColumnRadius, type MorphEngine } from '@datenriff/sculpture-core';
-import type { CityLabel } from '@datenriff/data-contracts';
+import { type MorphEngine } from '@datenriff/sculpture-core';
 import type { SceneData } from '../data/loader';
 import { useAtlasStore } from '../state/store';
 import { readUrlState, writeUrlState } from '../state/url';
 import { CAMERA_FOVY, INITIAL_VIEW_STATE } from './camera';
+import {
+  CAPTURE_EVENT,
+  EXPORT_HEIGHT,
+  EXPORT_WIDTH,
+  captureIsPending,
+  deliverCapture,
+} from './exportBridge';
 import { createLighting } from './lighting';
-import { PLINTH_COLOR, PLINTH_DEPTH_METERS } from './targets';
-
-// The canvas stays transparent; the paper tone comes from the page background
-// (--paper in design/global.css), so there is no clear colour to set here.
-const INK: [number, number, number, number] = [34, 28, 21, 235];
+import { createSculptureLayers, labelCharacterSet, sculptureRadius } from './layers';
 
 /** Delay before shadows return once the camera rests. */
 const SHADOW_IDLE_DELAY_MS = 220;
@@ -34,6 +35,7 @@ interface Props {
 
 export function SculptureView({ scene, engine }: Props) {
   const setHover = useAtlasStore((s) => s.setHover);
+  const setView = useAtlasStore((s) => s.setView);
   const modeId = useAtlasStore((s) => s.modeId);
   const timeT = useAtlasStore((s) => s.timeT);
   const palette = useAtlasStore((s) => s.palette);
@@ -45,7 +47,22 @@ export function SculptureView({ scene, engine }: Props) {
   }));
   const [frameVersion, setFrameVersion] = useState(0);
   const [idle, setIdle] = useState(true);
+  const [exporting, setExporting] = useState(false);
   const idleTimer = useRef<ReturnType<typeof setTimeout>>();
+  const deckRef = useRef<{ deck?: { canvas?: HTMLCanvasElement | null } } | null>(null);
+  // mercator zoom is absolute scale — compensate so the sculpture keeps its
+  // on-screen proportion in the larger poster frame
+  const exportZoomDelta = useRef(0);
+
+  // poster capture: resize the deck to 4K for one frame, copy, restore
+  useEffect(() => {
+    const onCapture = () => {
+      exportZoomDelta.current = Math.log2(EXPORT_HEIGHT / window.innerHeight);
+      setExporting(true);
+    };
+    window.addEventListener(CAPTURE_EVENT, onCapture);
+    return () => window.removeEventListener(CAPTURE_EVENT, onCapture);
+  }, []);
 
   // advance the morph engine; re-upload only when buffers changed
   useEffect(() => {
@@ -60,12 +77,10 @@ export function SculptureView({ scene, engine }: Props) {
 
   useEffect(() => {
     writeUrlState(modeId, timeT, palette, viewState);
-  }, [modeId, timeT, palette, viewState]);
+    setView(viewState);
+  }, [modeId, timeT, palette, viewState, setView]);
 
-  // slight overlap closes gaps between hex disks
-  const radius = scene.lod.cellRadiusMeters
-    ? scene.lod.cellRadiusMeters * 1.15
-    : hexColumnRadius(scene.lod.resolution);
+  const radius = sculptureRadius(scene);
 
   // new object identity → deck re-uploads the mutated binary attributes
   const data = useMemo(
@@ -81,99 +96,43 @@ export function SculptureView({ scene, engine }: Props) {
     [scene, engine, frameVersion, sculptureVersion],
   );
 
-  // positions only; elevation and colour are constant for the plinth
-  const plinthData = useMemo(
-    () => ({
-      length: scene.count,
-      attributes: { getPosition: { value: scene.positions, size: 2 } },
-    }),
-    [scene],
-  );
-
   const visibleLabels = useMemo(() => {
     const zoom = viewState.zoom;
     const maxTier = zoom > 7 ? 3 : zoom > 6.2 ? 2 : 1;
     return scene.cities.filter((c) => c.tier <= maxTier);
   }, [scene.cities, viewState.zoom]);
 
-  const characterSet = useMemo(() => {
-    const chars = new Set<string>();
-    for (const c of scene.cities) for (const ch of c.name.toUpperCase()) chars.add(ch);
-    return [...chars];
-  }, [scene.cities]);
+  const characterSet = useMemo(() => labelCharacterSet(scene.cities), [scene.cities]);
 
-  const layers = [
-    scene.boundary.length > 0 &&
-      new PathLayer({
-        id: 'outline',
-        data: scene.boundary,
-        getPath: (ring: [number, number][]) => [...ring, ring[0]!],
-        getColor: [34, 28, 21, 26],
-        getWidth: 1.2,
-        widthUnits: 'pixels',
-        jointRounded: true,
-      }),
-    // plinth: the same cells extruded downwards, so the country reads as a
-    // slab floating on the paper rather than a field of loose columns
-    new ColumnLayer({
-      id: 'plinth',
-      data: plinthData as unknown as never,
-      diskResolution: 6,
-      radius,
-      extruded: true,
-      flatShading: true,
-      pickable: false,
-      // deck.gl skips columns with a negative elevation, so flip the scale
-      getElevation: PLINTH_DEPTH_METERS,
-      elevationScale: -1,
-      getFillColor: [...PLINTH_COLOR, 255],
-      material: {
-        ambient: 0.7,
-        diffuse: 0.42,
-        shininess: 40,
-        specularColor: [30, 27, 24],
-      },
-    }),
-    new ColumnLayer({
-      id: 'sculpture',
-      // binary attribute objects are supported but typed loosely
-      data: data as unknown as never,
-      diskResolution: 6,
-      radius,
-      extruded: true,
-      flatShading: true,
-      pickable: true,
-      material: {
-        ambient: 0.64,
-        diffuse: 0.52,
-        shininess: 110,
-        specularColor: [46, 42, 38],
-      },
-      onHover: (info: PickingInfo) =>
-        setHover(info.index >= 0 ? { x: info.x, y: info.y, index: info.index } : null),
-    }),
-    new TextLayer<CityLabel>({
-      id: 'labels',
-      data: visibleLabels,
-      characterSet,
-      billboard: true,
-      sizeUnits: 'pixels',
-      getPosition: (d) => [d.lon, d.lat],
-      getText: (d) => d.name.toUpperCase(),
-      getSize: (d) => (d.tier === 1 ? 12.5 : 11),
-      getColor: INK,
-      getPixelOffset: [0, -14],
-      fontFamily: 'Inter, system-ui, sans-serif',
-      fontWeight: 600,
-      fontSettings: { sdf: true, fontSize: 128, buffer: 8, radius: 12 },
-      outlineWidth: 6,
-      outlineColor: [247, 240, 234, 235],
-      // labels sit on the paper plane; draw them over the columns like a poster overlay
-      parameters: { depthCompare: 'always', depthWriteEnabled: false },
-    }),
-  ].filter(Boolean);
+  const layers = createSculptureLayers({
+    scene,
+    data,
+    radius,
+    labels: visibleLabels,
+    characterSet,
+    // 4K frame: labels keep their poster proportion
+    labelScale: exporting ? 2.2 : 1,
+    pickable: !exporting,
+    onHover: (info: PickingInfo) =>
+      setHover(info.index >= 0 ? { x: info.x, y: info.y, index: info.index } : null),
+  });
 
-  const effects = useMemo(() => [createLighting(idle)], [idle]);
+  const effects = useMemo(() => [createLighting(idle || exporting)], [idle, exporting]);
+
+  const finishCapture = () => {
+    if (!exporting) return;
+    const canvas = deckRef.current?.deck?.canvas;
+    if (!canvas || canvas.width !== EXPORT_WIDTH || canvas.height !== EXPORT_HEIGHT) {
+      return; // resize has not landed yet; a later frame will match
+    }
+    // must copy synchronously — the drawing buffer is cleared after the task
+    const copy = document.createElement('canvas');
+    copy.width = EXPORT_WIDTH;
+    copy.height = EXPORT_HEIGHT;
+    copy.getContext('2d')?.drawImage(canvas, 0, 0);
+    setExporting(false);
+    if (captureIsPending()) deliverCapture(copy);
+  };
 
   const view = useMemo(
     () =>
@@ -187,11 +146,24 @@ export function SculptureView({ scene, engine }: Props) {
   );
 
   return (
-    <div className="atlas__canvas">
+    <div
+      className="atlas__canvas"
+      style={
+        exporting
+          ? { width: EXPORT_WIDTH, height: EXPORT_HEIGHT, inset: 'auto' }
+          : undefined
+      }
+    >
       <DeckGL
+        ref={deckRef as never}
         views={view}
-        viewState={viewState}
+        viewState={
+          exporting
+            ? { ...viewState, zoom: viewState.zoom + exportZoomDelta.current }
+            : viewState
+        }
         onViewStateChange={({ viewState: next }) => {
+          if (exporting) return; // the 4K resize echoes the capture viewState
           setViewState(next as MapViewState);
           setIdle(false);
           clearTimeout(idleTimer.current);
@@ -199,7 +171,8 @@ export function SculptureView({ scene, engine }: Props) {
         }}
         layers={layers}
         effects={effects}
-        useDevicePixels={Math.min(window.devicePixelRatio || 1, 2)}
+        onAfterRender={finishCapture}
+        useDevicePixels={exporting ? 1 : Math.min(window.devicePixelRatio || 1, 2)}
         style={{ background: 'transparent' }}
       />
     </div>
