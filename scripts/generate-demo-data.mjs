@@ -5,7 +5,7 @@
 // multi-GB downloads.
 // Usage: node scripts/generate-demo-data.mjs [outDir] [--coarse] [--no-tiles]
 
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -420,6 +420,20 @@ function writeTiles(baseDir, positions, metrics) {
   return { tileCount: entries.length, count: n };
 }
 
+/** Pipeline output under OUT/zensus, with URLs rebased for the app. */
+function loadRealDataset() {
+  const path = join(OUT, 'zensus', 'dataset.json');
+  if (!existsSync(path)) return null;
+  const dataset = JSON.parse(readFileSync(path, 'utf8'));
+  const rebase = (p) => (p && !p.startsWith('/') ? `/data/zensus/${p}` : p);
+  for (const lod of dataset.lods ?? []) {
+    for (const key of ['positions', 'metricTemplate', 'tileIndex', 'tileTemplate', 'positionsTemplate']) {
+      if (lod[key]) lod[key] = rebase(lod[key]);
+    }
+  }
+  return dataset;
+}
+
 function main() {
   console.log('Building hex lattice …');
   const positions = buildLattice(HEX_RADIUS_M);
@@ -526,13 +540,16 @@ function main() {
     },
   };
 
+  // a real pipeline output takes precedence; the demo stays as fallback
+  const real = loadRealDataset();
   const manifest = {
     version: 1,
     generatedAt: new Date().toISOString(),
-    datasets: [dataset],
+    datasets: real ? [real, dataset] : [dataset],
     labels: '/data/cities.json',
     boundary: '/data/boundary.json',
   };
+  if (real) console.log(`Including real dataset "${real.id}" (${real.metrics.length} metrics)`);
 
   writeFileSync(join(OUT, 'manifest.json'), JSON.stringify(manifest, null, 2));
   writeFileSync(

@@ -13,12 +13,18 @@ MISSING_TOKENS = frozenset(
 )
 
 
-def parse_value(raw: str | None) -> float | None:
-    """Parse one CSV cell into a float, or None for missing/suppressed."""
+def parse_value(
+    raw: str | None, extra_missing: frozenset[str] | None = None
+) -> float | None:
+    """Parse one CSV cell into a float, or None for missing/suppressed.
+
+    ``extra_missing`` covers release-specific markers, e.g. the 2011 grid
+    uses ``-1`` for uninhabited or suppressed cells.
+    """
     if raw is None:
         return None
     text = raw.strip()
-    if text in MISSING_TOKENS:
+    if text in MISSING_TOKENS or (extra_missing and text in extra_missing):
         return None
     # German decimal comma; grid CSVs do not use thousands separators.
     text = text.replace(",", ".")

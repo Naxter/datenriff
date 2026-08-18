@@ -37,10 +37,12 @@ python -m zensus_pipeline.pipeline \
   --source-url "<exact download URL>" --download-date 2026-08-18 \
   --out ../../apps/web/public/data/zensus
 
-# Population 2011 — aligned to the same universe
+# Population 2011 — aligned to the same universe. The 2011 grid marks
+# uninhabited/suppressed cells with -1, which must stay missing:
 python -m zensus_pipeline.pipeline \
-  --input downloads/Zensus_Bevoelkerung_100m-Gitter.csv \
+  --input downloads/Zensus2011_Einwohnerzahl_100m_Gitter.csv \
   --metric population_2011 --label "Population 2011" \
+  --treat-missing "-1" \
   --out ../../apps/web/public/data/zensus
 
 # Mean age — weighted mean, weights from the population file
@@ -61,14 +63,27 @@ python -m zensus_pipeline.pipeline \
   --metric vacancy_rate --label "Vacancy rate" \
   --out ../../apps/web/public/data/zensus
 
-# Heating — dominant category plus dominance from count columns
-# (check the column names in the CSV header first)
+# Homes and rent come from one file: dwelling count as SUM, rent as the
+# dwelling-weighted mean
 python -m zensus_pipeline.pipeline \
-  --input downloads/Zensus2022_Heizungsart_100m-Gitter.csv \
-  --rule category \
-  --category-columns "Gas,Heizoel,Fernwaerme,Waermepumpe,Strom,Holz_Pellets" \
-  --category-labels "Gas,Oil,District heating,Heat pump,Electricity,Biomass" \
-  --metric heating --label "Heating energy carrier" \
+  --input downloads/.../Zensus2022_Durchschn_Nettokaltmiete_Anzahl_der_Wohnungen_100m-Gitter.csv \
+  --rule sum --value-column AnzahlWohnungen \
+  --metric homes --label "Homes" \
+  --out ../../apps/web/public/data/zensus
+python -m zensus_pipeline.pipeline \
+  --input downloads/.../Zensus2022_Durchschn_Nettokaltmiete_Anzahl_der_Wohnungen_100m-Gitter.csv \
+  --rule wmean --value-column durchschnMieteQM --weight-column AnzahlWohnungen \
+  --metric rent --label "Net cold rent" --unit "€/m²" \
+  --out ../../apps/web/public/data/zensus
+
+# Heating — dominant category plus dominance from count columns. The
+# Energieträger CSV ships as cp1252, not UTF-8:
+python -m zensus_pipeline.pipeline \
+  --input downloads/Zensus2022_Energietraeger_100m-Gitter.csv \
+  --rule category --encoding cp1252 \
+  --category-columns "Gas,Heizoel,Fernwaerme,Solar_Geothermie_Waermepumpen,Strom,Holz_Holzpellets,Kohle" \
+  --category-labels "Gas,Heizöl,Fernwärme,Wärmepumpe,Strom,Biomasse,Kohle" \
+  --metric heating --label "Heating energy source" \
   --out ../../apps/web/public/data/zensus
 ```
 
@@ -89,10 +104,10 @@ apps/web/public/data/zensus/
 └── r9/                 # regional LOD (tiling still to come)
 ```
 
-Afterwards point `apps/web/public/data/manifest.json` at the new dataset
-(prefix the paths with `/data/zensus/`) — the renderer needs no change. Until
-then the app runs on the synthetic demo dataset from
-`scripts/generate-demo-data.mjs`.
+Afterwards run `npm run generate:demo` once — it rebuilds
+`apps/web/public/data/manifest.json` and puts the real dataset first, with
+the synthetic demo kept as the second entry. A fresh clone without the
+downloads keeps running on the demo alone.
 
 ## Rules
 
@@ -117,8 +132,8 @@ python3 -m unittest discover -s tests -t . -v      # from pipelines/zensus/
 
 ## Status
 
-- [x] SUM metrics (population 2022/2011) end to end
+- [x] SUM metrics (population 2022/2011) end to end with real data
 - [x] wmean (AGE, RENT) and category metrics (HEATING) in the CLI
 - [x] share metrics (vacancy, share ≥65) in the CLI
-- [ ] r9/r10 tiling by H3 parent
+- [x] r9 (and optional r10) tiling by H3 parent with a bounds index
 - [ ] download automation with hash pinning

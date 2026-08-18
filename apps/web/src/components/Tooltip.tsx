@@ -5,6 +5,7 @@ import { useMemo } from 'react';
 import type { SculptureMode, TooltipFieldDefinition } from '@datenriff/data-contracts';
 import type { SceneData } from '../data/loader';
 import { metricDefinition } from '../data/loader';
+import { CHANGE_PCT_METRIC } from '../modes/modes';
 import type { TargetBuilder } from '../sculpture/targets';
 import { useAtlasStore } from '../state/store';
 
@@ -69,13 +70,19 @@ export function Tooltip({ mode, scene, builder }: Props) {
   const content = useMemo(() => {
     if (!hover) return null;
     const place = nearestCity(scene, hover.index);
-    const rows = mode.tooltip.fields.map((field) => {
-      const { values } = builder.resolveMetric(field.metric);
-      return {
-        label: field.label,
-        value: formatField(field, values[hover.index]!, scene),
-      };
-    });
+    const rows = mode.tooltip.fields
+      .filter(
+        (field) =>
+          field.metric === CHANGE_PCT_METRIC ||
+          scene.dataset.metrics.some((m) => m.id === field.metric),
+      )
+      .map((field) => {
+        const { values } = builder.resolveMetric(field.metric);
+        return {
+          label: field.label,
+          value: formatField(field, values[hover.index]!, scene),
+        };
+      });
     return { place, rows };
   }, [hover, mode, scene, builder]);
 

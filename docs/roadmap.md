@@ -1,12 +1,13 @@
 # Roadmap
 
-## Data spike — done (with demo data)
+## Data spike — done
 
 - [x] binary format (positions + metric buffers + manifest)
 - [x] deterministic demo generator (~486k cells)
 - [x] rendering proof: `prototype/` → `docs/media/hero-people.png`
-- [ ] real census 2022 data through `pipelines/zensus` (the SUM path is
-      finished, it needs the multi-gigabyte CSVs from Destatis)
+- [x] real census data through `pipelines/zensus`: population 2022 + 2011,
+      mean age, homes, rent, heating energy source (sums verified against
+      the published totals; suppressed cells stay missing)
 
 ## Visual hero — done
 
@@ -34,19 +35,26 @@
       timeline slider with play, height mix 2011↔2022
 - [ ] census 2011 import (pipeline run), GPU morph instead of CPU
 
-## Multi-LOD — open
+## Multi-LOD — in progress
 
-- [ ] r9/r10 tiling by H3 parent, viewport tile index, crossfade (the alpha
-      channel of the colour buffer is reserved for it), prefetch, worker
+- [x] r9 tiling by H3 parent (pipeline + demo), viewport tile index with
+      bounds, worker-side decode and colour mapping, zoom crossfade,
+      prefetch ring, LRU tile cache
+- [ ] r10 tiles in the app (writer supports it via `--write-r10`)
+- [ ] picking/tooltip on fine tiles; per-tile fade-in polish
 
 ## Further sources — open
 
 - [ ] pipelines for night lights, precipitation, energy registry, land cover
       and forest (the `afterdark`/`rain`/`energy` palettes are prepared)
 
-## Cinematic polish — open
+## Cinematic polish — in progress
 
-- [ ] GPU morph shader, camera stories, 4K poster export, social formats
+- [x] 4K poster export (EXPORT button / E key: captured from the live view,
+      composed with title, legend and attribution)
+- [ ] GPU morph shader, camera stories, social formats
+- [ ] soft shadows in the app (the prototype's shadow mapping; deck's own
+      shadow pass corrupts texture bindings and stays off)
 
 ## Production — open
 
