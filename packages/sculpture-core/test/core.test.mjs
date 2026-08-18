@@ -2,8 +2,10 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   MorphEngine,
+  applyOcclusion,
   buildChangePct,
   computeElevations,
+  computeOcclusion,
   computeStats,
   elevationScaleFor,
   hexColumnRadius,
@@ -81,4 +83,38 @@ test('MorphEngine rejects mismatched targets', () => {
   assert.throws(() =>
     engine.snapTo({ heights: new Float32Array(3), colors: new Uint8Array(12) }),
   );
+});
+
+test('elevationScaleFor: peakedness moves the anchor from quantile to max', () => {
+  const stats = { min: 0, max: 20000, p50: 50, p95: 1000, p995: 5000 };
+  const atQuantile = elevationScaleFor(stats, 100_000, 0.995, 0);
+  const atMax = elevationScaleFor(stats, 100_000, 0.995, 1);
+  assert.equal(atQuantile, 100_000 / 5000, 'peakedness 0 keeps the p995 anchor');
+  assert.equal(atMax, 100_000 / 20000, 'peakedness 1 anchors at the maximum');
+  const mid = elevationScaleFor(stats, 100_000, 0.995, 0.5);
+  assert.ok(mid < atQuantile && mid > atMax, 'blend sits between the two');
+  // geometric midpoint: sqrt(5000 * 20000) = 10000
+  assert.ok(Math.abs(100_000 / mid - 10000) < 1e-6);
+});
+
+test('computeOcclusion: a low cell among tall neighbours is shaded', () => {
+  // three cells in a row, 0.01° apart; the middle one is short
+  const positions = new Float32Array([0, 0, 0.01, 0, 0.02, 0]);
+  const heights = new Float32Array([1000, 0, 1000]);
+  const occ = computeOcclusion(positions, heights, 0.011, 1000);
+  assert.ok(occ[1] > 0.9, 'shaded cell is nearly fully occluded');
+  assert.ok(occ[0] < 0.6, 'tall cells stay comparatively open');
+});
+
+test('computeOcclusion: a flat field is unoccluded', () => {
+  const positions = new Float32Array([0, 0, 0.01, 0, 0.02, 0]);
+  const heights = new Float32Array([500, 500, 500]);
+  const occ = computeOcclusion(positions, heights, 0.011, 1000);
+  assert.deepEqual([...occ], [0, 0, 0]);
+});
+
+test('applyOcclusion darkens proportionally and leaves alpha alone', () => {
+  const colors = new Uint8Array([200, 100, 50, 255]);
+  applyOcclusion(colors, new Float32Array([1]), 0.5);
+  assert.deepEqual([...colors], [100, 50, 25, 255]);
 });

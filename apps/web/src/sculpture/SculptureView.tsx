@@ -264,6 +264,8 @@ export function SculptureView({ scene, engine }: Props) {
         layers={layers}
         effects={effects}
         onAfterRender={finishCapture}
+        // MSAA: thin needles alias badly without it
+        deviceProps={{ webgl: { antialias: true } }}
         useDevicePixels={exporting ? 1 : Math.min(window.devicePixelRatio || 1, 2)}
         style={{ background: 'transparent' }}
       />

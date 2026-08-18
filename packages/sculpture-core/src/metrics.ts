@@ -8,16 +8,28 @@ export function quantileFromStats(stats: MetricStats, q: number): number {
   return stats.max;
 }
 
-/** Height stays linear, but each sculpture is calibrated so its p99.5 peak
- * reaches roughly the same composition height. */
+/** Height stays linear, but each sculpture is calibrated so its peak reaches
+ * roughly the same composition height.
+ *
+ * The anchor quantile decides the silhouette: anchoring at p99.5 clips the
+ * top half-percent to full height, which at country scale is thousands of
+ * equally tall towers — a carpet. Anchoring near the maximum leaves a low
+ * crust with a handful of spires, which is what the editorial reference
+ * looks like. Between the two, `peakedness` blends geometrically so the
+ * plain flattens without the extremes losing all their scale. */
 export function elevationScaleFor(
   stats: MetricStats,
   targetMaxMeters = 100_000,
   calibrationQuantile = 0.995,
+  peakedness = 0,
 ): number {
   const anchor = quantileFromStats(stats, calibrationQuantile);
   if (!(anchor > 0)) return 1;
-  return targetMaxMeters / anchor;
+  const top = stats.max > 0 ? stats.max : anchor;
+  const p = peakedness <= 0 ? 0 : peakedness >= 1 ? 1 : peakedness;
+  // geometric blend: 0 → anchor quantile, 1 → absolute maximum
+  const blended = anchor * Math.pow(top / anchor, p);
+  return targetMaxMeters / blended;
 }
 
 /** Per-cell elevations in metres. Working in metres (not per-layer scale)

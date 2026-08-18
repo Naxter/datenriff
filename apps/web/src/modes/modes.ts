@@ -20,7 +20,7 @@ export const MODES: SculptureMode[] = [
     heightMetric: 'population_2022',
     colorMetric: 'population_2022',
     heightScale: { type: 'linear' },
-    colorScale: { type: 'sqrt', clip: 0.995, palette: 'population', gamma: 1.5 },
+    colorScale: { type: 'sqrt', clip: 0.995, palette: 'population', gamma: 2.0 },
     tooltip: {
       fields: [{ metric: 'population_2022', label: 'Population', format: 'integer' }],
     },

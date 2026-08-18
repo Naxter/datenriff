@@ -11,7 +11,12 @@ import type {
 } from '@datenriff/data-contracts';
 import type { SceneData } from '../data/loader';
 import { CHANGE_PCT_METRIC } from '../modes/modes';
-import { TARGET_MAX_HEIGHT_METERS, effectiveColorScale } from './targets';
+import {
+  OCCLUSION_STRENGTH,
+  PEAKEDNESS,
+  TARGET_MAX_HEIGHT_METERS,
+  effectiveColorScale,
+} from './targets';
 import type {
   TileErrorResponse,
   TileLoadRequest,
@@ -188,7 +193,11 @@ export class TileManager {
 
     const heightStats = index.metrics[mode.heightMetric];
     if (!heightStats) return;
-    const elevationScale = TARGET_MAX_HEIGHT_METERS / (heightStats.p995 || 1);
+    // same anchor blend as the country LOD, but against this LOD's own stats
+    const anchor = heightStats.p995 || 1;
+    const top = heightStats.max > 0 ? heightStats.max : anchor;
+    const elevationScale =
+      TARGET_MAX_HEIGHT_METERS / (anchor * Math.pow(top / anchor, PEAKEDNESS));
 
     const scale = effectiveColorScale(mode, palette);
     const isChange = mode.colorMetric === CHANGE_PCT_METRIC;
@@ -206,6 +215,11 @@ export class TileManager {
       colorScale: scale,
       colorStats,
       colorStorage,
+      occlusion: {
+        radiusDeg: (lod.cellRadiusMeters * 2.2) / 111_320,
+        fullShadeMeters: TARGET_MAX_HEIGHT_METERS * 0.04,
+        strength: OCCLUSION_STRENGTH,
+      },
     };
     if (isChange) {
       req.changeUrls = {

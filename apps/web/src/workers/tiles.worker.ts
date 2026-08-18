@@ -4,7 +4,12 @@
 
 import type { ColorScaleDefinition, MetricStats } from '@datenriff/data-contracts';
 import { applyColorScale } from '@datenriff/color-scales';
-import { buildChangePct, computeElevations } from '@datenriff/sculpture-core';
+import {
+  applyOcclusion,
+  buildChangePct,
+  computeElevations,
+  computeOcclusion,
+} from '@datenriff/sculpture-core';
 
 export interface TileLoadRequest {
   type: 'load';
@@ -21,6 +26,8 @@ export interface TileLoadRequest {
   elevationScale: number;
   colorScale: ColorScaleDefinition;
   colorStats: MetricStats;
+  /** Ambient occlusion: neighbour radius in degrees, shade height, strength. */
+  occlusion?: { radiusDeg: number; fullShadeMeters: number; strength: number };
 }
 
 export interface TileLoadResponse {
@@ -79,6 +86,15 @@ async function load(req: TileLoadRequest): Promise<void> {
 
   const colors = new Uint8Array(count * 4);
   applyColorScale(req.colorScale, colorValues, req.colorStats, colors, saturation);
+  if (req.occlusion) {
+    const occ = computeOcclusion(
+      positions,
+      heights,
+      req.occlusion.radiusDeg,
+      req.occlusion.fullShadeMeters,
+    );
+    applyOcclusion(colors, occ, req.occlusion.strength);
+  }
 
   scope.postMessage(
     { type: 'tile', key: req.key, count, positions, heights, colors },

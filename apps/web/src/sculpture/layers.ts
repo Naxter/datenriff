@@ -6,7 +6,12 @@ import type { Layer, PickingInfo } from '@deck.gl/core';
 import { hexColumnRadius } from '@datenriff/sculpture-core';
 import type { CityLabel } from '@datenriff/data-contracts';
 import type { SceneData } from '../data/loader';
-import { PLINTH_COLOR, PLINTH_DEPTH_METERS } from './targets';
+import { NeedleExtension } from './needleExtension';
+import { COLUMN_TAPER, PLINTH_COLOR, PLINTH_DEPTH_METERS } from './targets';
+
+/** One shared instance: deck compares extensions by value, and a new object
+ *  per render would recompile the shader every frame. */
+const NEEDLE = new NeedleExtension({ taper: COLUMN_TAPER });
 
 export const INK: [number, number, number, number] = [34, 28, 21, 235];
 export const PAPER_HALO: [number, number, number, number] = [247, 240, 234, 235];
@@ -84,6 +89,7 @@ export function createSculptureLayers(o: SculptureLayerOptions): Layer[] {
       pickable: o.pickable,
       opacity: o.sculptureOpacity ?? 1,
       visible: (o.sculptureOpacity ?? 1) > 0.02,
+      extensions: [NEEDLE],
       material: {
         ambient: 0.64,
         diffuse: 0.52,

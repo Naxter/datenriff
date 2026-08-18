@@ -32,7 +32,8 @@ const HOVER_POINTS = [
   });
   const page = await browser.newPage({ viewport: { width: 1400, height: 900 } });
   page.on('pageerror', (err) => console.error('[pageerror]', err.message));
-  await page.goto(url, { waitUntil: 'networkidle' });
+  // not networkidle: the app keeps streaming LOD tiles, so it never settles
+  await page.goto(url, { waitUntil: 'domcontentloaded' });
   // Fixed wait: deck's canvas never counts as "visible" for Playwright's
   // waiters. Software rendering (SwiftShader) needs far longer than a GPU to
   // get half a million columns on screen, so allow overriding the wait.
