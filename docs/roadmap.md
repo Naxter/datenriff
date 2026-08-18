@@ -3,7 +3,7 @@
 ## Data spike — done
 
 - [x] binary format (positions + metric buffers + manifest)
-- [x] deterministic demo generator (~486k cells)
+- [x] manifest builder assembling every pipeline output (`scripts/build-manifest.mjs`)
 - [x] rendering proof: `prototype/` → `docs/media/hero-people.png`
 - [x] real census data through `pipelines/zensus`: population 2022 + 2011,
       mean age, homes, rent, heating energy source (sums verified against
@@ -24,7 +24,7 @@
 ## Census metric engine — in progress
 
 - [x] aggregation rules (tested), mode contract, mode morph
-- [x] AGE / RENT / HEATING as modes (demo data)
+- [x] AGE / RENT / HEATING as modes, on real census data
 - [x] weighted-mean and category metrics in the pipeline CLI
 - [x] share metrics in the pipeline CLI (vacancy, share ≥65)
 - [ ] FAMILIES / HOMES / VACANCY (ETL + mode definition only)
@@ -33,11 +33,12 @@
 
 - [x] delta metric with small-denominator suppression, diverging scale,
       timeline slider with play, height mix 2011↔2022
-- [ ] census 2011 import (pipeline run), GPU morph instead of CPU
+- [x] census 2011 import (80.26 M, aligned to the 2022 cell universe)
+- [ ] GPU morph instead of CPU
 
 ## Multi-LOD — in progress
 
-- [x] r9 tiling by H3 parent (pipeline + demo), viewport tile index with
+- [x] r9 tiling by H3 parent, viewport tile index with
       bounds, worker-side decode and colour mapping, zoom crossfade,
       prefetch ring, LRU tile cache
 - [ ] r10 tiles in the app (writer supports it via `--write-r10`)
@@ -66,7 +67,12 @@
       the frame at any window size (fixed zoom cropped or shrank it)
 - [ ] GPU morph shader, camera stories, social formats
 
-## Production — open
+## Production — in progress
 
-- [ ] CDN + Brotli + hashed assets, browser/GPU matrix, mobile profiles
-      (r7 country), visual regression
+- [x] CI (typecheck, tests, build), Dependabot, Cloudflare Pages config
+      with cache headers
+- [ ] **mobile quality profile** — the last unmet V1 criterion: r7 country
+      LOD, fewer labels, shadows off, reduced DPR. Today mobile only
+      reflows the UI, and it hides the attribution, which the data licences
+      require to stay visible.
+- [ ] browser/GPU matrix, visual regression
