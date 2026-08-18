@@ -63,14 +63,15 @@ export function SculptureView({ scene, engine }: Props) {
   const [frameVersion, setFrameVersion] = useState(0);
   const [exporting, setExporting] = useState(false);
   const deckRef = useRef<{ deck?: { canvas?: HTMLCanvasElement | null } } | null>(null);
-  // mercator zoom is absolute scale — compensate so the sculpture keeps its
-  // on-screen proportion in the larger poster frame
-  const exportZoomDelta = useRef(0);
+  // The poster frame has its own aspect, so it gets its own fit: same
+  // angles as the live view, position and zoom fitted to 16:9.
+  const exportView = useRef<MapViewState | null>(null);
 
-  // poster capture: resize the deck to 4K for one frame, copy, restore
+  // poster capture: resize the deck to the poster frame for one frame,
+  // copy, restore
   useEffect(() => {
     const onCapture = () => {
-      exportZoomDelta.current = Math.log2(EXPORT_HEIGHT / window.innerHeight);
+      exportView.current = null; // resolved lazily from the live viewState
       setExporting(true);
     };
     window.addEventListener(CAPTURE_EVENT, onCapture);
@@ -228,8 +229,9 @@ export function SculptureView({ scene, engine }: Props) {
     radius,
     labels: visibleLabels,
     characterSet,
-    // poster frame is 1920 CSS px at 2× — labels scale with the frame height
-    labelScale: exporting ? EXPORT_HEIGHT / window.innerHeight * 1.15 : 1,
+    // poster labels: the frame is 1920 CSS px, roughly a laptop window, so
+    // the on-screen size is about right already
+    labelScale: exporting ? 1.15 : 1,
     sculptureOpacity: 1 - fineOpacity,
     fineLayers,
     // stays pickable while the fine tiles fade in: tiles carry no metric
@@ -291,7 +293,11 @@ export function SculptureView({ scene, engine }: Props) {
         views={view}
         viewState={
           exporting
-            ? { ...viewState, zoom: viewState.zoom + exportZoomDelta.current }
+            ? (exportView.current ??= {
+                ...fitViewState(scene.lod.bounds, EXPORT_WIDTH, EXPORT_HEIGHT),
+                pitch: viewState.pitch,
+                bearing: viewState.bearing,
+              })
             : viewState
         }
         onViewStateChange={({ viewState: next }) => {
