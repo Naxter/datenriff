@@ -63,6 +63,10 @@ export interface SculptureLOD {
   tileTemplate?: string;
   /** Tiled: URL template, `{tile}` → tile id, for the positions buffer. */
   positionsTemplate?: string;
+  /** Tiled and packed: URL template, `{tile}` → tile id, of the one-file
+   *  pack (positions + every metric; see zensus_pipeline/pack.py). When
+   *  present the app fetches this instead of the loose buffers. */
+  tilePackTemplate?: string;
   tileParentResolution?: number;
   /** Stats per metric **at this resolution**. Coarser cells pool more
    *  people, so p99.5 at r7 is several times p99.5 at r8 — calibrating a

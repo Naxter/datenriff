@@ -289,6 +289,7 @@ export class TileManager {
     const req: TileLoadRequest = {
       type: 'load',
       key,
+      packUrl: lod.tilePackTemplate?.replace('{tile}', tileId),
       positionsUrl: lod.positionsTemplate.replace('{tile}', tileId),
       heightUrl: metricUrl(mode.heightMetric, 'f32'),
       elevationScale,

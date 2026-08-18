@@ -16,10 +16,9 @@ data/zensus/
 │   ├── heating_category.u8   # uint8 per cell; 255 = missing
 │   └── heating_dominance.u8  # uint8; 0–255 ≙ 0–1
 └── r9/                   # regional LOD, streamed
-    ├── index.json        # tile bounds + per-LOD metric stats
+    ├── index.json        # tile bounds + per-LOD metric stats (+ "packed")
     └── tiles/
-        ├── 851f1c6ffffffff.positions.bin
-        └── 851f1c6ffffffff.population_2022.f32
+        └── 851f1c6ffffffff.pack   # positions + every metric of the tile
 ```
 
 All buffers of one LOD share the same cell order — geometry is loaded once and
@@ -31,6 +30,15 @@ viewer fetches only what the viewport needs. A tiled LOD also keeps its
 whole-LOD buffers — the tiles are sliced from them — but those are **not** a
 country-LOD candidate: loading 830k cells up front is what tiling exists to
 prevent.
+
+Each metric run writes its tile buffers loose (`<tile>.<metric>.f32`);
+`python -m zensus_pipeline.pack --lod r9` then folds a tile's positions and
+every metric into one `<tile>.pack` — `"DRTL"`, u32 version, u32 header
+length, a JSON header with the section table (`name`, `dtype`, `size`,
+`offset`, `length`), then the 4-byte-aligned payload — and points the
+manifest's LOD entry at it (`tilePackTemplate`). One request per tile
+instead of one per metric, and 1,724 files instead of 19,000. Loose tiles
+still work when no pack template is set.
 
 ## Manifest
 

@@ -105,7 +105,13 @@ apps/web/public/data/zensus/
 └── r9/                 # regional LOD, tiled by H3 r5 parent + index.json
 ```
 
-Afterwards run `npm run build:manifest` once — it assembles
+After the last metric run, pack the tiled LOD (one file per tile instead of
+one per tile and metric — 1,724 files instead of 19,000; re-run it whenever
+a metric is added):
+
+    .venv/Scripts/python -m zensus_pipeline.pack --lod ../../apps/web/public/data/zensus/r9
+
+Then run `npm run build:manifest` once — it assembles
 `apps/web/public/data/manifest.json` from every pipeline output it finds,
 plus the city labels and the country outline.
 
