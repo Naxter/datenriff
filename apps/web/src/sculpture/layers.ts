@@ -2,7 +2,7 @@
 // both render the identical sculpture.
 
 import { ColumnLayer, SolidPolygonLayer, TextLayer } from '@deck.gl/layers';
-import { MorphColumnLayer } from './morphColumnLayer';
+import { MorphColumnLayer, type FadeBox } from './morphColumnLayer';
 import type { Layer, PickingInfo } from '@deck.gl/core';
 import { hexColumnRadius } from '@datenriff/sculpture-core';
 import type { CityLabel } from '@datenriff/data-contracts';
@@ -58,6 +58,10 @@ export interface ColumnLayerOptions {
   mixAmount?: number;
   radius: number;
   opacity?: number;
+  /** Zoom-dependent height factor (see `zoomHeightScale`). */
+  elevationScale?: number;
+  /** Region handed over to finer tiles (distance LOD); null = none. */
+  fadeBox?: FadeBox | null;
   pickable: boolean;
   onHover?: (info: PickingInfo) => void;
 }
@@ -71,8 +75,10 @@ export function createColumnLayer(o: ColumnLayerOptions): Layer {
     data: o.data as never,
     // both endpoints live on the GPU; only this uniform moves per frame
     mixAmount: o.mixAmount ?? 1,
+    fadeBox: o.fadeBox ?? null,
     diskResolution: 6,
     radius: o.radius,
+    elevationScale: o.elevationScale ?? 1,
     extruded: true,
     flatShading: true,
     pickable: o.pickable,
@@ -95,8 +101,10 @@ export interface SculptureLayerOptions {
   characterSet: string[];
   /** Scales label size/offset, e.g. for the 4K poster frame. */
   labelScale?: number;
-  /** Country LOD fade during the crossfade to a finer tiled LOD. */
-  sculptureOpacity?: number;
+  /** Where the country LOD yields to fine tiles, and how far it has faded. */
+  fadeBox?: FadeBox | null;
+  /** Zoom-dependent height factor, shared by every column layer. */
+  elevationScale?: number;
   /** The previous dataset's sculpture while it sinks away, drawn under the
    *  new one. */
   outgoingLayer?: Layer;
@@ -138,7 +146,8 @@ export function createSculptureLayers(o: SculptureLayerOptions): Layer[] {
       data: o.data,
       mixAmount: o.mixAmount,
       radius: o.radius,
-      opacity: o.sculptureOpacity,
+      elevationScale: o.elevationScale,
+      fadeBox: o.fadeBox,
       pickable: o.pickable,
       onHover: o.onHover,
     }),
