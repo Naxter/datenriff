@@ -440,9 +440,30 @@ body {
   color: var(--ink);
 }
 
+.timeline__track {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
 .timeline input[type='range'] {
   width: 220px;
   accent-color: var(--accent);
+}
+
+/* current step, read out above the slider on longer series */
+.timeline__current {
+  position: absolute;
+  left: 50%;
+  bottom: 100%;
+  transform: translateX(-50%);
+  margin-bottom: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
 }
 
 .timeline__play {

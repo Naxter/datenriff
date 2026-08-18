@@ -130,10 +130,16 @@ export function SculptureView({ scene, engine }: Props) {
   // Advance the blends. Only `mixAmount` changes per frame — the attribute
   // buffers stay put, so this re-renders without re-uploading anything.
   const [mixAmount, setMixAmount] = useState(1);
+  const shownMix = useRef(1);
   useEffect(() => {
     let raf = 0;
     const loop = (now: number) => {
-      if (engine.tick(now)) setMixAmount(engine.mixAmount);
+      engine.tick(now);
+      // transitions and timeline scrubs both move only this uniform
+      if (engine.mixAmount !== shownMix.current) {
+        shownMix.current = engine.mixAmount;
+        setMixAmount(engine.mixAmount);
+      }
       const out = outgoingRef.current;
       if (out) {
         if (out.engine.tick(now)) {

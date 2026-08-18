@@ -17,6 +17,7 @@ import { Toolbar } from '../components/Toolbar';
 import { StoryPlayer } from '../components/StoryPlayer';
 import { Veil } from '../components/Veil';
 import { INTRO_GROWTH_MS, introEligible, runIntro } from './intro';
+import { timeSegment } from '../modes/time';
 
 export default function App() {
   const status = useAtlasStore((s) => s.status);
@@ -159,10 +160,19 @@ export default function App() {
     if (!mode.time || (timeT >= 1 && !wasScrubbed)) return;
     const target = ctx.builder.build(mode, palette);
     const steps = mode.time.steps;
-    const a = target.timeHeights?.get(steps[0]!);
-    const b = target.timeHeights?.get(steps[steps.length - 1]!);
+    // piecewise: t sweeps the whole series, the engine mixes the two
+    // neighbouring steps (uploaded once per segment, one uniform per frame)
+    const seg = timeSegment(timeT, steps.length);
+    const a = target.timeHeights?.get(steps[seg.i]!);
+    const b = target.timeHeights?.get(steps[seg.i + 1]!);
     if (!a || !b) return;
-    ctx.engine.setHeightMix(a, b, timeT);
+    ctx.engine.scrub(
+      a,
+      b,
+      seg.local,
+      target.timeColors?.get(steps[seg.i]!),
+      target.timeColors?.get(steps[seg.i + 1]!),
+    );
     bumpSculpture();
   }, [ctx, ready, modeId, timeT, palette, bumpSculpture]);
 

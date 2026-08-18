@@ -64,6 +64,7 @@ export class MorphEngine {
 
   start(target: MorphTarget, nowMs: number, duration = 900, easing: Easing = cubicInOut): void {
     this.assertTarget(target);
+    this.scrubPair = null;
     // freeze the state currently on screen as the new `from`
     this.captureCurrentAsFrom();
     this.heightsTo.set(target.heights);
@@ -100,6 +101,7 @@ export class MorphEngine {
    *  when a new dataset arrives. */
   growFromFlat(target: MorphTarget, nowMs: number, duration = 1600, easing: Easing = cubicInOut): void {
     this.assertTarget(target);
+    this.scrubPair = null;
     this.heights.fill(0);
     this.colors.set(target.colors);
     for (let i = 3; i < this.colors.length; i += 4) this.colors[i] = 0;
@@ -116,6 +118,7 @@ export class MorphEngine {
   /** The reverse: sink what is on screen back into the plane and fade it
    *  out, keeping its colours. Used for the sculpture being replaced. */
   fadeOut(nowMs: number, duration = 950, easing: Easing = cubicInOut): void {
+    this.scrubPair = null;
     this.captureCurrentAsFrom();
     this.heightsTo.fill(0);
     this.colorsTo.set(this.colors);
@@ -131,6 +134,7 @@ export class MorphEngine {
   /** Jump without animation (initial load, prefers-reduced-motion). */
   snapTo(target: MorphTarget): void {
     this.assertTarget(target);
+    this.scrubPair = null;
     this.heights.set(target.heights);
     this.colors.set(target.colors);
     this.heightsTo.set(target.heights);
@@ -153,23 +157,54 @@ export class MorphEngine {
     return true;
   }
 
-  /** Timeline scrub: heights = mix(a, b, t), applied immediately.
-   *  Colours stay as they are, so scrubbing years keeps the mode's palette. */
-  setHeightMix(a: Float32Array, b: Float32Array, t: number): void {
-    if (a.length !== this.count || b.length !== this.count) {
+  /** Timeline scrub between two neighbouring steps: `from` and `to` are
+   *  parked as the endpoints and the slider drives `mixAmount` directly, so
+   *  a scrub frame moves one uniform. The buffers are re-uploaded only when
+   *  the step pair changes (identity of the arrays). Colours stay as they
+   *  are unless per-step colours are given. */
+  scrub(
+    fromHeights: Float32Array,
+    toHeights: Float32Array,
+    t: number,
+    fromColors?: Uint8Array,
+    toColors?: Uint8Array,
+  ): void {
+    if (fromHeights.length !== this.count || toHeights.length !== this.count) {
       throw new Error('Mix buffers differ in length from engine');
     }
     const tc = t < 0 ? 0 : t > 1 ? 1 : t;
-    // collapse any running blend, then park both endpoints on the scrubbed
-    // state — the scrub is driven by the slider, not by time
-    this.captureCurrentAsFrom();
-    const h = this.heights;
-    for (let i = 0; i < h.length; i++) h[i] = a[i]! + (b[i]! - a[i]!) * tc;
-    this.heightsTo.set(h);
-    this.colorsTo.set(this.colors);
-    this.mixAmount = 1;
+    const samePair =
+      this.scrubPair !== null &&
+      this.scrubPair[0] === fromHeights &&
+      this.scrubPair[1] === toHeights &&
+      this.scrubPair[2] === fromColors &&
+      this.scrubPair[3] === toColors;
+    if (!samePair) {
+      // colours keep whatever is on screen when no per-step colours exist
+      if (!fromColors || !toColors) this.captureCurrentAsFrom();
+      this.heights.set(fromHeights);
+      this.heightsTo.set(toHeights);
+      if (fromColors && toColors) {
+        this.colors.set(fromColors);
+        this.colorsTo.set(toColors);
+      } else {
+        this.colorsTo.set(this.colors);
+      }
+      this.scrubPair = [fromHeights, toHeights, fromColors, toColors];
+      this.version += 1;
+    }
+    this.mixAmount = tc;
     this.animating = false;
-    this.version += 1;
+  }
+
+  private scrubPair:
+    | [Float32Array, Float32Array, Uint8Array | undefined, Uint8Array | undefined]
+    | null = null;
+
+  /** Timeline scrub across just two buffers (kept for callers without
+   *  per-step colours). */
+  setHeightMix(a: Float32Array, b: Float32Array, t: number): void {
+    this.scrub(a, b, t);
   }
 
   private assertTarget(target: MorphTarget): void {
