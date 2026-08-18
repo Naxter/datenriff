@@ -16,6 +16,9 @@ export interface TileLoadRequest {
   type: 'load';
   /** Echoed back; identifies tile, LOD and colouring generation. */
   key: string;
+  /** One-file pack with positions and every metric; when set, the *Url
+   *  fields below only name the sections to read. */
+  packUrl?: string;
   positionsUrl: string;
   heightUrl: string;
   /** Colour source; omitted when equal to the height metric. */
@@ -65,32 +68,96 @@ async function fetchBuffer(url: string): Promise<ArrayBuffer> {
   return await res.arrayBuffer();
 }
 
+/** A tile pack (zensus_pipeline/pack.py): "DRTL", u32 version, u32 header
+ *  length, JSON header with a section table, 4-byte-aligned payload. */
+type Section = Float32Array | Uint8Array;
+
+async function fetchPack(url: string): Promise<Map<string, Section>> {
+  const buf = await fetchBuffer(url);
+  const view = new DataView(buf);
+  if (buf.byteLength < 12 || String.fromCharCode(...new Uint8Array(buf, 0, 4)) !== 'DRTL') {
+    throw new Error(`${url}: not a tile pack`);
+  }
+  const version = view.getUint32(4, true);
+  if (version !== 1) throw new Error(`${url}: pack version ${version}`);
+  const headerLen = view.getUint32(8, true);
+  const header = JSON.parse(new TextDecoder().decode(new Uint8Array(buf, 12, headerLen))) as {
+    count: number;
+    sections: { name: string; dtype: 'f32' | 'u8'; size: number; offset: number; length: number }[];
+  };
+  const base = 12 + headerLen;
+  const out = new Map<string, Section>();
+  for (const s of header.sections) {
+    // copies, so every section owns its buffer and can be transferred
+    const bytes = buf.slice(base + s.offset, base + s.offset + s.length);
+    out.set(s.name, s.dtype === 'f32' ? new Float32Array(bytes) : new Uint8Array(bytes));
+  }
+  return out;
+}
+
+/** "…/tiles/<tile>.<metric>.<storage>" → "<metric>" (a pack section name). */
+const sectionOf = (url: string) => {
+  const file = url.slice(url.lastIndexOf('/') + 1);
+  const parts = file.split('.');
+  return parts.slice(1, -1).join('.');
+};
+
 async function load(req: TileLoadRequest): Promise<void> {
-  const [positionsBuf, heightBuf] = await Promise.all([
-    fetchBuffer(req.positionsUrl),
-    fetchBuffer(req.heightUrl),
-  ]);
-  const positions = new Float32Array(positionsBuf);
-  const heightValues = new Float32Array(heightBuf);
+  const pack = req.packUrl ? await fetchPack(req.packUrl) : null;
+  const section = (url: string): Section => {
+    const id = sectionOf(url);
+    const s = pack!.get(id);
+    if (!s) throw new Error(`${req.packUrl}: no section ${id}`);
+    return s;
+  };
+
+  let positions: Float32Array;
+  let heightValues: Float32Array;
+  if (pack) {
+    positions = pack.get('positions') as Float32Array;
+    heightValues = section(req.heightUrl) as Float32Array;
+  } else {
+    const [positionsBuf, heightBuf] = await Promise.all([
+      fetchBuffer(req.positionsUrl),
+      fetchBuffer(req.heightUrl),
+    ]);
+    positions = new Float32Array(positionsBuf);
+    heightValues = new Float32Array(heightBuf);
+  }
   const count = heightValues.length;
 
   const heights = computeElevations(heightValues, req.elevationScale);
 
   let colorValues: Float32Array | Uint8Array = heightValues;
   if (req.changeUrls) {
-    const [a, b] = await Promise.all([
-      fetchBuffer(req.changeUrls.a),
-      fetchBuffer(req.changeUrls.b),
-    ]);
-    colorValues = buildChangePct(new Float32Array(b), new Float32Array(a));
+    let a: Float32Array;
+    let b: Float32Array;
+    if (pack) {
+      a = section(req.changeUrls.a) as Float32Array;
+      b = section(req.changeUrls.b) as Float32Array;
+    } else {
+      const [ab, bb] = await Promise.all([
+        fetchBuffer(req.changeUrls.a),
+        fetchBuffer(req.changeUrls.b),
+      ]);
+      a = new Float32Array(ab);
+      b = new Float32Array(bb);
+    }
+    colorValues = buildChangePct(b, a);
   } else if (req.colorUrl) {
-    const buf = await fetchBuffer(req.colorUrl);
-    colorValues = req.colorStorage === 'u8' ? new Uint8Array(buf) : new Float32Array(buf);
+    if (pack) {
+      colorValues = section(req.colorUrl);
+    } else {
+      const buf = await fetchBuffer(req.colorUrl);
+      colorValues = req.colorStorage === 'u8' ? new Uint8Array(buf) : new Float32Array(buf);
+    }
   }
 
   let saturation: Uint8Array | undefined;
   if (req.saturationUrl) {
-    saturation = new Uint8Array(await fetchBuffer(req.saturationUrl));
+    saturation = pack
+      ? (section(req.saturationUrl) as Uint8Array)
+      : new Uint8Array(await fetchBuffer(req.saturationUrl));
   }
 
   const colors = new Uint8Array(count * 4);
@@ -109,8 +176,12 @@ async function load(req: TileLoadRequest): Promise<void> {
 
   const values: Record<string, Float32Array | Uint8Array> = { [req.heightMetric]: heightValues };
   if (colorValues !== heightValues) values[req.colorMetric] = colorValues;
-  const transfer = [positions.buffer, heights.buffer, colors.buffer, heightValues.buffer];
-  if (colorValues !== heightValues) transfer.push(colorValues.buffer);
+  if (pack) {
+    // the pack carries every metric — the tooltip can read them all
+    for (const [name, arr] of pack) if (name !== 'positions' && !(name in values)) values[name] = arr;
+  }
+  const transfer: Transferable[] = [positions.buffer, heights.buffer, colors.buffer];
+  for (const arr of Object.values(values)) if (!transfer.includes(arr.buffer)) transfer.push(arr.buffer);
   scope.postMessage(
     { type: 'tile', key: req.key, count, positions, heights, colors, values },
     transfer,

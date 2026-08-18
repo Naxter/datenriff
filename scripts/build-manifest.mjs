@@ -95,7 +95,7 @@ function loadDataset(dir) {
   const dataset = JSON.parse(readFileSync(path, 'utf8'));
   const rebase = (p) => (p && !p.startsWith('/') ? `/data/${dir}/${p}` : p);
   for (const lod of dataset.lods ?? []) {
-    for (const key of ['positions', 'metricTemplate', 'tileIndex', 'tileTemplate', 'positionsTemplate']) {
+    for (const key of ['positions', 'metricTemplate', 'tileIndex', 'tileTemplate', 'positionsTemplate', 'tilePackTemplate']) {
       if (lod[key]) lod[key] = rebase(lod[key]);
     }
   }
