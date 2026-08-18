@@ -10,6 +10,7 @@ import type {
   MetricDefinition,
   SculptureMode,
 } from '@datenriff/data-contracts';
+import { pickCountryLod, type QualityProfile } from '../sculpture/quality';
 
 export interface SceneData {
   manifest: AtlasManifest;
@@ -75,22 +76,21 @@ export function resolveDataset(
 
 export async function loadScene(
   manifest: AtlasManifest,
-  datasetId?: string,
-  base = '/data',
+  datasetId: string | undefined,
+  profile: QualityProfile,
 ): Promise<SceneData> {
-  void base;
   const dataset = datasetId
     ? manifest.datasets.find((d) => d.id === datasetId) ?? manifest.datasets[0]
     : manifest.datasets[0];
   if (!dataset) throw new Error('Manifest contains no datasets');
-  // country LOD = coarsest un-tiled buffer set; finer tiled LODs stream later
-  const lod = [...dataset.lods]
-    .filter((l) => l.positions && l.metricTemplate)
-    .sort((a, b) => a.resolution - b.resolution)[0];
+  // country LOD depends on the quality profile: r8 on desktop, r7 on mobile
+  const lod = pickCountryLod(dataset, profile);
   if (!lod?.positions || !lod.metricTemplate) {
     throw new Error('Dataset has no un-tiled country LOD');
   }
-  const tileLods = dataset.lods.filter((l) => l.tileIndex);
+  const tileLods = profile.streamTiles
+    ? dataset.lods.filter((l) => l.tileIndex)
+    : [];
 
   const [positionsBuf, cities, boundary, ...metricBufs] = await Promise.all([
     fetchBuffer(lod.positions),
@@ -134,4 +134,13 @@ export function metricDefinition(dataset: SculptureDataset, id: string): MetricD
   const def = dataset.metrics.find((m) => m.id === id);
   if (!def) throw new Error(`Unknown metric: ${id}`);
   return def;
+}
+
+/** Metric definition with the stats of the LOD actually being drawn.
+ *  Coarser cells pool more people, so a shared stat block would flatten one
+ *  resolution or blow out the other. */
+export function metricForScene(scene: SceneData, id: string): MetricDefinition {
+  const def = metricDefinition(scene.dataset, id);
+  const perLod = scene.lod.metricStats?.[id];
+  return perLod ? { ...def, stats: perLod } : def;
 }

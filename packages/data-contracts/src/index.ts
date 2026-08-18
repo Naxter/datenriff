@@ -64,6 +64,10 @@ export interface SculptureLOD {
   /** Tiled: URL template, `{tile}` → tile id, for the positions buffer. */
   positionsTemplate?: string;
   tileParentResolution?: number;
+  /** Stats per metric **at this resolution**. Coarser cells pool more
+   *  people, so p99.5 at r7 is several times p99.5 at r8 — calibrating a
+   *  LOD with another LOD's stats flattens the sculpture. */
+  metricStats?: Record<string, MetricStats>;
 }
 
 /** One tile of a tiled LOD. */

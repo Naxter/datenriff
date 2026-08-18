@@ -9,7 +9,7 @@ import {
   resolveSequentialDomain,
 } from '@datenriff/color-scales';
 import type { SceneData } from '../data/loader';
-import { metricDefinition } from '../data/loader';
+import { metricForScene } from '../data/loader';
 import { CHANGE_PCT_METRIC } from '../modes/modes';
 import { EXPORT_DPR, EXPORT_HEIGHT, EXPORT_WIDTH } from './exportBridge';
 import { effectiveColorScale } from './targets';
@@ -97,7 +97,7 @@ function drawLegend(
   bottom: number,
 ): void {
   const scale = effectiveColorScale(ctx.mode, ctx.palette);
-  const def = metricDefinition(ctx.scene.dataset, ctx.mode.colorMetric);
+  const def = metricForScene(ctx.scene, ctx.mode.colorMetric);
   const title =
     ctx.mode.colorMetric === CHANGE_PCT_METRIC ? 'Population change' : def.label;
 

@@ -38,13 +38,15 @@ export function fitViewState(
     ],
     { padding: Math.round(Math.min(width, height) * 0.04) },
   );
+  // fitBounds assumes a top-down camera. Pitching compresses the footprint
+  // vertically, so a wide frame has room to zoom in past the flat fit; a
+  // portrait frame does not — there the pitched near edge spills sideways.
+  const landscape = width / height;
+  const bump = landscape >= 1.2 ? 0.3 : landscape >= 0.8 ? 0 : -0.35;
   return {
     ...INITIAL_VIEW_STATE,
     longitude: fitted.longitude,
     latitude: fitted.latitude,
-    // fitBounds assumes a top-down camera; pitching compresses the footprint
-    // vertically, so there is room to zoom in past the flat fit — minus a
-    // little headroom for the tallest columns
-    zoom: fitted.zoom + 0.3,
+    zoom: fitted.zoom + bump,
   };
 }

@@ -104,7 +104,12 @@ def merge_dataset_manifest(path: Path, fragment: dict) -> dict:
     lods = {l["resolution"]: l for l in manifest.get("lods", [])}
     for l in fragment.get("lods", []):
         existing = lods.get(l["resolution"], {})
+        # per-LOD metric stats accumulate across runs; a plain update would
+        # leave only the last metric's stats on the LOD
+        merged_stats = {**existing.get("metricStats", {}), **l.get("metricStats", {})}
         existing.update(l)
+        if merged_stats:
+            existing["metricStats"] = merged_stats
         lods[l["resolution"]] = existing
     manifest["lods"] = sorted(lods.values(), key=lambda l: -l["resolution"])
 

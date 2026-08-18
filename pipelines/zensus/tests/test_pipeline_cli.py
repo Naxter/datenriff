@@ -18,7 +18,7 @@ def install_stubs():
 
     def latlng_to_cell(lat, lon, res):
         # res 10: 1-unit buckets of the fake lon/lat; coarser: wider buckets
-        size = {10: 1, 9: 2, 8: 4, 5: 8}[res]
+        size = {10: 1, 9: 2, 8: 4, 7: 6, 5: 8}[res]
         return f"c{res}_{int(lon // size) * size}_{int(lat // size) * size}"
 
     def cell_to_parent(cell, res):
