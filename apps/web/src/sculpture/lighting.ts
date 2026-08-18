@@ -10,13 +10,14 @@ export function createLighting(shadows: boolean): LightingEffect {
       intensity: 1.12,
     }),
     // Key light from the upper left so shadows fall to the right, like the
-    // reference poster. In deck the direction vector points *at* the light
-    // in the world's frame as projected on screen, so −x = light on the
-    // left. ~37° elevation.
+    // reference poster (−x = light on the left in deck's convention).
+    // Steep — ~62° elevation. 100 km needles at a low sun throw shadows
+    // across half the country as smears; steep light keeps them as short
+    // pools at each foot, which is what the reference shows.
     key: new DirectionalLight({
       color: [255, 242, 226],
       intensity: 1.35,
-      direction: [-3, -5, -4.2],
+      direction: [-2.2, -2.6, -6.4],
       _shadow: shadows,
     }),
     // cool fill from the opposite side lifts the shadowed walls
@@ -27,6 +28,6 @@ export function createLighting(shadows: boolean): LightingEffect {
     }),
   });
   // warm ink on paper; the plane makes this the visible ground shading
-  effect.shadowColor = [0.2, 0.14, 0.09, 0.28];
+  effect.shadowColor = [0.2, 0.14, 0.09, 0.22];
   return effect;
 }
