@@ -171,7 +171,7 @@ export interface HeightScaleDefinition {
 export interface TooltipFieldDefinition {
   metric: string;
   label: string;
-  format: 'integer' | 'decimal1' | 'percent' | 'currencyPerSqm' | 'category';
+  format: 'integer' | 'decimal1' | 'percent' | 'currencyPerSqm' | 'megawatt' | 'category';
 }
 
 export interface TooltipDefinition {

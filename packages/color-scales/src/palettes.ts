@@ -56,6 +56,8 @@ export const PALETTES: Record<string, Palette> = {
   // paper → moss → deep forest green
   moss: seq('#EDF0E6', '#C6DBBC', '#8FBF92', '#4F9C69', '#23704C', '#0F4A34'),
   rain: seq('#EAE8F2', '#A9B6E3', '#7D7ED1', '#8A5BB8', '#C0509B'),
+  // installed wind power: paper → sea-glass → teal → deep North Sea
+  wind: seq('#EAF1F0', '#B9DDD9', '#7CBFBD', '#3E9AA0', '#1F6E80', '#123F55'),
   // nighttime radiance on paper: unlit stays paper, towns glow amber, city
   // cores burn through to plum
   afterdark: seq('#F1E9DE', '#F2CF8E', '#E9A24C', '#D2542A', '#8E2A5C', '#3D1B4A'),

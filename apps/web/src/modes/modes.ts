@@ -231,6 +231,34 @@ MODES.push({
   attribution: NASA_ATTRIBUTION,
 });
 
+const MASTR_ATTRIBUTION = {
+  label: 'Data: Bundesnetzagentur, Marktstammdatenregister',
+  url: 'https://www.marktstammdatenregister.de/MaStR/Datendownload',
+};
+
+/** Wind power has been registered since the first turbines of the 1990s;
+ *  the mode is bound to the years the dataset carries. */
+const WIND_YEARS = Array.from({ length: 41 }, (_, i) => String(1990 + i));
+
+// The energy transition as a landscape (plan §26): every turbine standing
+// at year end, cumulative MW per cell, played year by year. Offshore parks
+// stay in — they are the North Sea's story.
+MODES.push({
+  id: 'wind',
+  label: 'Wind',
+  subtitle: 'Wind power, built up year by year since 1990',
+  dataset: 'energy',
+  heightMetric: 'wind_mw_2030',
+  colorMetric: 'wind_mw_2030',
+  time: { kind: 'steps', steps: WIND_YEARS, metricTemplate: 'wind_mw_{step}' },
+  heightScale: { type: 'linear' },
+  colorScale: { type: 'sqrt', clip: 0.995, palette: 'wind', gamma: 1.2 },
+  tooltip: {
+    fields: [{ metric: 'wind_mw_2030', label: 'Installed wind power', format: 'megawatt' }],
+  },
+  attribution: MASTR_ATTRIBUTION,
+});
+
 const boundModes = new Map<string, SculptureMode>();
 
 /** A mode adapted to what a dataset actually carries: time steps whose

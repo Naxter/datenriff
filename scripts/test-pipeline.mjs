@@ -23,6 +23,7 @@ const candidates = [
 
 const args = ['-m', 'unittest', 'discover', '-s', 'tests', '-t', '.', '-v'];
 const BLACK_MARBLE = join(ROOT, 'pipelines', 'black-marble');
+const MASTR = join(ROOT, 'pipelines', 'mastr');
 
 for (const [cmd, pre] of candidates) {
   const probe = spawnSync(cmd, [...pre, '--version'], { stdio: 'ignore' });
@@ -36,7 +37,14 @@ for (const [cmd, pre] of candidates) {
     stdio: 'inherit',
     env: { ...process.env, PYTHONPATH: `.${sep}${PIPELINE}` },
   });
-  process.exit(nightLights.status ?? 1);
+  if (nightLights.status !== 0) process.exit(nightLights.status ?? 1);
+  // mastr likewise; stdlib + h3 only
+  const mastr = spawnSync(cmd, [...pre, ...args], {
+    cwd: MASTR,
+    stdio: 'inherit',
+    env: { ...process.env, PYTHONPATH: `.${sep}${PIPELINE}` },
+  });
+  process.exit(mastr.status ?? 1);
 }
 
 console.error('No Python interpreter found (tried venv, python3, python, py -3).');
