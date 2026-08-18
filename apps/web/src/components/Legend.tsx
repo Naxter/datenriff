@@ -9,6 +9,7 @@ import {
 import type { SceneData } from '../data/loader';
 import { metricForScene } from '../data/loader';
 import { CHANGE_PCT_METRIC } from '../modes/modes';
+import { nearestStep } from '../modes/time';
 import { effectiveColorScale } from '../sculpture/targets';
 import { useAtlasStore } from '../state/store';
 
@@ -79,10 +80,20 @@ export function Legend({ mode, scene, colorStats }: Props) {
     );
   }, [scale, scene, mode.colorMetric, colorStats]);
 
+  // when colour follows the timeline (a year of night light), the title
+  // names the year currently shown, not the latest one
+  const timeT = useAtlasStore((s) => s.timeT);
+  const stepMetric =
+    mode.time && mode.colorMetric === mode.heightMetric
+      ? mode.time.metricTemplate.replace(
+          '{step}',
+          mode.time.steps[nearestStep(timeT, mode.time.steps.length)]!,
+        )
+      : mode.colorMetric;
   const title =
     mode.colorMetric === CHANGE_PCT_METRIC
       ? 'Population change'
-      : metricForScene(scene, mode.colorMetric).label;
+      : metricForScene(scene, stepMetric).label;
 
   const choices = useMemo(() => {
     const base = mode.colorScale.palette;

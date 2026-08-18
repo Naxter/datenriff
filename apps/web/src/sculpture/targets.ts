@@ -61,6 +61,10 @@ export interface ModeTarget extends MorphTarget {
 
 export class TargetBuilder {
   private readonly cache = new Map<string, ModeTarget>();
+  /** The dataset this builder serves; modes are bound to it. */
+  get dataset() {
+    return this.scene.dataset;
+  }
   private readonly derived = new Map<string, { values: Float32Array; stats: MetricStats }>();
 
   constructor(private readonly scene: SceneData) {}

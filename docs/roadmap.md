@@ -50,10 +50,11 @@
 
 ## Further sources — open
 
-- [x] AFTER DARK: `pipelines/black-marble` turns the NASA Black Marble
-      mosaic into H3 r7 cells (mean brightness, clipped to the outline);
-      the app switches datasets per mode, proving the renderer is not a
-      census viewer
+- [x] AFTER DARK: `pipelines/black-marble` turns NASA Black Marble into H3
+      cells (mean radiance per year, clipped to the outline) — VNP46A4
+      annual composites 2012 on with a timeline, or the 8-bit mosaic for a
+      demo; the app switches datasets per mode, proving the renderer is not
+      a census viewer
 - [ ] pipelines for precipitation, energy registry, land cover and forest
       (the `rain`/`energy` palettes are prepared)
 

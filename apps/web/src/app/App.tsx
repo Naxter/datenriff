@@ -114,11 +114,11 @@ export default function App() {
   // cannot serve the mode (AFTER DARK → PEOPLE swaps datasets). The sculpture
   // stays up showing the last mode it could serve; only the target builder
   // waits for `ready`.
-  const mode = getMode(modeId);
+  const mode = getMode(modeId, scene?.dataset);
   const ready = ctx !== null && scene !== undefined && datasetServesMode(scene.dataset, mode);
   const shownModeId = useRef(modeId);
   if (ready) shownModeId.current = modeId;
-  const shownMode = getMode(shownModeId.current);
+  const shownMode = getMode(shownModeId.current, scene?.dataset);
 
   // Opening sequence: the timers start once the first scene is on screen
   // and must survive the title → reveal step, hence the coarse dependency.
@@ -135,7 +135,7 @@ export default function App() {
   const firstMorph = useRef(true);
   useEffect(() => {
     if (!ctx || !ready || introPhase === 'title') return;
-    const target = ctx.builder.build(getMode(modeId), palette);
+    const target = ctx.builder.build(getMode(modeId, ctx.builder.dataset), palette);
     if (reducedMotion) {
       ctx.engine.snapTo(target);
     } else if (ctx.engine.isPristine) {
@@ -154,7 +154,7 @@ export default function App() {
   const prevTimeT = useRef(1);
   useEffect(() => {
     if (!ctx || !ready) return;
-    const mode = getMode(modeId);
+    const mode = getMode(modeId, ctx.builder.dataset);
     const wasScrubbed = prevTimeT.current < 1;
     prevTimeT.current = timeT;
     if (!mode.time || (timeT >= 1 && !wasScrubbed)) return;

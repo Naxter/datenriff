@@ -201,8 +201,11 @@ MODES.push(
 const NASA_ATTRIBUTION = {
   label: 'Data: NASA Black Marble',
   url: 'https://www.earthdata.nasa.gov/data/projects/black-marble',
-  referenceDate: '2016-01-01',
 };
+
+/** VNP46A4 annual composites exist from 2012; the mode is bound to the
+ *  years the dataset actually carries (see `bindMode`). */
+const BLACK_MARBLE_YEARS = Array.from({ length: 13 }, (_, i) => String(2012 + i));
 
 // Proves the renderer is not a census viewer: a satellite raster, a
 // different cell universe and its own resolution, same contracts.
@@ -213,30 +216,70 @@ MODES.push({
   // the ground, not its ecological effect (plan §19)
   subtitle: 'Artificial light over Germany',
   dataset: 'afterdark',
-  heightMetric: 'light_brightness',
-  colorMetric: 'light_brightness',
+  // the latest year the data carries stands in for these (bindMode)
+  heightMetric: 'light_2024',
+  colorMetric: 'light_2024',
+  time: { kind: 'steps', steps: BLACK_MARBLE_YEARS, metricTemplate: 'light_{step}' },
   // a dense low field: a steeper, more frontal view keeps the cities from
   // stacking into one wall the way the census poster angle would
   camera: { pitch: 50, bearing: -8 },
   heightScale: { type: 'linear' },
   colorScale: { type: 'sqrt', clip: 0.995, palette: 'afterdark', gamma: 1.35 },
   tooltip: {
-    fields: [
-      { metric: 'light_brightness', label: 'Brightness', format: 'integer' },
-    ],
+    fields: [{ metric: 'light_2024', label: 'Night light', format: 'decimal1' }],
   },
   attribution: NASA_ATTRIBUTION,
 });
 
-export function getMode(id: string): SculptureMode {
-  return MODES.find((m) => m.id === id) ?? MODES[0]!;
+const boundModes = new Map<string, SculptureMode>();
+
+/** A mode adapted to what a dataset actually carries: time steps whose
+ *  metric is missing are dropped, and metrics that follow the step template
+ *  (height, colour, tooltip) point at the latest step present. So the same
+ *  AFTER DARK mode runs on one demo year or on the full 2012–2024 series,
+ *  and CHANGE is untouched (its 2011 and 2022 are both there). With fewer
+ *  than two steps left the timeline goes away. */
+export function bindMode(mode: SculptureMode, dataset: SculptureDataset): SculptureMode {
+  if (!mode.time) return mode;
+  const key = `${mode.id}|${dataset.id}|${dataset.metrics.map((m) => m.id).join(',')}`;
+  const cached = boundModes.get(key);
+  if (cached) return cached;
+  const template = (step: string) => mode.time!.metricTemplate.replace('{step}', step);
+  const has = (id: string) => dataset.metrics.some((m) => m.id === id);
+  const steps = mode.time.steps.filter((s) => has(template(s)));
+  let bound = mode;
+  if (steps.length > 0 && steps.length !== mode.time.steps.length) {
+    const last = template(steps[steps.length - 1]!);
+    const follows = (id: string) => mode.time!.steps.some((s) => template(s) === id);
+    const sub = (id: string) => (follows(id) ? last : id);
+    bound = {
+      ...mode,
+      heightMetric: sub(mode.heightMetric),
+      colorMetric: sub(mode.colorMetric),
+      tooltip: {
+        ...mode.tooltip,
+        fields: mode.tooltip.fields.map((f) => ({ ...f, metric: sub(f.metric) })),
+      },
+    };
+    if (steps.length >= 2) bound.time = { ...mode.time, steps };
+    else delete bound.time;
+  }
+  boundModes.set(key, bound);
+  return bound;
+}
+
+/** A mode by id; with a dataset, bound to the metrics that dataset carries. */
+export function getMode(id: string, dataset?: SculptureDataset): SculptureMode {
+  const mode = MODES.find((m) => m.id === id) ?? MODES[0]!;
+  return dataset ? bindMode(mode, dataset) : mode;
 }
 
 /** Can this dataset serve this mode? CHANGE is derived from two buffers. */
 export function datasetServesMode(
   dataset: SculptureDataset,
-  mode: SculptureMode,
+  unbound: SculptureMode,
 ): boolean {
+  const mode = bindMode(unbound, dataset);
   const has = (id: string) => dataset.metrics.some((m) => m.id === id);
   if (!has(mode.heightMetric)) return false;
   if (mode.colorMetric === CHANGE_PCT_METRIC) {
