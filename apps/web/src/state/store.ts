@@ -9,6 +9,10 @@ export interface HoverInfo {
   index: number;
 }
 
+/** 'title': title alone, sculpture held flat · 'reveal': sculpture rising,
+ *  tagline appears · 'done': title gone, UI in. */
+export type IntroPhase = 'title' | 'reveal' | 'done';
+
 interface AtlasState {
   status: 'loading' | 'ready' | 'error';
   error?: string;
@@ -16,6 +20,9 @@ interface AtlasState {
   scene?: SceneData;
   /** A further dataset is streaming in while `scene` stays on screen. */
   sceneLoading: boolean;
+  /** Opening sequence: title on empty paper → the sculpture rises beneath
+   *  it → tagline → UI. null = no intro this visit. */
+  introPhase: IntroPhase | null;
   modeId: string;
   /** Timeline position for time-enabled modes; 1 = latest step. */
   timeT: number;
@@ -31,6 +38,7 @@ interface AtlasState {
   setManifest(manifest: AtlasManifest): void;
   setScene(scene: SceneData): void;
   setError(message: string): void;
+  setIntroPhase(phase: IntroPhase | null): void;
   setMode(id: string): void;
   setTimeT(t: number): void;
   setPalette(palette: string | null): void;
@@ -43,6 +51,7 @@ interface AtlasState {
 export const useAtlasStore = create<AtlasState>((set) => ({
   status: 'loading',
   sceneLoading: false,
+  introPhase: null,
   modeId: 'people',
   timeT: 1,
   palette: null,
@@ -53,6 +62,7 @@ export const useAtlasStore = create<AtlasState>((set) => ({
   setManifest: (manifest) => set({ manifest }),
   setScene: (scene) => set({ scene, status: 'ready', sceneLoading: false }),
   setError: (error) => set({ error, status: 'error' }),
+  setIntroPhase: (introPhase) => set({ introPhase }),
   setMode: (modeId) => set({ modeId, timeT: 1, hover: null }),
   setTimeT: (timeT) => set({ timeT }),
   setPalette: (palette) => set({ palette }),

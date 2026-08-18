@@ -296,6 +296,30 @@ export function SculptureView({ scene, engine }: Props) {
 
   const characterSet = useMemo(() => labelCharacterSet(scene.cities), [scene.cities]);
 
+  // opening sequence: labels come in last, after the sculpture has risen
+  const introPhase = useAtlasStore((s) => s.introPhase);
+  const labelsHeld = introPhase === 'title' || introPhase === 'reveal';
+  const [labelOpacity, setLabelOpacity] = useState(labelsHeld ? 0 : 1);
+  const labelsWereHeld = useRef(labelsHeld);
+  useEffect(() => {
+    if (labelsHeld) {
+      labelsWereHeld.current = true;
+      setLabelOpacity(0);
+      return;
+    }
+    if (!labelsWereHeld.current) return; // ordinary visit: labels were never hidden
+    labelsWereHeld.current = false;
+    let raf = 0;
+    const t0 = performance.now();
+    const step = (now: number) => {
+      const t = Math.min(1, (now - t0) / 700);
+      setLabelOpacity(t);
+      if (t < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [labelsHeld]);
+
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const fineLayers = useMemo(() => {
     if (fineOpacity <= 0 || !fineLod || !tileManager) return [];
@@ -366,6 +390,7 @@ export function SculptureView({ scene, engine }: Props) {
     // poster labels: the frame is 1920 CSS px, roughly a laptop window, so
     // the on-screen size is about right already
     labelScale: exporting ? 1.15 : 1,
+    labelOpacity,
     mixAmount,
     fadeBox,
     elevationScale: heightScale,
