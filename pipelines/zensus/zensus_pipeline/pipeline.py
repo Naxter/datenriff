@@ -69,10 +69,19 @@ from .binary_writer import (
 )
 from .gridref import find_centre_columns, find_grid_id_column, parse_grid_id
 from .special_values import parse_value
+from .tiling import (
+    group_by_tile,
+    merge_tile_index,
+    write_tile_metric,
+    write_tile_positions,
+)
 
 BASE_RESOLUTION = 10
 COARSE_RESOLUTIONS = (9, 8)
 H3_EDGE_METERS = {8: 461.4, 9: 174.4, 10: 65.9}
+# finer LODs ship as tiles grouped by this H3 parent resolution
+TILED_RESOLUTIONS = frozenset({9, 10})
+TILE_PARENT_RES = 5
 WEIGHT_KEY = "__weight"
 
 
@@ -225,6 +234,39 @@ def positions_for(cells: list[str]) -> list[tuple[float, float]]:
     return result
 
 
+def write_tiles(
+    res: int,
+    res_dir: Path,
+    universe: list[str],
+    metric_files: list[tuple[str, list, str]],
+    metric_stats: dict[str, dict],
+) -> None:
+    """Group the universe by H3 parent and write per-tile buffers + index."""
+    import h3
+
+    groups = group_by_tile(
+        universe, lambda cell: h3.cell_to_parent(cell, TILE_PARENT_RES)
+    )
+    first_run = not (res_dir / "index.json").exists()
+    tile_bounds = (
+        write_tile_positions(res_dir, groups, positions_for(universe))
+        if first_run
+        else None
+    )
+    for file_name, aligned, storage in metric_files:
+        write_tile_metric(res_dir, groups, file_name, aligned, storage)
+    merge_tile_index(
+        res_dir,
+        res,
+        H3_EDGE_METERS[res],
+        tile_bounds,
+        {tile_id: len(indices) for tile_id, indices in groups.items()},
+        metric_stats,
+    )
+    if first_run:
+        print(f"  r{res}: {len(groups):,} tiles", file=sys.stderr)
+
+
 def ensure_universe(res_dir: Path, cells_at_level: dict) -> list[str]:
     universe = load_universe(res_dir)
     if universe is None:
@@ -308,6 +350,10 @@ def run(args: argparse.Namespace) -> None:
             stats = compute_stats(aligned, with_sum=True)
             if res == country_res:
                 metric_entries.append(metric_entry(args, "f32", "sum", stats))
+            if res in TILED_RESOLUTIONS:
+                write_tiles(res, res_dir, universe,
+                            [(f"{args.metric}.f32", aligned, "f32")],
+                            {args.metric: stats})
             lod_fragments.append(lod_fragment(res, universe))
 
     elif args.rule == "wmean":
@@ -328,6 +374,10 @@ def run(args: argparse.Namespace) -> None:
             stats = compute_stats(aligned)
             if res == country_res:
                 metric_entries.append(metric_entry(args, "f32", "weightedMean", stats))
+            if res in TILED_RESOLUTIONS:
+                write_tiles(res, res_dir, universe,
+                            [(f"{args.metric}.f32", aligned, "f32")],
+                            {args.metric: stats})
             lod_fragments.append(lod_fragment(res, universe))
 
     elif args.rule == "share":
@@ -358,6 +408,10 @@ def run(args: argparse.Namespace) -> None:
             stats = compute_stats(aligned)
             if res == country_res:
                 metric_entries.append(metric_entry(args, "f32", "share", stats))
+            if res in TILED_RESOLUTIONS:
+                write_tiles(res, res_dir, universe,
+                            [(f"{args.metric}.f32", aligned, "f32")],
+                            {args.metric: stats})
             lod_fragments.append(lod_fragment(res, universe))
 
     else:  # category
@@ -389,6 +443,12 @@ def run(args: argparse.Namespace) -> None:
                     doms.append(round(entry[1] * 255))
             write_u8(res_dir / f"{args.metric}_category.u8", cats)
             write_u8(res_dir / f"{args.metric}_dominance.u8", doms)
+            if res in TILED_RESOLUTIONS:
+                write_tiles(res, res_dir, universe,
+                            [(f"{args.metric}_category.u8", cats, "u8"),
+                             (f"{args.metric}_dominance.u8", doms, "u8")],
+                            {f"{args.metric}_category": compute_stats(cats),
+                             f"{args.metric}_dominance": compute_stats(doms)})
             if res == country_res:
                 metric_entries.append(
                     {
@@ -451,7 +511,7 @@ def metric_entry(args: argparse.Namespace, storage: str, rule: str, stats: dict)
 
 
 def lod_fragment(res: int, universe: list[str]) -> dict:
-    return {
+    fragment = {
         "resolution": res,
         "count": len(universe),
         "bounds": bounds_of(positions_for(universe)),
@@ -460,6 +520,16 @@ def lod_fragment(res: int, universe: list[str]) -> dict:
         "positions": f"r{res}/positions.bin",
         "metricTemplate": f"r{res}/{{metric}}",
     }
+    if res in TILED_RESOLUTIONS:
+        fragment.update(
+            {
+                "tileIndex": f"r{res}/index.json",
+                "tileTemplate": f"r{res}/tiles/{{tile}}.{{metric}}",
+                "positionsTemplate": f"r{res}/tiles/{{tile}}.positions.bin",
+                "tileParentResolution": TILE_PARENT_RES,
+            }
+        )
+    return fragment
 
 
 def main(argv: list[str] | None = None) -> None:
