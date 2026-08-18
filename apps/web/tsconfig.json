@@ -1,0 +1,17 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "noEmit": true,
+    "types": ["vite/client"],
+    "paths": {
+      "@datenriff/data-contracts": ["../../packages/data-contracts/src/index.ts"],
+      "@datenriff/color-scales": ["../../packages/color-scales/src/index.ts"],
+      "@datenriff/sculpture-core": ["../../packages/sculpture-core/src/index.ts"]
+    }
+  },
+  "include": ["src", "vite.config.ts"]
+}
