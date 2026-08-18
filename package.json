@@ -12,13 +12,13 @@
     "dev": "npm run dev -w @datenriff/web",
     "build": "npm run build -w @datenriff/web",
     "preview": "npm run preview -w @datenriff/web",
-    "generate:demo": "node scripts/generate-demo-data.mjs",
     "build:packages": "tsc -p packages/data-contracts && tsc -p packages/color-scales && tsc -p packages/sculpture-core",
     "typecheck": "npm run build:packages && npm run typecheck -w @datenriff/web",
     "test:packages": "npm run build:packages && node --test packages/color-scales/test/*.test.mjs packages/sculpture-core/test/*.test.mjs",
     "test:pipeline": "node scripts/test-pipeline.mjs",
     "test": "npm run test:packages && npm run test:pipeline",
-    "deploy": "npm run build && wrangler pages deploy apps/web/dist --project-name datenriff"
+    "deploy": "npm run build && wrangler pages deploy apps/web/dist --project-name datenriff",
+    "build:manifest": "node scripts/build-manifest.mjs"
   },
   "devDependencies": {
     "playwright": "^1.62.1",

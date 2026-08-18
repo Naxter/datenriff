@@ -9,7 +9,7 @@ __pycache__/
 dist/
 *.tsbuildinfo
 
-# Generated demo data (recreate with: npm run generate:demo)
+# Pipeline output (see pipelines/*/README.md, then: npm run build:manifest)
 apps/web/public/data/
 
 # Pipeline working data (large downloads / intermediate files)

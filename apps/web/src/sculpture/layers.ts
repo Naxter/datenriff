@@ -1,13 +1,13 @@
 // Layer factory shared by the interactive view and the poster export, so
 // both render the identical sculpture.
 
-import { ColumnLayer, PathLayer, TextLayer } from '@deck.gl/layers';
+import { ColumnLayer, SolidPolygonLayer, TextLayer } from '@deck.gl/layers';
 import type { Layer, PickingInfo } from '@deck.gl/core';
 import { hexColumnRadius } from '@datenriff/sculpture-core';
 import type { CityLabel } from '@datenriff/data-contracts';
 import type { SceneData } from '../data/loader';
 import { NeedleExtension } from './needleExtension';
-import { COLUMN_TAPER, PLINTH_COLOR, PLINTH_DEPTH_METERS } from './targets';
+import { COLUMN_TAPER } from './targets';
 
 /** One shared instance: deck compares extensions by value, and a new object
  *  per render would recompile the shader every frame. */
@@ -18,8 +18,22 @@ const NEEDLE = new NeedleExtension({ taper: COLUMN_TAPER });
  *  non-literal keeps excess-property checking out of the way. */
 const SHADOW_OFF = { shadowEnabled: false } as object;
 
+/** TextLayer is composite: the glyphs render in a `characters` sub-layer,
+ *  which does not inherit `shadowEnabled` — the label font atlas then gets
+ *  drawn into the shadow map and city names appear as giant letters on the
+ *  ground plane. Opt every sub-layer out explicitly. */
+const TEXT_SHADOW_OFF = {
+  ...SHADOW_OFF,
+  _subLayerProps: {
+    characters: { shadowEnabled: false },
+    background: { shadowEnabled: false },
+  },
+} as object;
+
 export const INK: [number, number, number, number] = [34, 28, 21, 235];
 export const PAPER_HALO: [number, number, number, number] = [247, 240, 234, 235];
+/** The page background, so the ground plane disappears into the paper. */
+export const PAPER: [number, number, number, number] = [247, 240, 234, 255];
 
 /** Slight overlap closes gaps between hex disks. */
 export function sculptureRadius(scene: SceneData): number {
@@ -46,43 +60,30 @@ export interface SculptureLayerOptions {
 }
 
 export function createSculptureLayers(o: SculptureLayerOptions): Layer[] {
-  const plinthData = {
-    length: o.scene.count,
-    attributes: { getPosition: { value: o.scene.positions, size: 2 } },
-  };
+  // Ground plane: paper-coloured, spanning well past the country. It is
+  // invisible against the page but catches the columns' shadows, which is
+  // what the editorial reference does — needles standing on paper. It
+  // replaces the earlier grey slab, whose top showed through every gap
+  // between tapered columns as a dull crust.
+  const [w, s, e, n] = o.scene.lod.bounds;
+  const pad = 6;
+  const ground = [
+    [w - pad, s - pad],
+    [e + pad, s - pad],
+    [e + pad, n + pad],
+    [w - pad, n + pad],
+  ] as [number, number][];
 
   const layers = [
-    o.scene.boundary.length > 0 &&
-      new PathLayer({
-        id: 'outline',
-        data: o.scene.boundary,
-        getPath: (ring: [number, number][]) => [...ring, ring[0]!],
-        getColor: [34, 28, 21, 26],
-        getWidth: 1.2,
-        widthUnits: 'pixels',
-        jointRounded: true,
-        shadowEnabled: false,
-      }),
-    // plinth: the same cells extruded downwards, so the country reads as a
-    // slab floating on the paper rather than a field of loose columns
-    new ColumnLayer({
-      id: 'plinth',
-      data: plinthData as unknown as never,
-      diskResolution: 6,
-      radius: o.radius,
-      extruded: true,
-      flatShading: true,
+    new SolidPolygonLayer({
+      id: 'ground',
+      data: [{ polygon: ground }],
+      getPolygon: (d: { polygon: [number, number][] }) => d.polygon,
+      getFillColor: PAPER,
       pickable: false,
-      // deck.gl skips columns with a negative elevation, so flip the scale
-      getElevation: PLINTH_DEPTH_METERS,
-      elevationScale: -1,
-      getFillColor: [...PLINTH_COLOR, 255],
-      material: {
-        ambient: 0.7,
-        diffuse: 0.42,
-        shininess: 40,
-        specularColor: [30, 27, 24],
-      },
+      // no self-shadowing on a flat plane; it only receives
+      ...SHADOW_OFF,
+      material: { ambient: 1, diffuse: 0, shininess: 1, specularColor: [0, 0, 0] },
     }),
     new ColumnLayer({
       id: 'sculpture',
@@ -122,9 +123,9 @@ export function createSculptureLayers(o: SculptureLayerOptions): Layer[] {
       fontSettings: { sdf: true, fontSize: 128, buffer: 8, radius: 12 },
       outlineWidth: 6,
       outlineColor: PAPER_HALO,
-      // the font atlas must not take part in the shadow pass: deck 9.1 binds
-      // it into the shadow sampler slot and every layer then fails to draw
-      ...SHADOW_OFF,
+      // the font atlas must not take part in the shadow pass (sampler
+      // corruption in 9.1, and letter-shaped shadows on the ground plane)
+      ...TEXT_SHADOW_OFF,
       // labels sit on the paper plane; draw them over the columns like a
       // poster overlay
       parameters: { depthCompare: 'always', depthWriteEnabled: false },

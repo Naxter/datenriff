@@ -62,8 +62,7 @@ export function datasetSupportsMode(
 }
 
 /** The dataset a mode should render from: its declared id when that one can
- *  serve it, otherwise the first that can — so the synthetic demo stands in
- *  for the census dataset until the pipeline has run. */
+ *  serve it, otherwise the first that can. */
 export function resolveDataset(
   manifest: AtlasManifest,
   mode: SculptureMode,

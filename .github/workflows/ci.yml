@@ -23,12 +23,6 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm run test
-      - run: npm run build
-
-      # The census downloads are gigabytes; CI builds against the synthetic
-      # demo dataset that `prebuild` generates.
-      - uses: actions/upload-artifact@v4
-        with:
-          name: web-dist
-          path: apps/web/dist
-          retention-days: 7
+      # The data lives outside the repo (multi-GB census downloads); the
+      # build only needs the app to compile.
+      - run: npm run build -w @datenriff/web

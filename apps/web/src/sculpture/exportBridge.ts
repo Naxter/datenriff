@@ -3,8 +3,11 @@
 // poster is captured from the app's own canvas, resized to 4K for one
 // frame by SculptureView.
 
-export const EXPORT_WIDTH = 3840;
-export const EXPORT_HEIGHT = 2160;
+// CSS size of the capture frame; the deck renders it at 2× device pixels
+// and the poster composes at that resolution, so needles stay crisp
+export const EXPORT_WIDTH = 1920;
+export const EXPORT_HEIGHT = 1080;
+export const EXPORT_DPR = 2;
 
 export const CAPTURE_EVENT = 'atlas-capture';
 
