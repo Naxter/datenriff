@@ -14,6 +14,7 @@ import { Legend } from '../components/Legend';
 import { Tooltip } from '../components/Tooltip';
 import { Attribution } from '../components/Attribution';
 import { ExportButton } from '../components/ExportButton';
+import { StoryPlayer } from '../components/StoryPlayer';
 import { Veil } from '../components/Veil';
 
 export default function App() {
@@ -152,6 +153,7 @@ export default function App() {
       )}
       {ready && <Tooltip mode={mode} scene={scene} builder={ctx.builder} />}
       {ready && <ExportButton builder={ctx.builder} />}
+      {ready && <StoryPlayer mode={mode} />}
       {ready && <Attribution scene={scene} />}
       <Veil visible={status !== 'ready' || !ready} error={error} />
     </div>

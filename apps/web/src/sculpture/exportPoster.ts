@@ -11,15 +11,11 @@ import {
 import type { SceneData } from '../data/loader';
 import { metricForScene } from '../data/loader';
 import { CHANGE_PCT_METRIC } from '../modes/modes';
-import { EXPORT_DPR, EXPORT_HEIGHT, EXPORT_WIDTH } from './exportBridge';
+import { EXPORT_DPR, currentFormat } from './exportBridge';
 import { effectiveColorScale } from './targets';
-
-const W = EXPORT_WIDTH * EXPORT_DPR;
-const H = EXPORT_HEIGHT * EXPORT_DPR;
 
 const PAPER = '#f7f0ea';
 const INK = '#221c15';
-const MARGIN = 120;
 
 export interface PosterContext {
   scene: SceneData;
@@ -34,6 +30,11 @@ export async function composePoster(
   ctx: PosterContext,
 ): Promise<void> {
   await document.fonts.ready;
+  const format = currentFormat();
+  const W = format.width * EXPORT_DPR;
+  const H = format.height * EXPORT_DPR;
+  // portrait crops have far less width for the header block
+  const MARGIN = Math.round(Math.min(W, H) * 0.055);
 
   const composed = document.createElement('canvas');
   composed.width = W;
@@ -44,7 +45,7 @@ export async function composePoster(
   c.fillStyle = PAPER;
   c.fillRect(0, 0, W, H);
   c.drawImage(base, 0, 0, W, H);
-  drawOverlay(c, ctx);
+  drawOverlay(c, ctx, W, H, MARGIN);
 
   const blob = await new Promise<Blob | null>((resolve) =>
     composed.toBlob(resolve, 'image/png'),
@@ -52,41 +53,49 @@ export async function composePoster(
   if (!blob) throw new Error('PNG encoding failed');
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `vertical-atlas-${ctx.mode.id}.png`;
+  a.download = `vertical-atlas-${ctx.mode.id}-${format.id}.png`;
   a.click();
   URL.revokeObjectURL(a.href);
 }
 
-function drawOverlay(c: CanvasRenderingContext2D, ctx: PosterContext): void {
+function drawOverlay(
+  c: CanvasRenderingContext2D,
+  ctx: PosterContext,
+  W: number,
+  H: number,
+  MARGIN: number,
+): void {
   const { mode, scene } = ctx;
+  // type scales with the frame so 9:16 does not get poster-sized headlines
+  const u = Math.min(W, H) / 2160;
   c.textBaseline = 'alphabetic';
 
   // header, top right
   const right = W - MARGIN;
   c.fillStyle = INK;
   c.globalAlpha = 0.6;
-  c.font = '600 30px Inter, sans-serif';
+  c.font = `600 ${30 * u}px Inter, sans-serif`;
   c.textAlign = 'right';
-  drawTracked(c, 'VERTICAL ATLAS — GERMANY', right, MARGIN + 10, 10);
+  drawTracked(c, 'VERTICAL ATLAS — GERMANY', right, MARGIN + 10 * u, 10 * u);
   c.globalAlpha = 1;
-  c.font = '400 190px "Instrument Serif", Georgia, serif';
-  c.fillText(mode.label.toUpperCase(), right, MARGIN + 190);
+  c.font = `400 ${190 * u}px "Instrument Serif", Georgia, serif`;
+  c.fillText(mode.label.toUpperCase(), right, MARGIN + 190 * u);
   c.globalAlpha = 0.62;
-  c.font = '400 40px Inter, sans-serif';
-  c.fillText(mode.subtitle ?? '', right, MARGIN + 262);
+  c.font = `400 ${40 * u}px Inter, sans-serif`;
+  c.fillText(mode.subtitle ?? '', right, MARGIN + 262 * u);
   c.globalAlpha = 0.38;
-  c.font = '500 28px Inter, sans-serif';
-  drawTracked(c, formatDate(mode.attribution?.referenceDate), right, MARGIN + 322, 4);
+  c.font = `500 ${28 * u}px Inter, sans-serif`;
+  drawTracked(c, formatDate(mode.attribution?.referenceDate), right, MARGIN + 322 * u, 4 * u);
   c.globalAlpha = 1;
 
-  drawLegend(c, ctx, right, H - MARGIN);
+  drawLegend(c, ctx, right, H - MARGIN, u);
 
   // attribution, bottom left
   c.textAlign = 'left';
   c.globalAlpha = 0.45;
-  c.font = '500 26px Inter, sans-serif';
-  drawTracked(c, scene.dataset.source.label.toUpperCase(), MARGIN, H - MARGIN - 44, 2.2);
-  drawTracked(c, 'DATENRIFF · VERTICAL ATLAS', MARGIN, H - MARGIN, 2.2);
+  c.font = `500 ${26 * u}px Inter, sans-serif`;
+  drawTracked(c, scene.dataset.source.label.toUpperCase(), MARGIN, H - MARGIN - 44 * u, 2.2 * u);
+  drawTracked(c, 'DATENRIFF · VERTICAL ATLAS', MARGIN, H - MARGIN, 2.2 * u);
   c.globalAlpha = 1;
 }
 
@@ -95,6 +104,7 @@ function drawLegend(
   ctx: PosterContext,
   right: number,
   bottom: number,
+  u: number,
 ): void {
   const scale = effectiveColorScale(ctx.mode, ctx.palette);
   const def = metricForScene(ctx.scene, ctx.mode.colorMetric);
@@ -104,25 +114,25 @@ function drawLegend(
   c.textAlign = 'right';
   c.fillStyle = INK;
   c.globalAlpha = 0.55;
-  c.font = '600 26px Inter, sans-serif';
-  drawTracked(c, (title ?? '').toUpperCase(), right, bottom - 250, 5);
+  c.font = `600 ${26 * u}px Inter, sans-serif`;
+  drawTracked(c, (title ?? '').toUpperCase(), right, bottom - 250 * u, 5 * u);
   c.globalAlpha = 1;
 
   if (scale.type === 'categorical') {
     const labels = def.categories ?? [];
     const colors = legendGradient(scale.palette);
-    c.font = '500 30px Inter, sans-serif';
-    const rowH = 52;
+    c.font = `500 ${30 * u}px Inter, sans-serif`;
+    const rowH = 52 * u;
     labels.forEach((label, i) => {
-      const y = bottom - 190 + (i % 5) * rowH;
+      const y = bottom - 190 * u + (i % 5) * rowH;
       const col = Math.floor(i / 5);
-      const x = right - col * 420;
+      const x = right - col * 420 * u;
       c.fillStyle = colors[i] ?? '#999';
-      c.fillRect(x - 360, y - 26, 30, 30);
+      c.fillRect(x - 360 * u, y - 26 * u, 30 * u, 30 * u);
       c.fillStyle = INK;
       c.globalAlpha = 0.8;
       c.textAlign = 'left';
-      c.fillText(label, x - 316, y);
+      c.fillText(label, x - 316 * u, y);
       c.globalAlpha = 1;
     });
     c.textAlign = 'right';
@@ -130,31 +140,31 @@ function drawLegend(
   }
 
   // gradient bar
-  const barW = 620;
-  const barY = bottom - 200;
+  const barW = 620 * u;
+  const barY = bottom - 200 * u;
   const gradient = c.createLinearGradient(right - barW, 0, right, 0);
   const stops = legendGradient(scale.palette);
   stops.forEach((color, i) => gradient.addColorStop(i / (stops.length - 1), color));
   c.fillStyle = gradient;
-  c.fillRect(right - barW, barY, barW, 26);
+  c.fillRect(right - barW, barY, barW, 26 * u);
 
   c.fillStyle = INK;
   c.globalAlpha = 0.6;
-  c.font = '500 28px Inter, sans-serif';
+  c.font = `500 ${28 * u}px Inter, sans-serif`;
   if (scale.type === 'diverging') {
     const hw = resolveDivergingHalfWidth(scale, ctx.colorStats);
     c.textAlign = 'left';
-    c.fillText(`−${Math.round(hw * 100)} %`, right - barW, barY + 66);
+    c.fillText(`−${Math.round(hw * 100)} %`, right - barW, barY + 66 * u);
     c.textAlign = 'center';
-    c.fillText('0', right - barW / 2, barY + 66);
+    c.fillText('0', right - barW / 2, barY + 66 * u);
     c.textAlign = 'right';
-    c.fillText(`+${Math.round(hw * 100)} %`, right, barY + 66);
+    c.fillText(`+${Math.round(hw * 100)} %`, right, barY + 66 * u);
   } else {
     const [lo, hi] = resolveSequentialDomain(scale, ctx.colorStats);
     c.textAlign = 'left';
-    c.fillText(formatNumber(lo, def.unit), right - barW, barY + 66);
+    c.fillText(formatNumber(lo, def.unit), right - barW, barY + 66 * u);
     c.textAlign = 'right';
-    c.fillText(formatNumber(hi, def.unit), right, barY + 66);
+    c.fillText(formatNumber(hi, def.unit), right, barY + 66 * u);
   }
   c.globalAlpha = 1;
 }

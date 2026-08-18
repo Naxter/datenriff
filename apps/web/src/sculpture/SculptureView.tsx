@@ -27,9 +27,8 @@ import { CAMERA_FOVY, INITIAL_VIEW_STATE, fitViewState } from './camera';
 import {
   CAPTURE_EVENT,
   EXPORT_DPR,
-  EXPORT_HEIGHT,
-  EXPORT_WIDTH,
   captureIsPending,
+  currentFormat,
   deliverCapture,
 } from './exportBridge';
 import { createLighting } from './lighting';
@@ -54,6 +53,7 @@ export function SculptureView({ scene, engine }: Props) {
   const timeT = useAtlasStore((s) => s.timeT);
   const palette = useAtlasStore((s) => s.palette);
   const sculptureVersion = useAtlasStore((s) => s.sculptureVersion);
+  const storyStop = useAtlasStore((s) => s.storyStop);
 
   const quality = useMemo(() => detectQuality(), []);
 
@@ -134,15 +134,36 @@ export function SculptureView({ scene, engine }: Props) {
     }));
   }, [modeId, mode.camera]);
 
+  // camera stories fly the view to each stop in turn
+  useEffect(() => {
+    if (!storyStop) return;
+    setViewState((v) => ({
+      ...v,
+      longitude: storyStop.longitude,
+      latitude: storyStop.latitude,
+      zoom: storyStop.zoom,
+      pitch: storyStop.pitch ?? v.pitch,
+      bearing: storyStop.bearing ?? v.bearing,
+      transitionDuration: 2200,
+      transitionInterpolator: new FlyToInterpolator({ speed: 1.2, curve: 1.3 }),
+    }));
+  }, [storyStop]);
+
   const fineLod = tileManager?.activeLod(viewState.zoom) ?? null;
   const fineUsable =
     tileManager !== null &&
     fineLod !== null &&
     timeT >= 1 &&
     tileManager.supportsMode(fineLod, mode);
-  const fineOpacity = fineUsable
-    ? clamp01((viewState.zoom - fineLod.minZoom) / CROSSFADE_ZOOM_SPAN)
-    : 0;
+  // Crossfade only as far as the fine tiles have actually arrived: fading
+  // the country layer out on zoom alone leaves an empty frame while the
+  // first tiles are still decoding (very visible when a camera story flies
+  // straight to a city).
+  const readyTiles = tileManager?.tiles().length ?? 0;
+  const fineOpacity =
+    fineUsable && readyTiles > 0
+      ? clamp01((viewState.zoom - fineLod.minZoom) / CROSSFADE_ZOOM_SPAN)
+      : 0;
 
   useEffect(() => {
     if (!fineUsable || !tileManager || !quality.streamTiles) return;
@@ -230,7 +251,8 @@ export function SculptureView({ scene, engine }: Props) {
         }),
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tileManager, fineLod, fineOpacity, tilesVersion]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tileManager, fineLod, fineOpacity, tilesVersion, readyTiles]);
 
   const layers = createSculptureLayers({
     scene,
@@ -261,8 +283,9 @@ export function SculptureView({ scene, engine }: Props) {
   const finishCapture = () => {
     if (!exporting) return;
     const canvas = deckRef.current?.deck?.canvas;
-    const pw = EXPORT_WIDTH * EXPORT_DPR;
-    const ph = EXPORT_HEIGHT * EXPORT_DPR;
+    const format = currentFormat();
+    const pw = format.width * EXPORT_DPR;
+    const ph = format.height * EXPORT_DPR;
     if (!canvas || canvas.width !== pw || canvas.height !== ph) {
       return; // resize has not landed yet; a later frame will match
     }
@@ -291,7 +314,11 @@ export function SculptureView({ scene, engine }: Props) {
       className="atlas__canvas"
       style={
         exporting
-          ? { width: EXPORT_WIDTH, height: EXPORT_HEIGHT, inset: 'auto' }
+          ? {
+              width: currentFormat().width,
+              height: currentFormat().height,
+              inset: 'auto',
+            }
           : undefined
       }
     >
@@ -300,11 +327,19 @@ export function SculptureView({ scene, engine }: Props) {
         views={view}
         viewState={
           exporting
-            ? (exportView.current ??= {
-                ...fitViewState(scene.lod.bounds, EXPORT_WIDTH, EXPORT_HEIGHT),
-                pitch: viewState.pitch,
-                bearing: viewState.bearing,
-              })
+            ? (exportView.current ??= (() => {
+                const f = currentFormat();
+                // Germany is wider than it is tall, so a portrait crop would
+                // leave it small between two empty bands. Turning the camera
+                // lays the country diagonally across the frame instead.
+                const portrait = f.width / f.height < 0.9;
+                const bearing = (viewState.bearing ?? 0) - (portrait ? 25 : 0);
+                return {
+                  ...fitViewState(scene.lod.bounds, f.width, f.height),
+                  pitch: viewState.pitch,
+                  bearing,
+                };
+              })())
             : viewState
         }
         onViewStateChange={({ viewState: next }) => {

@@ -42,7 +42,7 @@ export function fitViewState(
   // vertically, so a wide frame has room to zoom in past the flat fit; a
   // portrait frame does not — there the pitched near edge spills sideways.
   const landscape = width / height;
-  const bump = landscape >= 1.2 ? 0.3 : landscape >= 0.8 ? 0 : -0.35;
+  const bump = landscape >= 1.2 ? 0.3 : landscape >= 0.8 ? 0 : -0.15;
   return {
     ...INITIAL_VIEW_STATE,
     longitude: fitted.longitude,

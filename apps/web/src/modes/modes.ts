@@ -12,6 +12,15 @@ const CENSUS_ATTRIBUTION = {
 /** Derived in the app from the two population buffers, not shipped. */
 export const CHANGE_PCT_METRIC = 'population_change_pct';
 
+/** Curated camera moves (plan §98). Zoom is absolute Mercator scale, so
+ *  these are city-scale stops the viewer flies between. */
+const RUHR = { longitude: 7.1, latitude: 51.45, zoom: 8.4 };
+const BERLIN = { longitude: 13.4, latitude: 52.52, zoom: 8.6 };
+const MUNICH = { longitude: 11.57, latitude: 48.14, zoom: 8.6 };
+const LEIPZIG = { longitude: 12.37, latitude: 51.34, zoom: 8.6 };
+const LAUSITZ = { longitude: 14.3, latitude: 51.55, zoom: 8.0 };
+const RHINE_MAIN = { longitude: 8.68, latitude: 50.11, zoom: 8.4 };
+
 export const MODES: SculptureMode[] = [
   {
     id: 'people',
@@ -25,6 +34,18 @@ export const MODES: SculptureMode[] = [
     tooltip: {
       fields: [{ metric: 'population_2022', label: 'Population', format: 'integer' }],
     },
+    stories: [
+      {
+        id: 'metropolises',
+        label: 'The big four',
+        stops: [
+          { label: 'Rhine-Ruhr', ...RUHR },
+          { label: 'Berlin', ...BERLIN },
+          { label: 'Rhine-Main', ...RHINE_MAIN },
+          { label: 'Munich', ...MUNICH },
+        ],
+      },
+    ],
     attribution: CENSUS_ATTRIBUTION,
   },
   {
@@ -43,6 +64,17 @@ export const MODES: SculptureMode[] = [
         { metric: CHANGE_PCT_METRIC, label: 'Change 2011–2022', format: 'percent' },
       ],
     },
+    stories: [
+      {
+        id: 'growth-and-shrinking',
+        label: 'Growth and shrinking',
+        stops: [
+          { label: 'Munich, growing', ...MUNICH },
+          { label: 'Leipzig, turned around', ...LEIPZIG },
+          { label: 'Lusatia, shrinking', ...LAUSITZ },
+        ],
+      },
+    ],
     attribution: CENSUS_ATTRIBUTION,
   },
   {
@@ -97,6 +129,74 @@ export const MODES: SculptureMode[] = [
     attribution: CENSUS_ATTRIBUTION,
   },
 ];
+
+// V1.1 modes — same renderer, new census metrics only.
+MODES.push(
+  {
+    id: 'homes',
+    label: 'Homes',
+    subtitle: 'Housing stock, and where it was built recently',
+    dataset: 'zensus',
+    heightMetric: 'homes',
+    colorMetric: 'homes_new_share',
+    heightScale: { type: 'linear' },
+    // Destatis rounds cell values independently, so a handful of tiny cells
+    // report a share slightly above 1; the domain clips them.
+    colorScale: { type: 'linear', domain: [0, 0.6], palette: 'vintage' },
+    tooltip: {
+      fields: [
+        { metric: 'homes', label: 'Dwellings', format: 'integer' },
+        { metric: 'homes_new_share', label: 'Built 2014 or later', format: 'percent' },
+      ],
+    },
+    attribution: CENSUS_ATTRIBUTION,
+  },
+  {
+    id: 'vacancy',
+    label: 'Vacancy',
+    subtitle: 'Where flats stand empty',
+    dataset: 'zensus',
+    heightMetric: 'homes',
+    colorMetric: 'vacancy_rate',
+    heightScale: { type: 'linear' },
+    colorScale: { type: 'linear', domain: [0, 20], palette: 'vacancy' },
+    tooltip: {
+      fields: [
+        { metric: 'homes', label: 'Dwellings', format: 'integer' },
+        { metric: 'vacancy_rate', label: 'Vacancy rate', format: 'decimal1' },
+      ],
+    },
+    stories: [
+      {
+        id: 'empty-east',
+        label: 'Empty corners',
+        stops: [
+          { label: 'Lusatia', ...LAUSITZ },
+          { label: 'Leipzig', ...LEIPZIG },
+          { label: 'Munich, full', ...MUNICH },
+        ],
+      },
+    ],
+    attribution: CENSUS_ATTRIBUTION,
+  },
+  {
+    id: 'families',
+    label: 'Families',
+    subtitle: 'How many people share a home',
+    dataset: 'zensus',
+    heightMetric: 'population_2022',
+    colorMetric: 'household_size',
+    heightScale: { type: 'linear' },
+    colorScale: { type: 'linear', domain: [1.5, 3], palette: 'household' },
+    tooltip: {
+      fields: [
+        { metric: 'population_2022', label: 'Population', format: 'integer' },
+        { metric: 'household_size', label: 'Household size', format: 'decimal1' },
+      ],
+    },
+    attribution: CENSUS_ATTRIBUTION,
+  },
+);
 
 const NASA_ATTRIBUTION = {
   label: 'Data: NASA Black Marble',
