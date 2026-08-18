@@ -2,6 +2,10 @@
 // country outline and a handful of city labels are the only other layers —
 // no basemap. The morph engine's buffers are re-uploaded only on frames
 // where they actually changed.
+//
+// deck.gl is pinned to 9.1.x on purpose: in 9.3.10 the picking pass writes
+// nothing into its offscreen framebuffer, so hover picking never returns a
+// cell. Verify picking after any deck.gl upgrade.
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import DeckGL from '@deck.gl/react';
@@ -16,7 +20,8 @@ import { CAMERA_FOVY, INITIAL_VIEW_STATE } from './camera';
 import { createLighting } from './lighting';
 import { PLINTH_COLOR, PLINTH_DEPTH_METERS } from './targets';
 
-const PAPER_CLEAR: [number, number, number, number] = [247, 240, 234, 255];
+// The canvas stays transparent; the paper tone comes from the page background
+// (--paper in design/global.css), so there is no clear colour to set here.
 const INK: [number, number, number, number] = [34, 28, 21, 235];
 
 /** Delay before shadows return once the camera rests. */
@@ -176,8 +181,6 @@ export function SculptureView({ scene, engine }: Props) {
         id: 'main',
         fovy: CAMERA_FOVY,
         farZMultiplier: 3,
-        clear: true,
-        clearColor: PAPER_CLEAR,
         controller: { inertia: 260, touchRotate: true, keyboard: true },
       }),
     [],

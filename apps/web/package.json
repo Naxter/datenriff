@@ -15,9 +15,10 @@
     "@datenriff/color-scales": "*",
     "@datenriff/data-contracts": "*",
     "@datenriff/sculpture-core": "*",
-    "@deck.gl/core": "^9.2.0",
-    "@deck.gl/layers": "^9.2.0",
-    "@deck.gl/react": "^9.2.0",
+    "@deck.gl/core": "9.1.14",
+    "@deck.gl/layers": "9.1.14",
+    "@deck.gl/react": "9.1.14",
+    "@deck.gl/widgets": "9.1.14",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "zustand": "^5.0.2"
