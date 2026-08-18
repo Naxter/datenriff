@@ -13,6 +13,11 @@ import { COLUMN_TAPER, PLINTH_COLOR, PLINTH_DEPTH_METERS } from './targets';
  *  per render would recompile the shader every frame. */
 const NEEDLE = new NeedleExtension({ taper: COLUMN_TAPER });
 
+/** `shadowEnabled` is a core layer prop deck reads at runtime, but composite
+ *  layers such as TextLayer do not surface it in their typings. Spreading a
+ *  non-literal keeps excess-property checking out of the way. */
+const SHADOW_OFF = { shadowEnabled: false } as object;
+
 export const INK: [number, number, number, number] = [34, 28, 21, 235];
 export const PAPER_HALO: [number, number, number, number] = [247, 240, 234, 235];
 
@@ -56,6 +61,7 @@ export function createSculptureLayers(o: SculptureLayerOptions): Layer[] {
         getWidth: 1.2,
         widthUnits: 'pixels',
         jointRounded: true,
+        shadowEnabled: false,
       }),
     // plinth: the same cells extruded downwards, so the country reads as a
     // slab floating on the paper rather than a field of loose columns
@@ -116,6 +122,9 @@ export function createSculptureLayers(o: SculptureLayerOptions): Layer[] {
       fontSettings: { sdf: true, fontSize: 128, buffer: 8, radius: 12 },
       outlineWidth: 6,
       outlineColor: PAPER_HALO,
+      // the font atlas must not take part in the shadow pass: deck 9.1 binds
+      // it into the shadow sampler slot and every layer then fails to draw
+      ...SHADOW_OFF,
       // labels sit on the paper plane; draw them over the columns like a
       // poster overlay
       parameters: { depthCompare: 'always', depthWriteEnabled: false },

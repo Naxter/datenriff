@@ -52,9 +52,15 @@
 
 - [x] 4K poster export (EXPORT button / E key: captured from the live view,
       composed with title, legend and attribution)
+- [x] soft shadows in the app: deck's shadow pass works once texture-using
+      layers (labels, outline) opt out with `shadowEnabled: false`; a single
+      stable LightingEffect avoids stale pipeline bindings. `?shadows=0`
+      disables them for software renderers.
+- [x] needle silhouettes, peak-anchored height calibration, ambient
+      occlusion, thin plinth, MSAA — calibrated in the prototype
+- [x] camera fits the dataset bounds to the viewport, so the sculpture fills
+      the frame at any window size (fixed zoom cropped or shrank it)
 - [ ] GPU morph shader, camera stories, social formats
-- [ ] soft shadows in the app (the prototype's shadow mapping; deck's own
-      shadow pass corrupts texture bindings and stays off)
 
 ## Production — open
 

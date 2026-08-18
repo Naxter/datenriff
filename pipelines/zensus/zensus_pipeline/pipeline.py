@@ -526,7 +526,7 @@ def lod_fragment(res: int, universe: list[str]) -> dict:
         "count": len(universe),
         "bounds": bounds_of(positions_for(universe)),
         "cellRadiusMeters": H3_EDGE_METERS[res],
-        "minZoom": 0 if res == 8 else (6 if res == 9 else 8.5),
+        "minZoom": 0 if res == 8 else (7.0 if res == 9 else 8.5),
         "positions": f"r{res}/positions.bin",
         "metricTemplate": f"r{res}/{{metric}}",
     }
