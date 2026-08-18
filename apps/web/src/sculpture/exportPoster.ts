@@ -11,7 +11,7 @@ import {
 import type { SceneData } from '../data/loader';
 import { metricForScene } from '../data/loader';
 import { CHANGE_PCT_METRIC } from '../modes/modes';
-import { EXPORT_DPR, currentFormat } from './exportBridge';
+import { EXPORT_DPR, currentFormat, type ExportFormat } from './exportBridge';
 import { effectiveColorScale } from './targets';
 
 const PAPER = '#f7f0ea';
@@ -24,15 +24,18 @@ export interface PosterContext {
   colorStats: MetricStats;
 }
 
-/** Compose the captured frame into a poster and trigger the download. */
-export async function composePoster(
+/** Compose the captured frame into the poster: paper, sculpture, then title,
+ *  legend and attribution. `dpr` scales the whole composition, so the same
+ *  code draws the 4K file and the dialog's small preview. */
+export async function renderPoster(
   base: HTMLCanvasElement,
   ctx: PosterContext,
-): Promise<void> {
+  format: ExportFormat = currentFormat(),
+  dpr = EXPORT_DPR,
+): Promise<HTMLCanvasElement> {
   await document.fonts.ready;
-  const format = currentFormat();
-  const W = format.width * EXPORT_DPR;
-  const H = format.height * EXPORT_DPR;
+  const W = Math.round(format.width * dpr);
+  const H = Math.round(format.height * dpr);
   // portrait crops have far less width for the header block
   const MARGIN = Math.round(Math.min(W, H) * 0.055);
 
@@ -46,7 +49,16 @@ export async function composePoster(
   c.fillRect(0, 0, W, H);
   c.drawImage(base, 0, 0, W, H);
   drawOverlay(c, ctx, W, H, MARGIN);
+  return composed;
+}
 
+/** Compose the captured frame into a poster and trigger the download. */
+export async function composePoster(
+  base: HTMLCanvasElement,
+  ctx: PosterContext,
+): Promise<void> {
+  const format = currentFormat();
+  const composed = await renderPoster(base, ctx, format, EXPORT_DPR);
   const blob = await new Promise<Blob | null>((resolve) =>
     composed.toBlob(resolve, 'image/png'),
   );

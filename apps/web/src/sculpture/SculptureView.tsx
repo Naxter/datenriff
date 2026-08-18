@@ -24,7 +24,7 @@ import { readUrlState, writeUrlState } from '../state/url';
 import { CAMERA_FOVY, INITIAL_VIEW_STATE, fitViewState, zoomHeightScale } from './camera';
 import {
   CAPTURE_EVENT,
-  EXPORT_DPR,
+  currentDpr,
   captureIsPending,
   currentFormat,
   deliverCapture,
@@ -414,8 +414,8 @@ export function SculptureView({ scene, engine }: Props) {
     if (!exporting) return;
     const canvas = deckRef.current?.deck?.canvas;
     const format = currentFormat();
-    const pw = format.width * EXPORT_DPR;
-    const ph = format.height * EXPORT_DPR;
+    const pw = Math.round(format.width * currentDpr());
+    const ph = Math.round(format.height * currentDpr());
     if (!canvas || canvas.width !== pw || canvas.height !== ph) {
       return; // resize has not landed yet; a later frame will match
     }
@@ -483,7 +483,7 @@ export function SculptureView({ scene, engine }: Props) {
         deviceProps={{ webgl: { antialias: true } }}
         useDevicePixels={
           exporting
-            ? EXPORT_DPR
+            ? currentDpr()
             : Math.min(window.devicePixelRatio || 1, quality.maxDevicePixelRatio)
         }
         style={{ background: 'transparent' }}
