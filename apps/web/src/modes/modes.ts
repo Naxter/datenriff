@@ -259,6 +259,35 @@ MODES.push({
   attribution: MASTR_ATTRIBUTION,
 });
 
+const DWD_ATTRIBUTION = {
+  label: 'Data: Deutscher Wetterdienst',
+  url: 'https://opendata.dwd.de/climate_environment/CDC/grids_germany/annual/precipitation/',
+};
+
+/** DWD's annual grids reach back to 1881; the mode binds to what the
+ *  dataset actually carries. */
+const RAIN_YEARS = Array.from({ length: 60 }, (_, i) => String(1971 + i));
+
+// Rainfall is a field, not a scatter of peaks: a raised sheet with ridges
+// over the Alps, the Black Forest and the Harz, and a dip in the dry belt
+// around Magdeburg. `zeroAt` puts the driest square kilometre near the
+// plane instead of 300 mm above it, so that relief stays readable.
+MODES.push({
+  id: 'rain',
+  label: 'Rain',
+  subtitle: 'A year of rainfall, from the dry east to the Alps',
+  dataset: 'rain',
+  heightMetric: 'rain_mm_2030',
+  colorMetric: 'rain_mm_2030',
+  time: { kind: 'steps', steps: RAIN_YEARS, metricTemplate: 'rain_mm_{step}' },
+  heightScale: { type: 'linear', zeroAt: 300 },
+  colorScale: { type: 'linear', domain: [500, 1600], palette: 'rain' },
+  tooltip: {
+    fields: [{ metric: 'rain_mm_2030', label: 'Annual precipitation', format: 'millimetre' }],
+  },
+  attribution: DWD_ATTRIBUTION,
+});
+
 const boundModes = new Map<string, SculptureMode>();
 
 /** A mode adapted to what a dataset actually carries: time steps whose

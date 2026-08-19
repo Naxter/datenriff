@@ -172,12 +172,24 @@ export interface HeightScaleDefinition {
   type: 'linear';
   /** Quantile the composition height is calibrated against (default 0.995). */
   calibrationQuantile?: number;
+  /** Value that stands on the plane (default 0). Some quantities have a
+   *  floor — no square kilometre of Germany gets zero rain — and measuring
+   *  those from zero turns the sculpture into a slab whose front edge hides
+   *  the country behind it. The tooltip keeps showing the real value. */
+  zeroAt?: number;
 }
 
 export interface TooltipFieldDefinition {
   metric: string;
   label: string;
-  format: 'integer' | 'decimal1' | 'percent' | 'currencyPerSqm' | 'megawatt' | 'category';
+  format:
+    | 'integer'
+    | 'decimal1'
+    | 'percent'
+    | 'currencyPerSqm'
+    | 'megawatt'
+    | 'millimetre'
+    | 'category';
 }
 
 export interface TooltipDefinition {

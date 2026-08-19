@@ -4,7 +4,7 @@
 
 ```bash
 npm run typecheck      # packages + app
-npm run test           # node:test (packages) + unittest (zensus, black-marble, mastr pipelines)
+npm run test           # node:test (packages) + unittest (zensus, black-marble, mastr, dwd pipelines)
 npm run build
 ```
 

@@ -20,6 +20,7 @@ function formatValue(v: number, unit?: string): string {
     Math.abs(v) >= 10_000 ? `${nf.format(Math.round(v / 1000))}k` : nf.format(v);
   if (unit === '€/m²') return `${v} €/m²`;
   if (unit === 'MW') return `${compact} MW`;
+  if (unit === 'mm') return `${compact} mm`;
   return compact;
 }
 

@@ -6,6 +6,7 @@ import type { SculptureMode, TooltipFieldDefinition } from '@datenriff/data-cont
 import type { SceneData } from '../data/loader';
 import { metricForScene } from '../data/loader';
 import { CHANGE_PCT_METRIC } from '../modes/modes';
+import { nearestStep } from '../modes/time';
 import type { TargetBuilder } from '../sculpture/targets';
 import { useAtlasStore } from '../state/store';
 
@@ -53,6 +54,8 @@ function formatField(
       return `${dec1Fmt.format(value)} €/m²`;
     case 'megawatt':
       return `${dec1Fmt.format(value)} MW`;
+    case 'millimetre':
+      return `${intFmt.format(Math.round(value))} mm`;
     case 'category': {
       const def = metricForScene(scene, field.metric);
       return def.categories?.[Math.round(value)] ?? '—';
@@ -68,29 +71,44 @@ interface Props {
 
 export function Tooltip({ mode, scene, builder }: Props) {
   const hover = useAtlasStore((s) => s.hover);
+  const timeT = useAtlasStore((s) => s.timeT);
 
   const content = useMemo(() => {
     if (!hover) return null;
     const place = nearestCity(scene, hover.index);
+    // A field that follows the timeline (rain of a year, wind of a year)
+    // must read the year on screen, not the latest one the mode binds to.
+    const time = mode.time;
+    const shownStep = time ? time.steps[nearestStep(timeT, time.steps.length)]! : null;
+    const stepOf = (metric: string) => {
+      if (!time || !shownStep) return null;
+      const follows = time.steps.some(
+        (s) => time.metricTemplate.replace('{step}', s) === metric,
+      );
+      return follows ? shownStep : null;
+    };
     const rows = mode.tooltip.fields
       .filter(
         (field) =>
           field.metric === CHANGE_PCT_METRIC ||
-          scene.dataset.metrics.some((m) => m.id === field.metric),
+          scene.dataset.metrics.some((m) => m.id === field.metric) ||
+          stepOf(field.metric) !== null,
       )
       .map((field) => {
+        const step = stepOf(field.metric);
+        const metric = step ? time!.metricTemplate.replace('{step}', step) : field.metric;
         // a picked fine cell brings its own values; anything it lacks
         // (rare: a tooltip metric that is neither height nor colour) falls
         // back to the country cell beneath
-        const fine = hover.fine?.[field.metric];
-        const value = fine !== undefined ? fine : builder.resolveMetric(field.metric).values[hover.index]!;
+        const fine = hover.fine?.[metric];
+        const value = fine !== undefined ? fine : builder.resolveMetric(metric).values[hover.index]!;
         return {
-          label: field.label,
+          label: step ? `${field.label} ${step}` : field.label,
           value: formatField(field, value, scene),
         };
       });
     return { place, rows, fine: hover.fine !== undefined };
-  }, [hover, mode, scene, builder]);
+  }, [hover, mode, scene, builder, timeT]);
 
   if (!hover || !content) return null;
 

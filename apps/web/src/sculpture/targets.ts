@@ -149,13 +149,15 @@ export class TargetBuilder {
     if (cached) return cached;
 
     const height = this.resolveMetric(mode.heightMetric);
+    const zeroAt = mode.heightScale.zeroAt ?? 0;
     const scale = elevationScaleFor(
       height.stats,
       TARGET_MAX_HEIGHT_METERS,
       mode.heightScale.calibrationQuantile ?? 0.995,
       PEAKEDNESS,
+      zeroAt,
     );
-    const heights = computeElevations(toF32(height.values), scale);
+    const heights = computeElevations(toF32(height.values), scale, undefined, zeroAt);
 
     const color = this.resolveMetric(mode.colorMetric);
     const colors = new Uint8Array(this.scene.count * 4);
@@ -176,7 +178,10 @@ export class TargetBuilder {
       for (const step of mode.time.steps) {
         const metricId = mode.time.metricTemplate.replace('{step}', step);
         const stepMetric = this.resolveMetric(metricId);
-        target.timeHeights.set(step, computeElevations(toF32(stepMetric.values), scale));
+        target.timeHeights.set(
+          step,
+          computeElevations(toF32(stepMetric.values), scale, undefined, zeroAt),
+        );
         if (colorFollows) {
           // one colour domain (the height metric's stats) for every step
           const stepColors = new Uint8Array(this.scene.count * 4);

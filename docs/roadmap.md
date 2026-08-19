@@ -58,8 +58,10 @@
 - [x] WIND: `pipelines/mastr` range-reads the wind units out of the
       Marktstammdatenregister export and writes installed MW per cell and
       year since 1990; the timeline plays the build-up, offshore included
-- [ ] pipelines for precipitation, land cover and forest (the `rain`
-      palette is prepared)
+- [x] RAIN: `pipelines/dwd` turns the DWD's 1 km annual precipitation
+      grids into H3 cells and years; the timeline plays wet years against
+      dry ones, and `zeroAt` keeps the field a relief instead of a slab
+- [ ] pipelines for land cover and forest
 
 ## Cinematic polish — in progress
 
