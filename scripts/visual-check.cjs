@@ -58,6 +58,7 @@ const VIEWS = [
   { id: 'land', q: 'mode=land' },
   { id: 'forest', q: 'mode=forest' },
   { id: 'land-2012', q: 'mode=land&t=0' },
+  { id: 'land-2015', q: 'mode=land&t=0.333' },
   { id: 'people-de', q: 'mode=people&lang=de' },
   { id: 'people-mobile', q: 'mode=people&quality=mobile' },
   { id: 'people-berlin', q: 'mode=people&view=13.405,52.520,9.90,58,-18', wait: 6000 },
