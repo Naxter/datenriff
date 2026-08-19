@@ -167,7 +167,7 @@ const MODE_TEXT: Record<Lang, Record<string, { label: string; subtitle: string }
     land: { label: 'Boden', subtitle: 'Woraus der Boden besteht, und wie viel davon bebaut ist' },
     forest: {
       label: 'Wald',
-      subtitle: 'Wo der Wald steht, und wie viel davon seit 1985 getroffen wurde',
+      subtitle: 'Wo der Wald steht, und wie viel davon seit 1985 gefällt wurde oder abstarb',
     },
   },
 };

@@ -357,7 +357,7 @@ const EFDA_ATTRIBUTION = {
   referenceDate: '2023-12-31',
 };
 
-// Where the forest stands, and how much of it has been hit. Height is the
+// Where the forest stands, and how much of it has come down. Height is the
 // share of the cell under canopy, so the map is the forest itself — the
 // Harz, the Bavarian Forest, the Black Forest as ridges. Colour is the part
 // of that canopy disturbed at least once since 1985, which is why the
@@ -366,7 +366,7 @@ MODES.push({
   id: 'forest',
   family: 'nature',
   label: 'Forest',
-  subtitle: 'Where the forest stands, and how much of it has been hit',
+  subtitle: 'Where the forest stands, and how much of it has come down since 1985',
   dataset: 'forest',
   heightMetric: 'forest_share',
   colorMetric: 'disturbed_share',
