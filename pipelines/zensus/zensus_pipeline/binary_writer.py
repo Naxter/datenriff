@@ -93,9 +93,18 @@ def merge_dataset_manifest(path: Path, fragment: dict) -> dict:
     else:
         manifest = {"metrics": [], "lods": []}
 
+    previous_source = manifest.get("source")
     manifest.update(
         {k: v for k, v in fragment.items() if k not in ("metrics", "lods")}
     )
+    # A dataset's reference date is the newest thing in it, not the last
+    # thing that happened to be written. Running CLC5's 2018 vintage after
+    # its 2021 one left LAND claiming a 2018 date for a map that shows 2021.
+    if previous_source and isinstance(manifest.get("source"), dict):
+        old_date = previous_source.get("referenceDate")
+        new_date = manifest["source"].get("referenceDate")
+        if old_date and (not new_date or str(old_date) > str(new_date)):
+            manifest["source"] = {**manifest["source"], "referenceDate": old_date}
     metrics = {m["id"]: m for m in manifest.get("metrics", [])}
     for m in fragment.get("metrics", []):
         metrics[m["id"]] = m

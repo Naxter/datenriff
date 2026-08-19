@@ -54,7 +54,9 @@ export async function renderAnimation(
       // the new mix to be on screen
       await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
       const captured = await requestSculptureCapture(format, dpr);
-      const poster = await renderPoster(captured, ctx, format, dpr);
+      // each frame is a different year, so its poster furniture — the date
+      // and the legend's metric — has to be that year's, not the context's
+      const poster = await renderPoster(captured, { ...ctx, timeT: t }, format, dpr);
       const c2d = poster.getContext('2d');
       if (!c2d) throw new Error('no 2d context for the animation frame');
       const { data, width, height } = c2d.getImageData(0, 0, poster.width, poster.height);

@@ -94,3 +94,32 @@ class TestBinaryWriter(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestManifestReferenceDate(unittest.TestCase):
+    """A dataset is as new as its newest vintage, whatever ran last."""
+
+    def _write(self, path, date, metric):
+        merge_dataset_manifest(path, {
+            "id": "land",
+            "source": {"label": "BKG", "referenceDate": date},
+            "metrics": [{"id": metric, "stats": {}}],
+            "lods": [{"resolution": 8, "metricStats": {metric: {}}}],
+        })
+
+    def test_an_older_vintage_run_later_does_not_backdate_the_dataset(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "dataset.json"
+            self._write(path, "2021-01-01", "built_share_2021")
+            self._write(path, "2018-01-01", "built_share_2018")
+            manifest = json.loads(path.read_text(encoding="utf-8"))
+            self.assertEqual(manifest["source"]["referenceDate"], "2021-01-01")
+            self.assertEqual(len(manifest["metrics"]), 2, "both vintages are kept")
+
+    def test_a_newer_vintage_does_move_it_forward(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "dataset.json"
+            self._write(path, "2018-01-01", "built_share_2018")
+            self._write(path, "2021-01-01", "built_share_2021")
+            manifest = json.loads(path.read_text(encoding="utf-8"))
+            self.assertEqual(manifest["source"]["referenceDate"], "2021-01-01")

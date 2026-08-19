@@ -64,6 +64,9 @@ export function ExportDialog({ builder, onClose }: Props) {
       scene: s.scene,
       mode,
       palette: s.palette,
+      // the poster is of what is on screen: this year, this language
+      timeT: s.timeT,
+      lang: s.lang,
       colorStats: builder.build(mode, s.palette).colorStats,
     };
   }, [builder]);

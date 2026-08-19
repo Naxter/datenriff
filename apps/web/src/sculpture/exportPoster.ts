@@ -10,6 +10,8 @@ import {
 } from '@datenriff/color-scales';
 import type { SceneData } from '../data/loader';
 import { metricForScene } from '../data/loader';
+import { type Lang, metricText, modeText, translate } from '../i18n/strings';
+import { nearestStep } from '../modes/time';
 import { CHANGE_PCT_METRIC } from '../modes/modes';
 import { EXPORT_DPR, currentFormat, type ExportFormat } from './exportBridge';
 import { effectiveColorScale } from './targets';
@@ -21,6 +23,11 @@ export interface PosterContext {
   scene: SceneData;
   mode: SculptureMode;
   palette: string | null;
+  /** The step on screen. A poster of 2012 was carrying the latest year's
+   *  legend, because the poster read the mode's base colour metric. */
+  timeT: number;
+  /** The language on screen. The poster was always English. */
+  lang: Lang;
   colorStats: MetricStats;
 }
 
@@ -97,13 +104,20 @@ function drawOverlay(
   c.globalAlpha = 1;
   c.textAlign = 'right';
   c.font = `400 ${190 * u}px "Instrument Serif", Georgia, serif`;
-  c.fillText(mode.label.toUpperCase(), right, MARGIN + 190 * u);
+  const text = modeText(ctx.lang, mode.id, { label: mode.label, subtitle: mode.subtitle });
+  c.fillText(text.label.toUpperCase(), right, MARGIN + 190 * u);
   c.globalAlpha = 0.62;
   c.font = `400 ${40 * u}px Inter, sans-serif`;
-  c.fillText(mode.subtitle ?? '', right, MARGIN + 262 * u);
+  c.fillText(text.subtitle ?? '', right, MARGIN + 262 * u);
   c.globalAlpha = 0.38;
   c.font = `500 ${28 * u}px Inter, sans-serif`;
-  drawTracked(c, formatDate(mode.attribution?.referenceDate), right, MARGIN + 322 * u, 4 * u);
+  drawTracked(
+    c,
+    formatDate(shownDate(mode, ctx.timeT), ctx.lang),
+    right,
+    MARGIN + 322 * u,
+    4 * u,
+  );
   c.globalAlpha = 1;
 
   drawLegend(c, ctx, right, H - MARGIN, u);
@@ -117,6 +131,25 @@ function drawOverlay(
   c.globalAlpha = 1;
 }
 
+/** The colour metric of the step on screen, matching what the legend does. */
+export function shownColorMetric(mode: SculptureMode, timeT: number): string {
+  if (!mode.time) return mode.colorMetric;
+  const template =
+    mode.time.colorMetricTemplate ??
+    (mode.colorMetric === mode.heightMetric ? mode.time.metricTemplate : undefined);
+  if (!template) return mode.colorMetric;
+  return template.replace('{step}', mode.time.steps[nearestStep(timeT, mode.time.steps.length)]!);
+}
+
+/** The year the poster is of, when the mode has a timeline. */
+function shownDate(mode: SculptureMode, timeT: number): string | undefined {
+  if (mode.time) {
+    const step = mode.time.steps[nearestStep(timeT, mode.time.steps.length)];
+    if (step && /^\d{4}$/.test(step)) return `${step}-12-31`;
+  }
+  return mode.attribution?.referenceDate;
+}
+
 function drawLegend(
   c: CanvasRenderingContext2D,
   ctx: PosterContext,
@@ -125,9 +158,12 @@ function drawLegend(
   u: number,
 ): void {
   const scale = effectiveColorScale(ctx.mode, ctx.palette);
-  const def = metricForScene(ctx.scene, ctx.mode.colorMetric);
+  const metricId = shownColorMetric(ctx.mode, ctx.timeT);
+  const def = metricForScene(ctx.scene, metricId);
   const title =
-    ctx.mode.colorMetric === CHANGE_PCT_METRIC ? 'Population change' : def.label;
+    ctx.mode.colorMetric === CHANGE_PCT_METRIC
+      ? translate(ctx.lang, 'legend.populationChange')
+      : metricText(ctx.lang, metricId, def.label);
 
   c.textAlign = 'right';
   c.fillStyle = INK;
@@ -234,9 +270,13 @@ function formatNumber(v: number, unit?: string, aggregation?: string): string {
   return unit ? `${compact} ${unit}` : compact;
 }
 
-function formatDate(iso?: string): string {
+const MONTHS: Record<Lang, string[]> = {
+  en: 'JAN FEB MAR APR MAY JUN JUL AUG SEP OCT NOV DEC'.split(' '),
+  de: 'JAN FEB MÄR APR MAI JUN JUL AUG SEP OKT NOV DEZ'.split(' '),
+};
+
+function formatDate(iso: string | undefined, lang: Lang): string {
   if (!iso) return '';
   const d = new Date(iso);
-  const months = 'JAN FEB MAR APR MAY JUN JUL AUG SEP OCT NOV DEC'.split(' ');
-  return `${d.getUTCDate()} ${months[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+  return `${d.getUTCDate()} ${MONTHS[lang][d.getUTCMonth()]} ${d.getUTCFullYear()}`;
 }
