@@ -28,6 +28,8 @@ export interface TileLoadRequest {
   changeUrls?: { a: string; b: string };
   saturationUrl?: string;
   elevationScale: number;
+  /** Value that stands on the plane (see HeightScaleDefinition.zeroAt). */
+  zeroAt?: number;
   colorScale: ColorScaleDefinition;
   colorStats: MetricStats;
   /** Ambient occlusion: neighbour radius in degrees, shade height, strength. */
@@ -126,7 +128,7 @@ async function load(req: TileLoadRequest): Promise<void> {
   }
   const count = heightValues.length;
 
-  const heights = computeElevations(heightValues, req.elevationScale);
+  const heights = computeElevations(heightValues, req.elevationScale, undefined, req.zeroAt ?? 0);
 
   let colorValues: Float32Array | Uint8Array = heightValues;
   if (req.changeUrls) {

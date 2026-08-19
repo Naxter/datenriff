@@ -47,6 +47,8 @@ const VIEWS = [
   { id: 'afterdark', q: 'mode=afterdark' },
   { id: 'wind', q: 'mode=wind' },
   { id: 'wind-2005', q: 'mode=wind&t=0.42' },
+  { id: 'rain', q: 'mode=rain' },
+  { id: 'rain-2001', q: 'mode=rain&t=0' },
   { id: 'people-mobile', q: 'mode=people&quality=mobile' },
   { id: 'people-berlin', q: 'mode=people&view=13.405,52.520,9.90,58,-18', wait: 6000 },
   { id: 'people-focus-bayern', q: 'mode=people&focus=state:DE-09', wait: 5000 },

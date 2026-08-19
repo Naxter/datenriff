@@ -328,8 +328,9 @@ export class TileManager {
     const heightStats = index.metrics[mode.heightMetric];
     if (!heightStats) return;
     // same anchor blend as the country LOD, but against this LOD's own stats
-    const anchor = heightStats.p995 || 1;
-    const top = heightStats.max > 0 ? heightStats.max : anchor;
+    const zeroAt = mode.heightScale.zeroAt ?? 0;
+    const anchor = heightStats.p995 - zeroAt || 1;
+    const top = heightStats.max - zeroAt > 0 ? heightStats.max - zeroAt : anchor;
     const elevationScale =
       TARGET_MAX_HEIGHT_METERS / (anchor * Math.pow(top / anchor, PEAKEDNESS));
 
@@ -347,6 +348,7 @@ export class TileManager {
       positionsUrl: lod.positionsTemplate.replace('{tile}', tileId),
       heightUrl: metricUrl(mode.heightMetric, 'f32'),
       elevationScale,
+      zeroAt,
       colorScale: scale,
       colorStats,
       colorStorage,

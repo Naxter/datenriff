@@ -22,10 +22,11 @@ export function elevationScaleFor(
   targetMaxMeters = 100_000,
   calibrationQuantile = 0.995,
   peakedness = 0,
+  zeroAt = 0,
 ): number {
-  const anchor = quantileFromStats(stats, calibrationQuantile);
+  const anchor = quantileFromStats(stats, calibrationQuantile) - zeroAt;
   if (!(anchor > 0)) return 1;
-  const top = stats.max > 0 ? stats.max : anchor;
+  const top = stats.max - zeroAt > 0 ? stats.max - zeroAt : anchor;
   const p = peakedness <= 0 ? 0 : peakedness >= 1 ? 1 : peakedness;
   // geometric blend: 0 → anchor quantile, 1 → absolute maximum
   const blended = anchor * Math.pow(top / anchor, p);
@@ -38,10 +39,11 @@ export function computeElevations(
   values: Float32Array,
   scale: number,
   out?: Float32Array,
+  zeroAt = 0,
 ): Float32Array {
   const result = out ?? new Float32Array(values.length);
   for (let i = 0; i < values.length; i++) {
-    const v = values[i]!;
+    const v = values[i]! - zeroAt;
     result[i] = Number.isNaN(v) || v < 0 ? 0 : v * scale;
   }
   return result;

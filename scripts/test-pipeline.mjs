@@ -24,6 +24,7 @@ const candidates = [
 const args = ['-m', 'unittest', 'discover', '-s', 'tests', '-t', '.', '-v'];
 const BLACK_MARBLE = join(ROOT, 'pipelines', 'black-marble');
 const MASTR = join(ROOT, 'pipelines', 'mastr');
+const DWD = join(ROOT, 'pipelines', 'dwd');
 
 for (const [cmd, pre] of candidates) {
   const probe = spawnSync(cmd, [...pre, '--version'], { stdio: 'ignore' });
@@ -44,7 +45,14 @@ for (const [cmd, pre] of candidates) {
     stdio: 'inherit',
     env: { ...process.env, PYTHONPATH: `.${sep}${PIPELINE}` },
   });
-  process.exit(mastr.status ?? 1);
+  if (mastr.status !== 0) process.exit(mastr.status ?? 1);
+  // dwd: the reprojection tests skip themselves without pyproj
+  const dwd = spawnSync(cmd, [...pre, ...args], {
+    cwd: DWD,
+    stdio: 'inherit',
+    env: { ...process.env, PYTHONPATH: `.${sep}${PIPELINE}` },
+  });
+  process.exit(dwd.status ?? 1);
 }
 
 console.error('No Python interpreter found (tried venv, python3, python, py -3).');
