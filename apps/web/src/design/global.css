@@ -1306,6 +1306,14 @@ body {
 .about__more a { color: var(--ink-soft); font-size: 0.85rem; }
 
 @media (max-width: 760px) {
+  /* The bottom edge is a stack on phones, so the links take the lowest rung
+     and everything above moves up by their height. Without this the nav sits
+     on top of them and the two legally required links cannot be tapped. */
+  .pagelinks { bottom: 10px; font-size: 0.62rem; gap: 0.4rem; }
+  .modenav { bottom: 46px; }
+  .legend { bottom: 132px; }
+  .timeline { bottom: 268px; }
+
   /* a sheet over the lower two thirds; the sculpture keeps the top */
   .about {
     top: auto;
@@ -1316,5 +1324,4 @@ body {
     border-top: 1px solid var(--hairline);
   }
   .atlas--about .atlas__canvas { transform: none; }
-  .pagelinks { font-size: 0.62rem; gap: 0.4rem; }
 }
