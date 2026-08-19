@@ -28,6 +28,7 @@ export default function App() {
   const timeT = useAtlasStore((s) => s.timeT);
   const palette = useAtlasStore((s) => s.palette);
   const setScene = useAtlasStore((s) => s.setScene);
+  const sceneLoading = useAtlasStore((s) => s.sceneLoading);
   const setError = useAtlasStore((s) => s.setError);
   const bumpSculpture = useAtlasStore((s) => s.bumpSculpture);
 
@@ -79,15 +80,23 @@ export default function App() {
     return dataset?.id ?? null;
   }, [manifest, modeId]);
 
-  // Only the very first scene shows the veil. A later dataset switch keeps
-  // the current sculpture on screen until the new one has arrived, then the
-  // view cross-morphs (old sinks into the plane, new grows out of it).
+  // Only the very first scene shows the veil. A dataset switch is a piece
+  // of choreography: the sculpture on screen sinks into the plane at once,
+  // the wait is spent on an empty page with a progress hairline, and the
+  // new data grows out of the plane when it is all there. RAIN is 25 years
+  // of country LOD — long enough that standing still reads as a freeze.
   useEffect(() => {
     if (!manifest || !wantedDatasetId) return;
     if (scene?.dataset.id === wantedDatasetId && scene.profileId === quality.id) return;
     let cancelled = false;
-    useAtlasStore.setState(scene ? { sceneLoading: true } : { status: 'loading' });
-    loadScene(manifest, wantedDatasetId, quality)
+    useAtlasStore.setState(
+      scene ? { sceneLoading: true, sceneProgress: 0 } : { status: 'loading' },
+    );
+    engineRef.current?.fadeOut(performance.now(), 700);
+    bumpSculpture();
+    loadScene(manifest, wantedDatasetId, quality, (fraction) => {
+      if (!cancelled) useAtlasStore.setState({ sceneProgress: fraction });
+    })
       .then((s) => !cancelled && setScene(s))
       .catch((e: unknown) => {
         if (!cancelled) setError(e instanceof Error ? e.message : String(e));
@@ -96,7 +105,7 @@ export default function App() {
       cancelled = true;
       useAtlasStore.setState({ sceneLoading: false });
     };
-  }, [manifest, wantedDatasetId, scene, quality, setScene, setError]);
+  }, [manifest, wantedDatasetId, scene, quality, setScene, setError, bumpSculpture]);
 
   // no dataset can serve the requested mode → fall back to one that works
   useEffect(() => {
@@ -111,6 +120,10 @@ export default function App() {
     if (!scene) return null;
     return { engine: new MorphEngine(scene.count), builder: new TargetBuilder(scene) };
   }, [scene]);
+  // the effect above runs before a new ctx exists, so it sinks the engine
+  // that is still on screen through this handle
+  const engineRef = useRef<MorphEngine | null>(null);
+  engineRef.current = ctx?.engine ?? null;
 
   // Between a mode switch and the matching scene arriving, the loaded scene
   // cannot serve the mode (AFTER DARK → PEOPLE swaps datasets). The sculpture
@@ -200,7 +213,11 @@ export default function App() {
   const shownTarget = shown ? ctx.builder.build(shownMode, palette, focus) : null;
 
   return (
-    <div className={`atlas${introOn ? ' atlas--intro' : ''}`}>
+    <div
+      className={`atlas${introOn ? ' atlas--intro' : ''}${
+        sceneLoading ? ' atlas--loading' : ''
+      }`}
+    >
       {ctx && scene && <SculptureView scene={scene} engine={ctx.engine} />}
       {scene && (
         <div className="topblock">

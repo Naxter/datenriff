@@ -80,6 +80,9 @@ export async function loadScene(
   manifest: AtlasManifest,
   datasetId: string | undefined,
   profile: QualityProfile,
+  /** 0…1 as the buffers land. RAIN is 25 years of country LOD; without a
+   *  count the wait is a blank pause with nothing to read. */
+  onProgress?: (fraction: number) => void,
 ): Promise<SceneData> {
   const dataset = datasetId
     ? manifest.datasets.find((d) => d.id === datasetId) ?? manifest.datasets[0]
@@ -94,14 +97,26 @@ export async function loadScene(
     ? dataset.lods.filter((l) => l.tileIndex)
     : [];
 
-  const [positionsBuf, cities, boundary, ...metricBufs] = await Promise.all([
+  const jobs = [
     fetchBuffer(lod.positions),
     manifest.labels ? fetchJson<CityLabel[]>(manifest.labels) : Promise.resolve([]),
     manifest.boundary
       ? fetchJson<{ rings: [number, number][][] }>(manifest.boundary)
       : Promise.resolve({ rings: [] }),
     ...dataset.metrics.map((m) => fetchBuffer(metricUrl(lod, m))),
-  ]);
+  ];
+  let done = 0;
+  onProgress?.(0);
+  const counted = jobs.map((job) =>
+    job.then((value) => {
+      done += 1;
+      onProgress?.(done / jobs.length);
+      return value;
+    }),
+  );
+  const [positionsBuf, cities, boundary, ...metricBufs] = (await Promise.all(
+    counted,
+  )) as [ArrayBuffer, CityLabel[], { rings: [number, number][][] }, ...ArrayBuffer[]];
 
   const positions = new Float32Array(positionsBuf);
   const count = positions.length / 2;
