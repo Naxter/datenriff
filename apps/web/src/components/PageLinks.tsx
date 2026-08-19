@@ -33,7 +33,9 @@ export function PageLinks() {
       <a className="pagelinks__link" href="/datenschutz/">
         {t('pages.privacy')}
       </a>
-      <a className="pagelinks__hidden" href={aboutHref}>
+      {/* the crawlable twin of the About button: a real href for indexers,
+          hidden from assistive technology so the link is not announced twice */}
+      <a className="pagelinks__hidden" href={aboutHref} tabIndex={-1} aria-hidden="true">
         {t('pages.about')}
       </a>
     </nav>

@@ -10,6 +10,11 @@
   --paper-veil: rgba(247, 240, 234, 0.86);
   --ink: #221c15;
   --ink-soft: rgba(34, 28, 21, 0.62);
+  /* Text you can read or act on: 4.55:1 on paper, which clears AA. The
+     controls used to wear --ink-faint at 2.30:1, so what you could click
+     was fainter than what you could only read. */
+  --ink-quiet: rgba(34, 28, 21, 0.62);
+  /* Decoration only — hairlines, separators, inactive dots. Never text. */
   --ink-faint: rgba(34, 28, 21, 0.38);
   --hairline: rgba(34, 28, 21, 0.14);
   --accent: #c41e78;
@@ -88,7 +93,7 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.404em;
   text-indent: 0.404em;
-  color: var(--ink-faint);
+  color: var(--ink-quiet);
   margin-top: 8px;
 }
 
@@ -163,7 +168,7 @@ body {
   font-size: 10.5px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--ink-faint);
+  color: var(--ink-quiet);
   margin: 14px 0 0;
   pointer-events: auto;
 }
@@ -182,7 +187,7 @@ body {
   font-size: 11px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--ink-faint);
+  color: var(--ink-quiet);
   margin-top: 6px;
 }
 
@@ -220,7 +225,7 @@ body {
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.22em;
-  color: var(--ink-faint);
+  color: var(--ink-quiet);
   text-transform: uppercase;
   border-bottom: 1px solid transparent;
   transition: color 160ms ease;
@@ -229,7 +234,8 @@ body {
 .modenav__family:hover,
 .modenav__family:focus-visible {
   color: var(--ink);
-  outline: none;
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
 }
 
 /* FOCUS lives in the family row but is not a family: a hairline before it
@@ -246,7 +252,7 @@ body {
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.22em;
-  color: var(--ink-faint);
+  color: var(--ink-quiet);
   text-transform: uppercase;
   transition: color 160ms ease;
 }
@@ -254,7 +260,8 @@ body {
 .modenav__focus:hover,
 .modenav__focus:focus-visible {
   color: var(--ink);
-  outline: none;
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
 }
 
 .modenav__focus--on {
@@ -269,7 +276,7 @@ body {
 }
 
 .langswitch__sep {
-  color: var(--ink-faint);
+  color: var(--ink-quiet);
   font-size: 11px;
 }
 
@@ -283,14 +290,15 @@ body {
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.18em;
-  color: var(--ink-faint);
+  color: var(--ink-quiet);
   transition: color 160ms ease;
 }
 
 .langswitch__item:hover,
 .langswitch__item:focus-visible {
   color: var(--ink);
-  outline: none;
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
 }
 
 .langswitch__item--active {
@@ -312,7 +320,7 @@ body {
   font-size: 11px;
   font-weight: 500;
   letter-spacing: 0.16em;
-  color: var(--ink-faint);
+  color: var(--ink-quiet);
   text-transform: uppercase;
   border-bottom: 1px solid transparent;
   transition: color 160ms ease;
@@ -321,7 +329,8 @@ body {
 .modenav__item:hover,
 .modenav__item:focus-visible {
   color: var(--ink);
-  outline: none;
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
 }
 
 .modenav__item--active {
@@ -353,7 +362,7 @@ body {
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.22em;
-  color: var(--ink-faint);
+  color: var(--ink-quiet);
   text-transform: uppercase;
   border-bottom: 1px solid transparent;
   transition: color 160ms ease;
@@ -365,7 +374,8 @@ body {
 .stories__item:hover,
 .stories__item:focus-visible {
   color: var(--ink);
-  outline: none;
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
 }
 
 .export__go:disabled {
@@ -447,7 +457,7 @@ body {
   font-weight: 600;
   letter-spacing: 0.26em;
   text-transform: uppercase;
-  color: var(--ink-faint);
+  color: var(--ink-quiet);
 }
 
 .focus__item {
@@ -467,7 +477,8 @@ body {
 .focus__item:hover,
 .focus__item:focus-visible {
   color: var(--ink);
-  outline: none;
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
 }
 
 .focus__item--active {
@@ -478,7 +489,7 @@ body {
 .focus__note {
   margin: 0;
   font-size: 11px;
-  color: var(--ink-faint);
+  color: var(--ink-quiet);
 }
 
 .focus__clear {
@@ -556,14 +567,15 @@ body {
   font-family: var(--serif);
   font-size: 30px;
   line-height: 1;
-  color: var(--ink-faint);
+  color: var(--ink-quiet);
   padding: 0 2px;
 }
 
 .dialog__close:hover,
 .dialog__close:focus-visible {
   color: var(--ink);
-  outline: none;
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
 }
 
 .dialog__row {
@@ -578,7 +590,7 @@ body {
   font-size: 11px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--ink-faint);
+  color: var(--ink-quiet);
 }
 
 .dialog__primary {
@@ -599,7 +611,8 @@ body {
 .dialog__primary:hover:not(:disabled),
 .dialog__primary:focus-visible {
   opacity: 0.86;
-  outline: none;
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
 }
 
 .dialog__primary:disabled {
@@ -632,7 +645,7 @@ body {
   font-size: 12px;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--ink-faint);
+  color: var(--ink-quiet);
 }
 
 .dialog .export__formats {
@@ -688,7 +701,7 @@ body {
 .settings__note {
   margin: -6px 0 0;
   font-size: 11px;
-  color: var(--ink-faint);
+  color: var(--ink-quiet);
   grid-column: 1 / -1;
 }
 
@@ -823,7 +836,7 @@ body {
   display: flex;
   justify-content: space-between;
   font-size: 10.5px;
-  color: var(--ink-faint);
+  color: var(--ink-quiet);
   margin-top: 5px;
   font-variant-numeric: tabular-nums;
 }
@@ -902,7 +915,7 @@ body {
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--ink-faint);
+  color: var(--ink-quiet);
 }
 
 .tooltip__value {
@@ -1180,6 +1193,14 @@ body {
   }
 }
 
+/* Keyboard focus has to be visible somewhere. Every control used to clear
+   its outline, and on an active item the focused colour equalled the
+   resting one, so tabbing through the atlas changed nothing on screen. */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
 /* ---- Standing pages: the three links, and About over the atlas ---- */
 
 /* Centred under the sculpture, below the timeline. Fine print, but the two
@@ -1195,7 +1216,7 @@ body {
   font-size: 0.68rem;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--ink-faint);
+  color: var(--ink-quiet);
   z-index: 6;
   pointer-events: auto;
 }
@@ -1284,7 +1305,7 @@ body {
   font-size: 0.68rem;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--ink-faint);
+  color: var(--ink-quiet);
 }
 .about__close {
   background: none;
