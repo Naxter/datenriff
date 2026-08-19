@@ -11,6 +11,7 @@ import {
   metricText,
   modeText,
   translate,
+  unitText,
   type Lang,
 } from './strings';
 
@@ -50,6 +51,7 @@ export function useI18n() {
     metric: (id: string, fallback: string) => metricText(lang, id, fallback),
     category: (metricId: string, index: number, fallback: string) =>
       categoryText(lang, metricId, index, fallback),
+    unit: (unit: string) => unitText(lang, unit),
     locale: LOCALE[lang],
   };
 }

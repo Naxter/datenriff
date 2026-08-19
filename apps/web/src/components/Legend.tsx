@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import type { MetricStats, SculptureMode } from '@datenriff/data-contracts';
+import type { MetricDefinition, MetricStats, SculptureMode } from '@datenriff/data-contracts';
 import {
   SEQUENTIAL_CHOICES,
   legendGradient,
@@ -15,14 +15,18 @@ import { useAtlasStore } from '../state/store';
 import { useI18n } from '../i18n';
 import { intFormat } from '../i18n/format';
 
-function formatValue(locale: string, v: number, unit?: string): string {
+/** The metric says what it is: a share is a fraction of 1 and reads as a
+ *  percentage, anything else prints whatever unit the pipeline declared.
+ *  Hard-coding three units meant nW/cm²/sr, years, % and people never
+ *  reached the legend, and a share printed as "0" to "1". */
+function formatValue(locale: string, v: number, metric: MetricDefinition, unit: string): string {
   const nf = intFormat(locale);
+  if (metric.aggregation === 'share') {
+    return `${nf.format(Math.round(v * 100))} %`;
+  }
   const compact =
     Math.abs(v) >= 10_000 ? `${nf.format(Math.round(v / 1000))}k` : nf.format(v);
-  if (unit === '€/m²') return `${v} €/m²`;
-  if (unit === 'MW') return `${compact} MW`;
-  if (unit === 'mm') return `${compact} mm`;
-  return compact;
+  return unit ? `${compact} ${unit}` : compact;
 }
 
 const cssGradient = (id: string) =>
@@ -76,13 +80,14 @@ export function Legend({ mode, scene, colorStats }: Props) {
     }
 
     const [lo, hi] = resolveSequentialDomain(scale, colorStats);
-    const unit = metricForScene(scene, mode.colorMetric).unit;
+    const def = metricForScene(scene, mode.colorMetric);
+    const unit = def.unit ? i18n.unit(def.unit) : '';
     return (
       <>
         <div className="legend__bar" style={{ background: cssGradient(scale.palette) }} />
         <div className="legend__range">
-          <span>{formatValue(i18n.locale, lo, unit)}</span>
-          <span>{formatValue(i18n.locale, hi, unit)}</span>
+          <span>{formatValue(i18n.locale, lo, def, unit)}</span>
+          <span>{formatValue(i18n.locale, hi, def, unit)}</span>
         </div>
       </>
     );

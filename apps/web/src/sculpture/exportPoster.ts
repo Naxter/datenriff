@@ -180,9 +180,9 @@ function drawLegend(
   } else {
     const [lo, hi] = resolveSequentialDomain(scale, ctx.colorStats);
     c.textAlign = 'left';
-    c.fillText(formatNumber(lo, def.unit), right - barW, barY + 66 * u);
+    c.fillText(formatNumber(lo, def.unit, def.aggregation), right - barW, barY + 66 * u);
     c.textAlign = 'right';
-    c.fillText(formatNumber(hi, def.unit), right, barY + 66 * u);
+    c.fillText(formatNumber(hi, def.unit, def.aggregation), right, barY + 66 * u);
   }
   c.globalAlpha = 1;
 }
@@ -226,13 +226,12 @@ function drawTracked(
 
 const nf = new Intl.NumberFormat('de-DE', { maximumFractionDigits: 0 });
 
-function formatNumber(v: number, unit?: string): string {
-  if (unit === '€/m²') return `${v} €/m²`;
-  if (unit === 'mm') return `${nf.format(Math.round(v))} mm`;
-  if (unit === 'MW') {
-    return `${Math.abs(v) >= 10_000 ? `${nf.format(Math.round(v / 1000))}k` : nf.format(v)} MW`;
-  }
-  return Math.abs(v) >= 10_000 ? `${nf.format(Math.round(v / 1000))}k` : nf.format(v);
+/** Same rule as the screen legend: a share reads as a percentage, anything
+ *  else prints the unit the pipeline declared. */
+function formatNumber(v: number, unit?: string, aggregation?: string): string {
+  if (aggregation === 'share') return `${nf.format(Math.round(v * 100))} %`;
+  const compact = Math.abs(v) >= 10_000 ? `${nf.format(Math.round(v / 1000))}k` : nf.format(v);
+  return unit ? `${compact} ${unit}` : compact;
 }
 
 function formatDate(iso?: string): string {

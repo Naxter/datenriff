@@ -178,6 +178,17 @@ const METRIC_TEXT: Record<Lang, Record<string, string>> = {
   },
 };
 
+/** Units that are words rather than symbols. mm, MW, %, €/m² and
+ *  nW/cm²/sr read the same in both languages and are left alone. */
+const UNIT_TEXT: Record<Lang, Record<string, string>> = {
+  en: {},
+  de: { years: 'Jahre', people: 'Personen', homes: 'Wohnungen', 'per home': 'pro Wohnung' },
+};
+
+export function unitText(lang: Lang, unit: string): string {
+  return UNIT_TEXT[lang]?.[unit] ?? unit;
+}
+
 /** Land-cover group names, in the order pipelines/clc5/clc5/classes.py writes. */
 const LAND_CLASSES: Record<Lang, string[]> = {
   en: [],
