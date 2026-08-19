@@ -12,10 +12,11 @@ import { CHANGE_PCT_METRIC } from '../modes/modes';
 import { nearestStep } from '../modes/time';
 import { effectiveColorScale } from '../sculpture/targets';
 import { useAtlasStore } from '../state/store';
+import { useI18n } from '../i18n';
+import { intFormat } from '../i18n/format';
 
-const nf = new Intl.NumberFormat('de-DE', { maximumFractionDigits: 0 });
-
-function formatValue(v: number, unit?: string): string {
+function formatValue(locale: string, v: number, unit?: string): string {
+  const nf = intFormat(locale);
   const compact =
     Math.abs(v) >= 10_000 ? `${nf.format(Math.round(v / 1000))}k` : nf.format(v);
   if (unit === '€/m²') return `${v} €/m²`;
@@ -36,6 +37,7 @@ interface Props {
 export function Legend({ mode, scene, colorStats }: Props) {
   const palette = useAtlasStore((s) => s.palette);
   const setPalette = useAtlasStore((s) => s.setPalette);
+  const i18n = useI18n();
   const scale = effectiveColorScale(mode, palette);
   const isSequential =
     scale.type === 'linear' || scale.type === 'sqrt' || scale.type === 'log1p';
@@ -46,12 +48,15 @@ export function Legend({ mode, scene, colorStats }: Props) {
       const colors = legendGradient(scale.palette);
       return (
         <div className="legend__cats">
-          {(def.categories ?? []).map((label, i) => (
-            <div key={label} className="legend__cat">
-              <span className="legend__swatch" style={{ background: colors[i] }} />
-              {label}
-            </div>
-          ))}
+          {(def.categories ?? []).map((raw, i) => {
+            const label = i18n.category(mode.colorMetric, i, raw);
+            return (
+              <div key={raw} className="legend__cat">
+                <span className="legend__swatch" style={{ background: colors[i] }} />
+                {label}
+              </div>
+            );
+          })}
         </div>
       );
     }
@@ -76,12 +81,12 @@ export function Legend({ mode, scene, colorStats }: Props) {
       <>
         <div className="legend__bar" style={{ background: cssGradient(scale.palette) }} />
         <div className="legend__range">
-          <span>{formatValue(lo, unit)}</span>
-          <span>{formatValue(hi, unit)}</span>
+          <span>{formatValue(i18n.locale, lo, unit)}</span>
+          <span>{formatValue(i18n.locale, hi, unit)}</span>
         </div>
       </>
     );
-  }, [scale, scene, mode.colorMetric, colorStats]);
+  }, [scale, scene, mode.colorMetric, colorStats, i18n]);
 
   // when colour follows the timeline (a year of night light), the title
   // names the year currently shown, not the latest one
@@ -95,8 +100,8 @@ export function Legend({ mode, scene, colorStats }: Props) {
       : mode.colorMetric;
   const title =
     mode.colorMetric === CHANGE_PCT_METRIC
-      ? 'Population change'
-      : metricForScene(scene, stepMetric).label;
+      ? i18n.t('legend.populationChange')
+      : i18n.metric(stepMetric, metricForScene(scene, stepMetric).label);
 
   const choices = useMemo(() => {
     const base = mode.colorScale.palette;
@@ -108,7 +113,7 @@ export function Legend({ mode, scene, colorStats }: Props) {
       <p className="legend__title">{title}</p>
       {body}
       {isSequential && (
-        <div className="legend__palettes" role="group" aria-label="Colour ramp">
+        <div className="legend__palettes" role="group" aria-label={i18n.t('legend.colourRamp')}>
           {choices.map((id) => {
             const active = scale.palette === id;
             return (

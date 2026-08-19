@@ -4,6 +4,7 @@
 import { useEffect, useState } from 'react';
 import type { TargetBuilder } from '../sculpture/targets';
 import { ExportDialog } from './ExportDialog';
+import { useI18n } from '../i18n';
 
 interface Props {
   builder: TargetBuilder;
@@ -11,6 +12,7 @@ interface Props {
 
 export function ExportButton({ builder }: Props) {
   const [open, setOpen] = useState(false);
+  const { t } = useI18n();
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -30,11 +32,11 @@ export function ExportButton({ builder }: Props) {
         type="button"
         className="export__go"
         onClick={() => setOpen(true)}
-        title="Poster PNG (E)"
+        title={t('export.title')}
         aria-haspopup="dialog"
         aria-expanded={open}
       >
-        Export
+        {t('ui.export')}
       </button>
       {open && <ExportDialog builder={builder} onClose={() => setOpen(false)} />}
     </>

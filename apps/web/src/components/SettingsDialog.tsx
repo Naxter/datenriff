@@ -10,6 +10,7 @@ import {
   type Settings,
 } from '../state/settings';
 import { useAtlasStore } from '../state/store';
+import { useI18n } from '../i18n';
 
 interface Props {
   onClose: () => void;
@@ -97,6 +98,7 @@ export function SettingsDialog({ onClose }: Props) {
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
+  const { t } = useI18n();
   const forcedQuality = new URLSearchParams(window.location.search).get('quality');
   const forcedShadowsOff = new URLSearchParams(window.location.search).get('shadows') === '0';
   const set = <K extends keyof Settings>(key: K) => (v: Settings[K]) => update({ [key]: v });
@@ -114,26 +116,29 @@ export function SettingsDialog({ onClose }: Props) {
       >
         <div className="dialog__head">
           <p id="settings-title" className="dialog__title">
-            Settings
+            {t('settings.title')}
           </p>
-          <button type="button" className="dialog__close" onClick={onClose} aria-label="Close">
+          <button type="button" className="dialog__close" onClick={onClose} aria-label={t('ui.close')}>
             ×
           </button>
         </div>
 
         <Segment
-          label="Shadows"
+          label={t('settings.shadows')}
           value={settings.shadows}
           choices={[
-            { value: 'auto', label: `Auto (${quality.shadows ? 'on' : 'off'})` },
-            { value: 'on', label: 'On' },
-            { value: 'off', label: 'Off' },
+            {
+              value: 'auto',
+              label: `${t('settings.auto')} (${t(quality.shadows ? 'settings.on' : 'settings.off')})`,
+            },
+            { value: 'on', label: t('settings.on') },
+            { value: 'off', label: t('settings.off') },
           ]}
           onChange={set('shadows')}
         />
         {forcedShadowsOff && <p className="settings__note">?shadows=0 in the URL keeps them off.</p>}
         <Slider
-          label="Shadow strength"
+          label={t('settings.shadowStrength')}
           value={settings.shadowStrength}
           range={SHADOW_STRENGTH_RANGE}
           step={0.01}
@@ -141,7 +146,7 @@ export function SettingsDialog({ onClose }: Props) {
           onChange={set('shadowStrength')}
         />
         <Slider
-          label="Light elevation"
+          label={t('settings.lightElevation')}
           value={settings.lightElevation}
           range={LIGHT_ELEVATION_RANGE}
           step={1}
@@ -149,40 +154,40 @@ export function SettingsDialog({ onClose }: Props) {
           onChange={set('lightElevation')}
         />
         <Segment
-          label="Quality"
+          label={t('settings.quality')}
           value={settings.quality}
           choices={[
-            { value: 'auto', label: `Auto (${quality.id})` },
-            { value: 'desktop', label: 'Desktop' },
-            { value: 'mobile', label: 'Mobile' },
+            { value: 'auto', label: `${t('settings.auto')} (${quality.id})` },
+            { value: 'desktop', label: t('settings.desktop') },
+            { value: 'mobile', label: t('settings.mobile') },
           ]}
           onChange={set('quality')}
         />
         {forcedQuality && <p className="settings__note">?quality= in the URL overrides this.</p>}
         <Segment
-          label="City labels"
+          label={t('settings.labels')}
           value={settings.labels}
           choices={[
-            { value: 'auto', label: 'Auto' },
-            { value: 'major', label: 'Major' },
-            { value: 'all', label: 'All' },
-            { value: 'none', label: 'None' },
+            { value: 'auto', label: t('settings.auto') },
+            { value: 'major', label: t('settings.major') },
+            { value: 'all', label: t('settings.all') },
+            { value: 'none', label: t('settings.none') },
           ]}
           onChange={set('labels')}
         />
         <Segment
-          label="Motion"
+          label={t('settings.motion')}
           value={settings.motion}
           choices={[
-            { value: 'auto', label: 'Auto' },
-            { value: 'full', label: 'Full' },
-            { value: 'reduced', label: 'Reduced' },
+            { value: 'auto', label: t('settings.auto') },
+            { value: 'full', label: t('settings.full') },
+            { value: 'reduced', label: t('settings.reduced') },
           ]}
           onChange={set('motion')}
         />
 
         <div className="dialog__row">
-          <span className="dialog__hint">Remembered in this browser</span>
+          <span className="dialog__hint">{t('ui.rememberedHere')}</span>
           <button
             type="button"
             className="export__format"

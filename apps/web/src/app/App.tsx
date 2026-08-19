@@ -208,13 +208,13 @@ export default function App() {
           <Header mode={mode} scene={scene} />
         </div>
       )}
-      {manifest && <ModeNav />}
+      {manifest && <ModeNav scene={scene} />}
       {ready && mode.time && <Timeline mode={mode} />}
       {shown && shownTarget && (
         <Legend mode={shownMode} scene={scene} colorStats={shownTarget.colorStats} />
       )}
       {shown && <Tooltip mode={shownMode} scene={scene} builder={ctx.builder} />}
-      {ready && <Toolbar builder={ctx.builder} scene={scene} />}
+      {ready && <Toolbar builder={ctx.builder} />}
       {ready && <StoryPlayer mode={mode} />}
       <Veil
         visible={status !== 'ready' || !scene}

@@ -204,6 +204,71 @@ body {
   outline: none;
 }
 
+/* FOCUS lives in the family row but is not a family: a hairline before it
+   says so without adding chrome. */
+.modenav__focus {
+  appearance: none;
+  background: none;
+  border: none;
+  padding: 4px 0 4px 22px;
+  margin-left: 4px;
+  border-left: 1px solid var(--ink-faint);
+  cursor: pointer;
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  color: var(--ink-faint);
+  text-transform: uppercase;
+  transition: color 160ms ease;
+}
+
+.modenav__focus:hover,
+.modenav__focus:focus-visible {
+  color: var(--ink);
+  outline: none;
+}
+
+.modenav__focus--on {
+  color: var(--ink);
+}
+
+/* language, in the tools corner */
+.langswitch {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.langswitch__sep {
+  color: var(--ink-faint);
+  font-size: 11px;
+}
+
+.langswitch__item {
+  appearance: none;
+  background: none;
+  border: none;
+  padding: 4px 0;
+  cursor: pointer;
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  color: var(--ink-faint);
+  transition: color 160ms ease;
+}
+
+.langswitch__item:hover,
+.langswitch__item:focus-visible {
+  color: var(--ink);
+  outline: none;
+}
+
+.langswitch__item--active {
+  color: var(--ink);
+}
+
 .modenav__family--active {
   color: var(--ink);
   border-bottom-color: var(--ink);

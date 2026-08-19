@@ -1,4 +1,5 @@
 import { INTRO_TAGLINE } from '../app/intro';
+import { useI18n } from '../i18n';
 import type { IntroPhase } from '../state/store';
 
 /** Loading veil and, on a plain visit, the opening title: the same mark
@@ -12,6 +13,7 @@ export function Veil({
   intro: IntroPhase | null;
   error?: string;
 }) {
+  const { t } = useI18n();
   const cls = visible
     ? 'veil'
     : intro
@@ -20,8 +22,8 @@ export function Veil({
   return (
     <div className={cls} aria-hidden={!visible && !intro}>
       <div className="veil__mark">
-        <h1 className="veil__title">Vertical Atlas</h1>
-        <p className="veil__sub">Germany</p>
+        <h1 className="veil__title">{t('intro.title')}</h1>
+        <p className="veil__sub">{t('intro.sub')}</p>
         <p className="veil__tagline">{INTRO_TAGLINE}</p>
         {error && <p className="veil__error">{error}</p>}
       </div>

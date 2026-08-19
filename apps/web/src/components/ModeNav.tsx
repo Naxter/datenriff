@@ -1,14 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { MODES, availableModes, modeFamilies } from '../modes/modes';
 import { useAtlasStore } from '../state/store';
+import { useI18n } from '../i18n';
+import type { SceneData } from '../data/loader';
+import { FocusButton } from './FocusButton';
 
 /** Two tiers: the families, then the modes of the open one. A flat row of
  *  every mode stopped being readable at about ten, and every dataset added
  *  makes it worse; a family absorbs new modes without growing the bar. */
-export function ModeNav() {
+export function ModeNav({ scene }: { scene?: SceneData }) {
   const modeId = useAtlasStore((s) => s.modeId);
   const setMode = useAtlasStore((s) => s.setMode);
   const manifest = useAtlasStore((s) => s.manifest);
+  const i18n = useI18n();
   const modes = useMemo(
     () => (manifest ? availableModes(manifest.datasets) : MODES),
     [manifest],
@@ -29,7 +33,7 @@ export function ModeNav() {
   if (!openFamily || !shown) return null;
 
   return (
-    <nav className="modenav" aria-label="Sculpture modes">
+    <nav className="modenav" aria-label={i18n.t('ui.modes')}>
       <div className="modenav__families">
         {families.map((family) => (
           <button
@@ -50,9 +54,12 @@ export function ModeNav() {
               setMode(target.id);
             }}
           >
-            {family.label}
+            {i18n.t(`family.${family.id}`)}
           </button>
         ))}
+        {/* what you are looking at, spatially — the same kind of control as
+            a family, so it sits with them rather than among the tools */}
+        {scene && <FocusButton scene={scene} />}
       </div>
       <div className="modenav__modes">
         {shown.modes.map((m) => (
@@ -66,7 +73,7 @@ export function ModeNav() {
               setMode(m.id);
             }}
           >
-            {m.label}
+            {i18n.mode(m.id, { label: m.label }).label}
           </button>
         ))}
       </div>

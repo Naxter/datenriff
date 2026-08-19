@@ -9,12 +9,9 @@ import { CHANGE_PCT_METRIC } from '../modes/modes';
 import { nearestStep } from '../modes/time';
 import type { TargetBuilder } from '../sculpture/targets';
 import { useAtlasStore } from '../state/store';
-
-const intFmt = new Intl.NumberFormat('de-DE', { maximumFractionDigits: 0 });
-const dec1Fmt = new Intl.NumberFormat('de-DE', {
-  minimumFractionDigits: 1,
-  maximumFractionDigits: 1,
-});
+import { useI18n, type Lang } from '../i18n';
+import { dec1Format, intFormat } from '../i18n/format';
+import { categoryText } from '../i18n/strings';
 
 // nearest labelled city within maxKm, used as the headline
 function nearestCity(scene: SceneData, index: number, maxKm = 35): string | null {
@@ -36,11 +33,15 @@ function nearestCity(scene: SceneData, index: number, maxKm = 35): string | null
 }
 
 function formatField(
+  locale: string,
+  lang: Lang,
   field: TooltipFieldDefinition,
   value: number,
   scene: SceneData,
 ): string {
   if (Number.isNaN(value)) return '—';
+  const intFmt = intFormat(locale);
+  const dec1Fmt = dec1Format(locale);
   switch (field.format) {
     case 'integer':
       return intFmt.format(Math.round(value));
@@ -58,7 +59,9 @@ function formatField(
       return `${intFmt.format(Math.round(value))} mm`;
     case 'category': {
       const def = metricForScene(scene, field.metric);
-      return def.categories?.[Math.round(value)] ?? '—';
+      const index = Math.round(value);
+      const raw = def.categories?.[index];
+      return raw ? categoryText(lang, field.metric, index, raw) : '—';
     }
   }
 }
@@ -72,6 +75,7 @@ interface Props {
 export function Tooltip({ mode, scene, builder }: Props) {
   const hover = useAtlasStore((s) => s.hover);
   const timeT = useAtlasStore((s) => s.timeT);
+  const i18n = useI18n();
 
   const content = useMemo(() => {
     if (!hover) return null;
@@ -102,13 +106,14 @@ export function Tooltip({ mode, scene, builder }: Props) {
         // back to the country cell beneath
         const fine = hover.fine?.[metric];
         const value = fine !== undefined ? fine : builder.resolveMetric(metric).values[hover.index]!;
+        const label = i18n.metric(field.metric, field.label);
         return {
-          label: step ? `${field.label} ${step}` : field.label,
-          value: formatField(field, value, scene),
+          label: step ? `${label} ${step}` : label,
+          value: formatField(i18n.locale, i18n.lang, field, value, scene),
         };
       });
     return { place, rows, fine: hover.fine !== undefined };
-  }, [hover, mode, scene, builder, timeT]);
+  }, [hover, mode, scene, builder, timeT, i18n]);
 
   if (!hover || !content) return null;
 
