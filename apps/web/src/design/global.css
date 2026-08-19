@@ -87,6 +87,29 @@ body {
   margin-top: 8px;
 }
 
+/* A dataset arriving: the hairline fills as the buffers land. Nothing
+   else on the page moves while the sculpture is down, so this is what
+   says the wait is going somewhere. */
+.wordmark__progress {
+  margin-top: 9px;
+  height: 1px;
+  background: var(--hairline);
+  opacity: 0;
+  transition: opacity 300ms ease;
+}
+
+.wordmark__progress--on {
+  opacity: 1;
+}
+
+.wordmark__progress span {
+  display: block;
+  height: 100%;
+  background: var(--ink);
+  transform-origin: left center;
+  transition: transform 260ms ease;
+}
+
 /* ---------------- header, top right ---------------- */
 
 .header {
@@ -730,13 +753,16 @@ body {
   accent-color: var(--accent);
 }
 
-/* current step, read out above the slider on longer series */
+/* Current step, read out above the handle it belongs to. The thumb centre
+   travels between half a thumb from each end, so the offset is the track
+   minus one thumb width. */
 .timeline__current {
   position: absolute;
-  left: 50%;
+  left: calc(9px + var(--t, 0) * (100% - 18px));
   bottom: 100%;
   transform: translateX(-50%);
-  margin-bottom: 4px;
+  /* clears the pill: 10px padding + its 1px edge, then a little air */
+  margin-bottom: 17px;
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.14em;
@@ -878,6 +904,16 @@ body {
   font-size: 14px;
   font-variant-numeric: tabular-nums;
   color: var(--ink);
+}
+
+/* While the next dataset streams in the sculpture is down, so the legend
+   describes colours nobody can see. It steps back until there is something
+   to describe again. */
+.atlas--loading .legend,
+.atlas--loading .timeline {
+  opacity: 0.25;
+  pointer-events: none;
+  transition: opacity 400ms ease;
 }
 
 /* ---------------- loading veil ---------------- */

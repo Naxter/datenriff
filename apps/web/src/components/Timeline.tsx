@@ -3,6 +3,7 @@
 // plays step by step instead of sweeping.
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import type React from 'react';
 import type { SculptureMode } from '@datenriff/data-contracts';
 import { nearestStep, stepT, sweepDuration } from '../modes/time';
 import { resolveReducedMotion } from '../state/settings';
@@ -79,8 +80,15 @@ export function Timeline({ mode }: { mode: SculptureMode }) {
             setTimeT(Number(e.target.value));
           }}
         />
-        {n > 2 && (
-          <span className="timeline__current" aria-hidden="true">
+        {/* the read-out follows the handle. At either end the fixed labels
+            already say the year, so it steps aside instead of printing it
+            twice. */}
+        {n > 2 && current !== first && current !== last && (
+          <span
+            className="timeline__current"
+            style={{ '--t': timeT } as React.CSSProperties}
+            aria-hidden="true"
+          >
             {current}
           </span>
         )}

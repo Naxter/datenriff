@@ -30,6 +30,8 @@ interface AtlasState {
   scene?: SceneData;
   /** A further dataset is streaming in while `scene` stays on screen. */
   sceneLoading: boolean;
+  /** 0…1 while a dataset streams in; the buffers are counted as they land. */
+  sceneProgress: number;
   /** Opening sequence: title on empty paper → the sculpture rises beneath
    *  it → tagline → UI. null = no intro this visit. */
   introPhase: IntroPhase | null;
@@ -78,6 +80,7 @@ const initialSettings = loadSettings();
 export const useAtlasStore = create<AtlasState>((set) => ({
   status: 'loading',
   sceneLoading: false,
+  sceneProgress: 0,
   introPhase: null,
   lang: detectLang(),
   settings: initialSettings,
@@ -93,7 +96,7 @@ export const useAtlasStore = create<AtlasState>((set) => ({
   storyStop: null,
   sculptureVersion: 0,
   setManifest: (manifest) => set({ manifest }),
-  setScene: (scene) => set({ scene, status: 'ready', sceneLoading: false }),
+  setScene: (scene) => set({ scene, status: 'ready', sceneLoading: false, sceneProgress: 1 }),
   setError: (error) => set({ error, status: 'error' }),
   setIntroPhase: (introPhase) => set({ introPhase }),
   updateSettings: (patch) =>

@@ -14,7 +14,12 @@ export function Header({ mode, scene }: { mode: SculptureMode; scene: SceneData 
   const focus = useAtlasStore((s) => s.focus);
   const i18n = useI18n();
   const text = i18n.mode(mode.id, { label: mode.label, subtitle: mode.subtitle });
-  const source = scene.dataset.source;
+  // While a dataset streams in the title already names the new mode, so the
+  // credit has to name the new source too — otherwise RAIN stands over a
+  // Destatis credit for as long as the load takes.
+  const manifest = useAtlasStore((s) => s.manifest);
+  const incoming = manifest?.datasets.find((d) => d.id === mode.dataset);
+  const source = (loading && incoming ? incoming : scene.dataset).source;
   // the credit names the publisher in its own words; only the prefix is ours
   const sourceLabel = source.label.replace(/^Data:/, i18n.t('source.prefix'));
   const date = mode.attribution.referenceDate
