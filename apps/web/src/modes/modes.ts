@@ -106,7 +106,10 @@ export const MODES: SculptureMode[] = [
     heightMetric: 'homes',
     colorMetric: 'rent',
     heightScale: { type: 'linear' },
-    colorScale: { type: 'linear', domain: [5, 15], palette: 'rent' },
+    // No cell reaches 15 €/m² — p98 is 9.80 — so the old ceiling spent a
+    // third of the ramp on rents that do not exist while a quarter of the
+    // country sat clipped at the floor. 4-11 clips 7.7 % and 0.8 %.
+    colorScale: { type: 'linear', domain: [4, 11], palette: 'rent' },
     tooltip: {
       fields: [
         { metric: 'homes', label: 'Rented dwellings', format: 'integer' },
@@ -296,7 +299,10 @@ MODES.push({
   colorMetric: 'rain_mm_2030',
   time: { kind: 'steps', steps: RAIN_YEARS, metricTemplate: 'rain_mm_{step}' },
   heightScale: { type: 'linear', zeroAt: 300 },
-  colorScale: { type: 'linear', domain: [500, 1600], palette: 'rain' },
+  // One domain has to hold a dry year and a wet one, since a fixed scale is
+  // what makes the scrub show real change. Dropping the floor to 400 rescues
+  // a fifth of 2025 (20.9 % clipped, now 1.2 %) and costs 2001 under a point.
+  colorScale: { type: 'linear', domain: [400, 1500], palette: 'rain' },
   tooltip: {
     fields: [{ metric: 'rain_mm_2030', label: 'Annual precipitation', format: 'millimetre' }],
   },
