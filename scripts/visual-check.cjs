@@ -57,6 +57,7 @@ const VIEWS = [
   { id: 'rain-2001', q: 'mode=rain&t=0' },
   { id: 'land', q: 'mode=land' },
   { id: 'land-2012', q: 'mode=land&t=0' },
+  { id: 'people-de', q: 'mode=people&lang=de' },
   { id: 'people-mobile', q: 'mode=people&quality=mobile' },
   { id: 'people-berlin', q: 'mode=people&view=13.405,52.520,9.90,58,-18', wait: 6000 },
   { id: 'people-focus-bayern', q: 'mode=people&focus=state:DE-09', wait: 11000, threshold: 2 },
@@ -85,7 +86,10 @@ const VIEWS = [
   const results = [];
   for (const view of VIEWS) {
     if (ONLY && !ONLY.includes(view.id)) continue;
-    const url = `${BASE}/?${view.q}&intro=0${GPU ? '' : '&shadows=0'}`;
+    // pin the language: it otherwise follows the browser's locale, and a
+    // baseline shot on a German machine would not match an English one
+    const lang = view.q.includes('lang=') ? '' : '&lang=en';
+    const url = `${BASE}/?${view.q}${lang}&intro=0${GPU ? '' : '&shadows=0'}`;
     await page.goto(url, { waitUntil: 'domcontentloaded' });
     try {
       await page.waitForSelector('.veil--hidden', { timeout: 90_000 });

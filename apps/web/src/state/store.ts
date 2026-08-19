@@ -4,6 +4,8 @@ import type { AtlasManifest, CameraStop } from '@datenriff/data-contracts';
 import type { SceneData } from '../data/loader';
 import { detectQuality, type QualityProfile } from '../sculpture/quality';
 import { loadSettings, saveSettings, type Settings } from './settings';
+import { detectLang, persistLang } from '../i18n';
+import type { Lang } from '../i18n/strings';
 import type { FocusGeometry } from '../sculpture/focus';
 
 export interface HoverInfo {
@@ -31,6 +33,9 @@ interface AtlasState {
   /** Opening sequence: title on empty paper → the sculpture rises beneath
    *  it → tagline → UI. null = no intro this visit. */
   introPhase: IntroPhase | null;
+  /** UI language; `?lang=` pins it, otherwise the viewer's choice or the
+   *  browser's. Only the interface changes — the data keeps its own words. */
+  lang: Lang;
   /** Viewer settings (persisted) and the quality profile resolved from them. */
   settings: Settings;
   quality: QualityProfile;
@@ -55,6 +60,7 @@ interface AtlasState {
   setError(message: string): void;
   setIntroPhase(phase: IntroPhase | null): void;
   updateSettings(patch: Partial<Settings>): void;
+  setLang(lang: Lang): void;
   setSettingsOpen(open: boolean): void;
   setFocus(focus: FocusGeometry | null): void;
   setFocusOpen(open: boolean): void;
@@ -73,6 +79,7 @@ export const useAtlasStore = create<AtlasState>((set) => ({
   status: 'loading',
   sceneLoading: false,
   introPhase: null,
+  lang: detectLang(),
   settings: initialSettings,
   quality: detectQuality(initialSettings.quality),
   settingsOpen: false,
@@ -95,6 +102,10 @@ export const useAtlasStore = create<AtlasState>((set) => ({
       saveSettings(settings);
       return { settings, quality: detectQuality(settings.quality) };
     }),
+  setLang: (lang) => {
+    persistLang(lang);
+    set({ lang });
+  },
   setSettingsOpen: (settingsOpen) => set({ settingsOpen }),
   setFocus: (focus) => set({ focus, hover: null }),
   setFocusOpen: (focusOpen) => set({ focusOpen }),

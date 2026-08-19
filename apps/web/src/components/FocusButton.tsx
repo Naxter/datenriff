@@ -1,11 +1,13 @@
 // FOCUS: pick a state or a city; the rest of the country steps back and
-// the camera flies there. Lives in the top-left row next to EXPORT.
+// the camera flies there. It sits with the mode families: both answer the
+// question of what you are looking at.
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { SceneData } from '../data/loader';
 import { cityFocus, focusCities, loadStates, stateFocus } from '../data/focusData';
 import type { StatesFile } from '../sculpture/focus';
 import { useAtlasStore } from '../state/store';
+import { useI18n } from '../i18n';
 
 interface Props {
   scene: SceneData;
@@ -19,6 +21,7 @@ export function FocusButton({ scene }: Props) {
   const setOpen = useAtlasStore((s) => s.setFocusOpen);
   const [states, setStates] = useState<StatesFile | null>(null);
   const [query, setQuery] = useState('');
+  const { t } = useI18n();
   const input = useRef<HTMLInputElement>(null);
 
   // outlines load on first open (300 KB nobody needs otherwise)
@@ -59,29 +62,31 @@ export function FocusButton({ scene }: Props) {
     <div className="focus">
       <button
         type="button"
-        className={`export__go${focus ? ' export__go--on' : ''}`}
+        className={`modenav__focus${focus ? ' modenav__focus--on' : ''}`}
         onClick={() => setOpen(!open)}
-        title="Focus a state or city (F)"
+        title={t('focus.title')}
         aria-haspopup="dialog"
         aria-expanded={open}
       >
-        {focus ? `Focus · ${focus.name}` : 'Focus'}
+        {focus ? `${t('ui.focus')} · ${focus.name}` : t('ui.focus')}
       </button>
       {open && (
-        <div className="focus__panel" role="dialog" aria-label="Focus">
+        <div className="focus__panel" role="dialog" aria-label={t('ui.focus')}>
           <input
             ref={input}
             className="focus__search"
             type="search"
-            placeholder="State or city …"
+            placeholder={t('focus.placeholder')}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            aria-label="Search states and cities"
+            aria-label={t('focus.search')}
           />
           <div className="focus__lists">
             <div className="focus__group">
-              <p className="focus__heading">Bundesländer</p>
-              {!states && manifest?.states && <p className="focus__note">Loading …</p>}
+              <p className="focus__heading">{t('focus.states')}</p>
+              {!states && manifest?.states && (
+                <p className="focus__note">{t('ui.loading')}</p>
+              )}
               {!manifest?.states && (
                 <p className="focus__note">No outlines — run scripts/fetch-states.mjs</p>
               )}
@@ -100,7 +105,7 @@ export function FocusButton({ scene }: Props) {
               ))}
             </div>
             <div className="focus__group">
-              <p className="focus__heading">Cities</p>
+              <p className="focus__heading">{t('focus.cities')}</p>
               {cityRows.map((c) => (
                 <button
                   key={c.name}
@@ -125,7 +130,7 @@ export function FocusButton({ scene }: Props) {
                 setOpen(false);
               }}
             >
-              Show the whole country
+              {t('focus.whole')}
             </button>
           )}
         </div>
