@@ -289,6 +289,43 @@ MODES.push({
   attribution: DWD_ATTRIBUTION,
 });
 
+const BKG_ATTRIBUTION = {
+  label: 'Data: GeoBasis-DE / BKG, CLC5',
+  url: 'https://gdz.bkg.bund.de/index.php/default/corine-land-cover-5-ha-clc5.html',
+};
+
+// What the country is made of. Height is the artificial share of a cell,
+// colour the land cover that covers most of it — so cities rise as plateaus
+// out of a field that is green where it grows and blue where it is water.
+// CLC5 has four vintages (2012–2021); with more than one loaded the mode
+// gains a timeline the same way WIND and RAIN do.
+MODES.push({
+  id: 'land',
+  label: 'Land',
+  subtitle: 'What the ground is made of, and how much of it is built',
+  dataset: 'land',
+  heightMetric: 'built_share_2021',
+  colorMetric: 'land_class_2021',
+  // a dense field, like AFTER DARK: a steeper, more frontal view keeps the
+  // cities from stacking into one wall
+  camera: { pitch: 48, bearing: -8 },
+  // the share is bounded at 1 and a city's cells all sit near it, so the
+  // full 100 km ceiling would stand the Ruhr up as a palisade
+  heightScale: { type: 'linear', maxMeters: 26_000 },
+  colorScale: {
+    type: 'categorical',
+    palette: 'land',
+    saturationMetric: 'land_class_dominance_2021',
+  },
+  tooltip: {
+    fields: [
+      { metric: 'built_share_2021', label: 'Artificial surface', format: 'percent' },
+      { metric: 'land_class_2021', label: 'Dominant cover', format: 'category' },
+    ],
+  },
+  attribution: BKG_ATTRIBUTION,
+});
+
 const boundModes = new Map<string, SculptureMode>();
 
 /** A mode adapted to what a dataset actually carries: time steps whose

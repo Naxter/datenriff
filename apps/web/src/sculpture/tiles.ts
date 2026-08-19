@@ -332,7 +332,8 @@ export class TileManager {
     const anchor = heightStats.p995 - zeroAt || 1;
     const top = heightStats.max - zeroAt > 0 ? heightStats.max - zeroAt : anchor;
     const elevationScale =
-      TARGET_MAX_HEIGHT_METERS / (anchor * Math.pow(top / anchor, PEAKEDNESS));
+      (mode.heightScale.maxMeters ?? TARGET_MAX_HEIGHT_METERS) /
+      (anchor * Math.pow(top / anchor, PEAKEDNESS));
 
     const scale = effectiveColorScale(mode, palette);
     const isChange = mode.colorMetric === CHANGE_PCT_METRIC;

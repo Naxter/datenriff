@@ -51,17 +51,21 @@
 ## Further sources — open
 
 - [x] AFTER DARK: `pipelines/black-marble` turns NASA Black Marble into H3
-      cells (mean radiance per year, clipped to the outline) — VNP46A4
-      annual composites 2012 on with a timeline, or the 8-bit mosaic for a
-      demo; the app switches datasets per mode, proving the renderer is not
-      a census viewer
+      cells (mean radiance per year, clipped to the outline) — the VNP46A4
+      annual composites 2012–2025 with a timeline; the app switches
+      datasets per mode, proving the renderer is not a census viewer
 - [x] WIND: `pipelines/mastr` range-reads the wind units out of the
       Marktstammdatenregister export and writes installed MW per cell and
       year since 1990; the timeline plays the build-up, offshore included
 - [x] RAIN: `pipelines/dwd` turns the DWD's 1 km annual precipitation
       grids into H3 cells and years; the timeline plays wet years against
       dry ones, and `zeroAt` keeps the field a relief instead of a slab
-- [ ] pipelines for land cover and forest
+- [x] LAND: `pipelines/clc5` reads BKG's CORINE Land Cover 5 ha straight
+      out of the GeoPackage (SQLite + WKB, no GDAL), covers every polygon
+      with H3 cells and writes the artificial share and the dominant cover
+      per cell. 2021 is in; the older vintages are shapefiles, and with two
+      of them loaded the mode gains a timeline of sealing
+- [ ] FOREST (Thünen / Copernicus): forest extent, species and disturbance
 
 ## Cinematic polish — in progress
 
