@@ -7,13 +7,22 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAtlasStore } from '../state/store';
+import { INITIAL_VIEW_STATE } from '../sculpture/camera';
 import { resolveReducedMotion } from '../state/settings';
 import { useI18n } from '../i18n';
 
 interface Stop {
   mode?: string;
   step?: number;
-  zoom?: string;
+  /** A place to fly to, so a section about cells can show you cells. */
+  camera?: {
+    label: string;
+    longitude: number;
+    latitude: number;
+    zoom: number;
+    pitch?: number;
+    bearing?: number;
+  };
 }
 
 interface Section {
@@ -29,17 +38,33 @@ interface Doc {
   sections: Section[];
 }
 
+/** Where a section without a camera sends the view: the country, as the
+ *  atlas opens on it. Releasing the story instead would strand the reader
+ *  at whatever close-up the previous section flew to. */
+const COUNTRY_STOP = {
+  label: 'Germany',
+  longitude: INITIAL_VIEW_STATE.longitude!,
+  latitude: INITIAL_VIEW_STATE.latitude!,
+  zoom: INITIAL_VIEW_STATE.zoom!,
+  pitch: INITIAL_VIEW_STATE.pitch,
+  bearing: INITIAL_VIEW_STATE.bearing,
+};
+
 export function AboutPanel() {
   const open = useAtlasStore((s) => s.aboutOpen);
   const setOpen = useAtlasStore((s) => s.setAboutOpen);
   const setMode = useAtlasStore((s) => s.setMode);
   const setTimeT = useAtlasStore((s) => s.setTimeT);
+  const playStory = useAtlasStore((s) => s.playStory);
   const settings = useAtlasStore((s) => s.settings);
   const reduceMotion = resolveReducedMotion(settings);
   const { lang, t } = useI18n();
   const [doc, setDoc] = useState<Doc | null>(null);
   const scroller = useRef<HTMLDivElement>(null);
-  const close = useCallback(() => setOpen(false), [setOpen]);
+  const close = useCallback(() => {
+    playStory(null);
+    setOpen(false);
+  }, [playStory, setOpen]);
 
   // A toggles it, like E and S; Escape closes it
   useEffect(() => {
@@ -90,6 +115,10 @@ export function AboutPanel() {
         if (!stop) return;
         if (stop.mode && useAtlasStore.getState().modeId !== stop.mode) setMode(stop.mode);
         if (stop.step !== undefined) setTimeT(stop.step);
+        // a camera stop rides the same flight the curated stories use; a
+        // section without one flies back out to the country, so the reader
+        // is never left reading about rainfall over a close-up of Berlin
+        playStory(stop.camera ?? COUNTRY_STOP);
       },
       // a band across the middle of the panel, so a section takes over as it
       // reaches reading position rather than as it appears at the edge
@@ -97,7 +126,7 @@ export function AboutPanel() {
     );
     root.querySelectorAll('section[id]').forEach((el) => observer.observe(el));
     return () => observer.disconnect();
-  }, [open, doc, setMode, setTimeT]);
+  }, [open, doc, setMode, setTimeT, playStory]);
 
   if (!open) return null;
   const moreHref = lang === 'de' ? '/ueber/' : '/about/';
