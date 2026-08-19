@@ -195,7 +195,9 @@ MODES.push(
     heightMetric: 'population_2022',
     colorMetric: 'household_size',
     heightScale: { type: 'linear' },
-    colorScale: { type: 'linear', domain: [1.5, 3], palette: 'household' },
+    // 1 is the floor a household can have, and 7 % of cells sit under 1.5:
+    // city centres full of one-person households, the part worth seeing
+    colorScale: { type: 'linear', domain: [1, 3.5], palette: 'household' },
     tooltip: {
       fields: [
         { metric: 'population_2022', label: 'Population', format: 'integer' },
@@ -305,11 +307,14 @@ const BKG_ATTRIBUTION = {
   url: 'https://gdz.bkg.bund.de/index.php/default/corine-land-cover-5-ha-clc5.html',
 };
 
+/** CLC5 has four vintages; the mode binds to the ones actually loaded. */
+const CLC5_VINTAGES = ['2012', '2015', '2018', '2021'];
+
 // What the country is made of. Height is the artificial share of a cell,
 // colour the land cover that covers most of it — so cities rise as plateaus
 // out of a field that is green where it grows and blue where it is water.
-// CLC5 has four vintages (2012–2021); with more than one loaded the mode
-// gains a timeline the same way WIND and RAIN do.
+// Scrubbing the timeline grows the built share vintage by vintage; the
+// colour stays on the newest cover, since it is a different metric.
 MODES.push({
   id: 'land',
   family: 'nature',
@@ -323,6 +328,7 @@ MODES.push({
   camera: { pitch: 48, bearing: -8 },
   // the share is bounded at 1 and a city's cells all sit near it, so the
   // full 100 km ceiling would stand the Ruhr up as a palisade
+  time: { kind: 'steps', steps: CLC5_VINTAGES, metricTemplate: 'built_share_{step}' },
   heightScale: { type: 'linear', maxMeters: 26_000 },
   colorScale: {
     type: 'categorical',
