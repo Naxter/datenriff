@@ -111,9 +111,16 @@ denominator are not in the data; it aggregates as a weighted mean instead.
 
 ## Missing values
 
-- Official suppression markers (`–`, `.`, `x`, …) are missing, never zero.
+Two kinds of marker, and they mean opposite things:
+
+- **Nil** (`–`, `-`) is a real zero — the census legend reads "– = Genau Null
+  oder auf Null geändert". It parses to `0.0` and keeps its cell in the data.
+  Reading it as missing deletes the cell from a share, denominator included,
+  which pools the ratio over only the cells that had something to report.
+- **Withheld or unknown** (`.`, `/`, `x`, …) is missing, never zero.
 - Release-specific markers exist: the 2011 grid writes `-1` for uninhabited
-  or suppressed cells (`--treat-missing "-1"`).
+  or suppressed cells (`--treat-missing "-1"`), and such a marker outranks
+  both tables above.
 - f32 buffers: NaN; u8 buffers: 255.
 - Renderer: NaN → height 0 plus the "suppressed" colour.
 
