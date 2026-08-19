@@ -77,7 +77,10 @@ export const PALETTES: Record<string, Palette> = {
   age: seq('#2F8A7D', '#9EC6B6', '#F2EBDF', '#C98FA8', '#77365C'),
   rent: seq('#F2EBDF', '#EFC968', '#E89A3C', '#D95F3B', '#A8232F'),
 
-  // 0 gas · 1 oil · 2 district · 3 heat pump · 4 electric · 5 biomass · 6 other
+  // The census publishes nine carriers and the map now shows all nine:
+  // 0 gas · 1 oil · 2 district · 3 solar & heat pump · 4 electric ·
+  // 5 wood & pellets · 6 biomass & biogas · 7 coal · 8 none.
+  // Fossils read warm, renewables green, grid-borne heat cool.
   heating: {
     kind: 'categorical',
     colors: [
@@ -87,6 +90,8 @@ export const PALETTES: Record<string, Palette> = {
       hexToRgb('#2FA8BC'),
       hexToRgb('#9FB8D8'),
       hexToRgb('#6FA45E'),
+      hexToRgb('#3F7A3A'),
+      hexToRgb('#5A4B42'),
       hexToRgb('#B9B2A6'),
     ],
     neutral: hexToRgb('#E4DDD2'),

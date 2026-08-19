@@ -7,6 +7,7 @@ from zensus_pipeline.aggregate import (
     categorical_dominant,
     change_pct,
     share,
+    weighted_harmonic_mean,
     sum_values,
     weighted_mean,
 )
@@ -79,3 +80,41 @@ class TestParentAggregation(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestHarmonicMean(unittest.TestCase):
+    """Persons per home pools the homes, it does not average the ratios."""
+
+    def test_it_pools_the_implied_units(self):
+        # 100 people at 1.0 per home = 100 homes; 100 people at 4.0 = 25 homes.
+        # 200 people over 125 homes is 1.6, not the arithmetic 2.5.
+        self.assertAlmostEqual(weighted_harmonic_mean([(1.0, 100), (4.0, 100)]), 1.6)
+
+    def test_it_differs_from_the_arithmetic_mean_upwards(self):
+        pairs = [(1.4, 500), (2.1, 900), (3.6, 200)]
+        arithmetic = sum(v * w for v, w in pairs) / sum(w for _, w in pairs)
+        pooled = weighted_harmonic_mean(pairs)
+        self.assertLess(pooled, arithmetic, "averaging ratios always reads high")
+
+    def test_a_single_cell_is_itself(self):
+        self.assertAlmostEqual(weighted_harmonic_mean([(2.3, 47)]), 2.3)
+
+    def test_missing_and_impossible_values_are_skipped(self):
+        self.assertAlmostEqual(
+            weighted_harmonic_mean([(2.0, 10), (None, 10), (3.0, None), (0.0, 10)]), 2.0
+        )
+
+    def test_no_weight_is_no_value(self):
+        self.assertIsNone(weighted_harmonic_mean([(2.0, 0), (3.0, None)]))
+
+    def test_pooling_is_associative_over_levels(self):
+        # what the pipeline relies on: r10 -> r8 in one hop equals two hops
+        leaves = [(1.5, 300), (2.2, 800), (3.1, 150), (2.7, 640)]
+        direct = weighted_harmonic_mean(leaves)
+        left = weighted_harmonic_mean(leaves[:2])
+        right = weighted_harmonic_mean(leaves[2:])
+        stepwise = weighted_harmonic_mean([
+            (left, leaves[0][1] + leaves[1][1]),
+            (right, leaves[2][1] + leaves[3][1]),
+        ])
+        self.assertAlmostEqual(direct, stepwise, places=9)

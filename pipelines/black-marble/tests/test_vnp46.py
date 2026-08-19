@@ -133,7 +133,7 @@ class TestReadAndSample(unittest.TestCase):
         # is (0.5 + c) / 240 °E, 60 − (0.5 + r) / 240 °N
         rad = np.full((4, 4), vnp46.DEFAULT_FILL, dtype="float32")   # fill everywhere
         rad[0, 0] = 12.0    # good
-        rad[0, 1] = 0.5     # good but at the floor
+        rad[0, 1] = 0.5     # good, but at the floor: dark, not absent
         rad[1, 0] = 30.0    # bright but poor quality (1)
         rad[1, 1] = 4.0     # gap-filled (2)
         rad[2, 2] = 90.0    # good
@@ -169,14 +169,16 @@ class TestReadAndSample(unittest.TestCase):
         self.assertAlmostEqual(float(radiance[0, 0]), 12.0, places=5)
         self.assertTrue(np.isnan(radiance[1, 1]))
 
-    def test_sample_masks_quality_and_floor(self):
+    def test_sample_masks_quality_and_clamps_at_the_floor(self):
         radiance, quality, origin = vnp46.read_tile(self.path)
         bbox = (0.0, 59.9, 0.1, 60.0)
         got = list(vnp46.sample_tile(radiance, quality, origin, bbox, floor=0.5))
         values = sorted(round(v, 3) for _, _, v in got)
-        # 12.0 (good), 4.0 (gap-filled) and 90.0 (good) survive; the 0.5 is
-        # at the floor, the 30.0 is poor quality, the rest is fill
-        self.assertEqual(values, [4.0, 12.0, 90.0])
+        # 12.0 (good), 4.0 (gap-filled) and 90.0 (good) keep their value; the
+        # 0.5 is at the floor and comes through as a dark 0.0 rather than
+        # vanishing, because a dark pixel still belongs to its cell. The 30.0
+        # is poor quality and the rest is fill, so those do drop out.
+        self.assertEqual(values, [0.0, 4.0, 12.0, 90.0])
         lon, lat, v = next(s for s in got if abs(s[2] - 12.0) < 1e-6)
         self.assertAlmostEqual(lon, 0.5 / 240, places=9)
         self.assertAlmostEqual(lat, 60 - 0.5 / 240, places=9)

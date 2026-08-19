@@ -226,6 +226,23 @@ const LAND_CLASSES: Record<Lang, string[]> = {
   ],
 };
 
+/** Heating carriers, in the order run_all_metrics.py declares them. The
+ *  pipeline labels are German, so English is the translation here. */
+const HEATING_SOURCES: Record<Lang, string[]> = {
+  en: [
+    'Gas',
+    'Heating oil',
+    'District heat',
+    'Solar & heat pump',
+    'Electricity',
+    'Wood & pellets',
+    'Biomass & biogas',
+    'Coal',
+    'None',
+  ],
+  de: [],
+};
+
 /** Disturbance causes, in the order forest/raster.py writes them. */
 const FOREST_AGENTS: Record<Lang, string[]> = {
   en: [],
@@ -266,6 +283,9 @@ export function categoryText(lang: Lang, metricId: string, index: number, fallba
   }
   if (metricId.startsWith('disturbance_agent')) {
     return FOREST_AGENTS[lang]?.[index] ?? fallback;
+  }
+  if (metricId.startsWith('heating_category')) {
+    return HEATING_SOURCES[lang]?.[index] ?? fallback;
   }
   return fallback;
 }

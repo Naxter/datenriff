@@ -173,8 +173,12 @@ export class TargetBuilder {
     // same calibration for every step, so a shrinking column really shrank
     if (mode.time) {
       target.timeHeights = new Map();
-      const colorFollows = mode.colorMetric === mode.heightMetric;
-      if (colorFollows) target.timeColors = new Map();
+      // colour follows the step either because it *is* the height metric
+      // (night light) or because it declares a series of its own (land cover)
+      const colorTemplate =
+        mode.time.colorMetricTemplate ??
+        (mode.colorMetric === mode.heightMetric ? mode.time.metricTemplate : undefined);
+      if (colorTemplate) target.timeColors = new Map();
       for (const step of mode.time.steps) {
         const metricId = mode.time.metricTemplate.replace('{step}', step);
         const stepMetric = this.resolveMetric(metricId);
@@ -182,10 +186,19 @@ export class TargetBuilder {
           step,
           computeElevations(toF32(stepMetric.values), scale, undefined, zeroAt),
         );
-        if (colorFollows) {
-          // one colour domain (the height metric's stats) for every step
+        if (colorTemplate) {
+          const colorId = colorTemplate.replace('{step}', step);
+          const stepColor = colorId === metricId ? stepMetric : this.resolveMetric(colorId);
+          const satTemplate = mode.time.saturationMetricTemplate;
+          // dominance ships as u8, the same as the un-stepped saturation
+          const stepSaturation = satTemplate
+            ? (this.scene.metrics.get(satTemplate.replace('{step}', step)) as
+                | Uint8Array
+                | undefined)
+            : saturation;
+          // one colour domain (the calibration metric's stats) for every step
           const stepColors = new Uint8Array(this.scene.count * 4);
-          applyColorScale(colorScale, stepMetric.values, color.stats, stepColors, saturation);
+          applyColorScale(colorScale, stepColor.values, color.stats, stepColors, stepSaturation);
           applyOcclusion(stepColors, this.occlusion(heights), OCCLUSION_STRENGTH);
           target.timeColors!.set(step, stepColors);
         }

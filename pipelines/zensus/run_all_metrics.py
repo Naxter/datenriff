@@ -67,8 +67,8 @@ METRICS: dict[str, list[str]] = {
     "heating": [
         "--input", f"{D}/Zensus2022_Energietraeger_100m-Gitter.csv",
         "--rule", "category", "--encoding", "cp1252",
-        "--category-columns", "Gas,Heizoel,Fernwaerme,Solar_Geothermie_Waermepumpen,Strom,Holz_Holzpellets,Kohle",
-        "--category-labels", "Gas,Heizöl,Fernwärme,Wärmepumpe,Strom,Biomasse,Kohle",
+        "--category-columns", "Gas,Heizoel,Fernwaerme,Solar_Geothermie_Waermepumpen,Strom,Holz_Holzpellets,Biomasse_Biogas,Kohle,kein_Energietraeger",
+        "--category-labels", "Gas,Heizöl,Fernwärme,Solar & Wärmepumpe,Strom,Holz & Pellets,Biomasse & Biogas,Kohle,Ohne",
         "--metric", "heating", "--label", "Heating energy source",
         "--source-url", "https://www.destatis.de/static/DE/zensus/gitterdaten/Zensus2022_Energietraeger.zip",
     ],
@@ -91,9 +91,12 @@ METRICS: dict[str, list[str]] = {
         "--metric", "homes_new_share", "--label", "Built 2014 or later",
         "--source-url", "https://www.destatis.de/static/DE/zensus/gitterdaten/Wohnungen_nach_Baujahresklassen_in_Gitterzellen.zip",
     ],
+    # Persons per home: pooling the *homes* (population / size), not averaging
+    # the ratios. Weighting arithmetically by population counts a big
+    # household once per person and reads 2.165 where the truth is 2.03.
     "household_size": [
         "--input", f"{D}/Zensus2022_Durchschn_Haushaltsgroesse_100m-Gitter.csv",
-        "--rule", "wmean", "--value-column", "DurchschnHHGroesse",
+        "--rule", "hmean", "--value-column", "DurchschnHHGroesse",
         "--weight-input", POP, "--weight-value-column", "Einwohner",
         "--metric", "household_size", "--label", "Average household size", "--unit", "per home",
         "--source-url", "https://www.destatis.de/static/DE/zensus/gitterdaten/Durchschnittliche_Haushaltsgroesse_in_Gitterzellen.zip",

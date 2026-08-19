@@ -124,13 +124,16 @@ export const MODES: SculptureMode[] = [
     label: 'Heating',
     subtitle: "Germany's heating landscape by energy source",
     dataset: 'zensus',
-    heightMetric: 'homes',
+    // the carrier is reported for every dwelling, so the height has to be
+    // every dwelling too: on the rented count, 44 % of cells with a heating
+    // category stood at zero and seven million dwellings were invisible
+    heightMetric: 'homes_total',
     colorMetric: 'heating_category',
     heightScale: { type: 'linear' },
     colorScale: { type: 'categorical', palette: 'heating', saturationMetric: 'heating_dominance' },
     tooltip: {
       fields: [
-        { metric: 'homes', label: 'Rented dwellings', format: 'integer' },
+        { metric: 'homes_total', label: 'Dwellings', format: 'integer' },
         { metric: 'heating_category', label: 'Dominant source', format: 'category' },
       ],
     },
@@ -320,8 +323,8 @@ const CLC5_VINTAGES = ['2012', '2015', '2018', '2021'];
 // What the country is made of. Height is the artificial share of a cell,
 // colour the land cover that covers most of it — so cities rise as plateaus
 // out of a field that is green where it grows and blue where it is water.
-// Scrubbing the timeline grows the built share vintage by vintage; the
-// colour stays on the newest cover, since it is a different metric.
+// Scrubbing the timeline moves both: the built share grows and the land
+// cover of that vintage comes with it.
 MODES.push({
   id: 'land',
   family: 'nature',
@@ -335,7 +338,15 @@ MODES.push({
   camera: { pitch: 48, bearing: -8 },
   // the share is bounded at 1 and a city's cells all sit near it, so the
   // full 100 km ceiling would stand the Ruhr up as a palisade
-  time: { kind: 'steps', steps: CLC5_VINTAGES, metricTemplate: 'built_share_{step}' },
+  time: {
+    kind: 'steps',
+    steps: CLC5_VINTAGES,
+    metricTemplate: 'built_share_{step}',
+    // the cover is mapped per vintage too, so scrubbing shows the ground
+    // changing rather than 2021's cover under a moving built share
+    colorMetricTemplate: 'land_class_{step}',
+    saturationMetricTemplate: 'land_class_dominance_{step}',
+  },
   heightScale: { type: 'linear', maxMeters: 26_000 },
   colorScale: {
     type: 'categorical',
@@ -401,14 +412,23 @@ export function bindMode(mode: SculptureMode, dataset: SculptureDataset): Sculpt
   const key = `${mode.id}|${dataset.id}|${dataset.metrics.map((m) => m.id).join(',')}`;
   const cached = boundModes.get(key);
   if (cached) return cached;
-  const template = (step: string) => mode.time!.metricTemplate.replace('{step}', step);
+  const templates = [
+    mode.time.metricTemplate,
+    mode.time.colorMetricTemplate,
+    mode.time.saturationMetricTemplate,
+  ].filter((t): t is string => Boolean(t));
+  const fill = (t: string, step: string) => t.replace('{step}', step);
+  const template = (step: string) => fill(mode.time!.metricTemplate, step);
   const has = (id: string) => dataset.metrics.some((m) => m.id === id);
-  const steps = mode.time.steps.filter((s) => has(template(s)));
+  // a step counts only if every series it drives is actually present
+  const steps = mode.time.steps.filter((s) => templates.every((t) => has(fill(t, s))));
   let bound = mode;
   if (steps.length > 0 && steps.length !== mode.time.steps.length) {
-    const last = template(steps[steps.length - 1]!);
-    const follows = (id: string) => mode.time!.steps.some((s) => template(s) === id);
-    const sub = (id: string) => (follows(id) ? last : id);
+    const lastStep = steps[steps.length - 1]!;
+    const sub = (id: string) => {
+      const t = templates.find((tpl) => mode.time!.steps.some((s) => fill(tpl, s) === id));
+      return t ? fill(t, lastStep) : id;
+    };
     bound = {
       ...mode,
       heightMetric: sub(mode.heightMetric),
