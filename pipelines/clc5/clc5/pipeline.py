@@ -103,10 +103,19 @@ def run(args: argparse.Namespace) -> None:
 
     for res in resolutions:
         cells = per_res[res]
-        universe = sorted(cells)
         res_dir = out / f"r{res}"
         res_dir.mkdir(parents=True, exist_ok=True)
-        (res_dir / "cells.txt").write_text("\n".join(universe), encoding="utf-8")
+        # vintages of one dataset must share a cell universe, or the buffers
+        # of two years do not line up. The first vintage written defines it.
+        cells_file = res_dir / "cells.txt"
+        if cells_file.exists():
+            universe = cells_file.read_text(encoding="utf-8").split()
+            dropped = len(set(cells) - set(universe))
+            if dropped:
+                log(f"  r{res}: {dropped:,} cells outside the existing universe dropped")
+        else:
+            universe = sorted(cells)
+            cells_file.write_text("\n".join(universe), encoding="utf-8")
         positions = [
             (round(lon, 6), round(lat, 6))
             for lon, lat in (
@@ -118,8 +127,13 @@ def run(args: argparse.Namespace) -> None:
         built: list[float | None] = []
         category: list[int | None] = []
         dominance: list[int] = []
+        # a cell the universe carries but this vintage does not cover is
+        # missing, not "nothing built": NaN renders as suppressed
+        empty = np.zeros(len(classes.LABELS), dtype="int32")
         for cell in universe:
-            share, dominant, strength = coverage.shares(cells[cell], classes.ARTIFICIAL_GROUPS)
+            share, dominant, strength = coverage.shares(
+                cells.get(cell, empty), classes.ARTIFICIAL_GROUPS
+            )
             built.append(None if np.isnan(share) else share)
             category.append(None if dominant < 0 else dominant)
             dominance.append(round(strength * 255))

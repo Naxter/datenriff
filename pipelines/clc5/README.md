@@ -20,14 +20,38 @@ python -c "import zipfile; zipfile.ZipFile('downloads/clc5_2021.utm32s.gpkg.zip'
 ```
 
 1.5 GB compressed, 5.4 GB as a GeoPackage: 657,676 multipolygons in
-EPSG:25832 with a three-digit CORINE code. The 2021 vintage is a
-GeoPackage; 2012–2018 are shapefiles, which this reader does not do yet.
+EPSG:25832 with a three-digit CORINE code.
+
+Only 2021 is published as a GeoPackage; 2012, 2015 and 2018 are
+shapefiles, and each of those is split into five files, one per class
+group. They are **converted once** rather than parsed, so the pipeline
+only ever reads one format and one layer:
+
+```bash
+../zensus/.venv/Scripts/pip install pyogrio     # brings its own GDAL
+curl -o downloads/clc5_2012.utm32s.shape.zip \
+  https://daten.gdz.bkg.bund.de/produkte/dlm/clc5_2012/aktuell/clc5_2012.utm32s.shape.zip
+python -c "import zipfile; zipfile.ZipFile('downloads/clc5_2012.utm32s.shape.zip').extractall('downloads')"
+PYTHONPATH="." ../zensus/.venv/Scripts/python -m clc5.convert \
+  --input downloads/clc5_2012.utm32s.shape/clc5/clc5_class?xx.shp \
+  --out downloads/clc5_2012.gpkg --layer clc5 --columns CLC12
+```
+
+`clc5/convert.py` is the only file in the repo that needs GDAL, and it is
+a tool: nothing in the pipeline imports it. Converting also sidesteps the
+shapefile hole rule — a shapefile marks a hole by the direction its ring
+winds, WKB by the ring's position, and reading that wrong turns a lake
+inside a forest into forest.
 
 ## Run
 
 ```bash
 PYTHONPATH=".;../zensus" ../zensus/.venv/Scripts/python -m clc5.pipeline \
   --input downloads/clc5_2021/CLC5ha_2021.gpkg --year 2021 \
+  --out ../../apps/web/public/data/land
+# an older vintage, once converted; the layer and column names differ
+PYTHONPATH=".;../zensus" ../zensus/.venv/Scripts/python -m clc5.pipeline \
+  --input downloads/clc5_2012.gpkg --year 2012 --table clc5 --attribute CLC12 \
   --out ../../apps/web/public/data/land
 cd ../zensus && .venv/Scripts/python -m zensus_pipeline.pack \
   --lod ../../apps/web/public/data/land/r8
