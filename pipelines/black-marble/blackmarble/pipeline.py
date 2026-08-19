@@ -8,9 +8,13 @@
     all years share one cell universe (the union of everything ever lit)
      -> stats + binary (light_{year}.f32) + dataset.json
 
+The country LOD is r7: the app loads every metric of a dataset up front,
+so fourteen years of r8 would be tens of megabytes at start-up. r8 is
+written as a tiled LOD (--tiled) and streamed on zoom instead.
+
 Two sources:
 
-- `--vnp46 --years 2012-2024`: the calibrated VNP46A4 annual composites
+- `--vnp46 --years 2012-2025`: the calibrated VNP46A4 annual composites
   (500 m, nW/cm²/sr; Earthdata login, see vnp46.py). This is the real
   data and gives the timeline.
 - `--input <geotiff> --year 2016`: an 8-bit Black Marble *visualisation*
@@ -40,11 +44,18 @@ from zensus_pipeline.binary_writer import (
     write_f32,
     write_positions,
 )
+from zensus_pipeline.tiling import (
+    group_by_tile,
+    merge_tile_index,
+    write_tile_metric,
+    write_tile_positions,
+)
 
 from .aggregate import accumulate_mean, aggregate_mean_to_parent
 
 # H3 edge lengths in metres, for the renderer's column radius
 H3_EDGE_METERS = {5: 8544.4, 6: 3229.5, 7: 1220.6, 8: 461.4}
+TILE_PARENT_RES = 5
 # ITU-R BT.709 luma: the composite is near-greyscale, but weighting keeps
 # the faint blue-white city cores from being over- or under-read
 LUMA = (0.2126, 0.7152, 0.0722)
@@ -95,6 +106,34 @@ def point_in_rings(lon: float, lat: float, rings) -> bool:
         if inside:
             return True
     return False
+
+
+def mask_in_rings(lons, lats, rings):
+    """point_in_rings for whole arrays: a boolean mask of the points inside
+    any ring. The per-pixel version costs minutes over a 500 m grid."""
+    import numpy as np
+
+    lons = np.asarray(lons, dtype="float64")
+    lats = np.asarray(lats, dtype="float64")
+    inside_any = np.zeros(lons.shape, dtype=bool)
+    for ring in rings:
+        xs = np.array([p[0] for p in ring], dtype="float64")
+        ys = np.array([p[1] for p in ring], dtype="float64")
+        xj, yj = np.roll(xs, 1), np.roll(ys, 1)
+        inside = np.zeros(lons.shape, dtype=bool)
+        for i in range(len(ring)):
+            straddles = (ys[i] > lats) != (yj[i] > lats)
+            if not straddles.any():
+                continue
+            # only where the edge straddles the latitude: elsewhere the
+            # denominator is zero and the crossing is not counted anyway
+            dy = yj[i] - ys[i]
+            cut = np.empty(lons.shape, dtype="float64")
+            cut.fill(np.inf)
+            np.divide((xj[i] - xs[i]) * (lats - ys[i]), dy, out=cut, where=straddles)
+            inside ^= straddles & (lons < cut + xs[i])
+        inside_any |= inside
+    return inside_any
 
 
 def sample_pixels(
@@ -182,6 +221,7 @@ def run(args: argparse.Namespace) -> None:
     if not args.vnp46 and not args.input:
         raise SystemExit("either --input <geotiff> or --vnp46 is required")
 
+    tiled = {int(r) for r in args.tiled.split(",") if r.strip()} if args.tiled else set()
     rings = load_clip_rings(Path(args.clip)) if args.clip else None
     if rings:
         print(f"  clipping to {len(rings)} ring(s) from {Path(args.clip).name}",
@@ -223,6 +263,7 @@ def run(args: argparse.Namespace) -> None:
                       for cell in universe)]
         write_positions(res_dir / "positions.bin", positions)
         stats_by_metric: dict[str, dict] = {}
+        metric_files: list[tuple[str, list[float], str]] = []
         for year, values in values_by_year.items():
             metric_id = f"{args.metric_prefix}_{year}"
             # a cell lit in some other year but not this one is dark, not
@@ -231,6 +272,7 @@ def run(args: argparse.Namespace) -> None:
             write_f32(res_dir / f"{metric_id}.f32", aligned)
             stats = compute_stats(aligned)
             stats_by_metric[metric_id] = stats
+            metric_files.append((f"{metric_id}.f32", aligned, "f32"))
             if res == country_res:
                 metric_entries.append(
                     {
@@ -242,22 +284,38 @@ def run(args: argparse.Namespace) -> None:
                         "stats": stats,
                     }
                 )
-        lod_fragments.append(
-            {
-                "resolution": res,
-                "count": len(universe),
-                "bounds": bounds_of(positions),
-                "cellRadiusMeters": H3_EDGE_METERS.get(res, 1220.6),
-                "minZoom": 0 if res == country_res else 7.0,
-                "positions": f"r{res}/positions.bin",
-                "metricTemplate": f"r{res}/{{metric}}",
-                "metricStats": stats_by_metric,
-            }
-        )
+        fragment = {
+            "resolution": res,
+            "count": len(universe),
+            "bounds": bounds_of(positions),
+            "cellRadiusMeters": H3_EDGE_METERS.get(res, 1220.6),
+            "minZoom": 0 if res == country_res else 7.0,
+            "positions": f"r{res}/positions.bin",
+            "metricTemplate": f"r{res}/{{metric}}",
+            "metricStats": stats_by_metric,
+        }
+        if res in tiled:
+            groups = group_by_tile(universe, lambda c: h3.cell_to_parent(c, TILE_PARENT_RES))
+            counts_per_tile = {tile: len(idx) for tile, idx in groups.items()}
+            tile_bounds = write_tile_positions(res_dir, groups, positions)
+            for file_name, aligned, storage in metric_files:
+                write_tile_metric(res_dir, groups, file_name, aligned, storage)
+            merge_tile_index(
+                res_dir, res, H3_EDGE_METERS[res], tile_bounds,
+                counts_per_tile, stats_by_metric,
+            )
+            fragment.update({
+                "tileIndex": f"r{res}/index.json",
+                "tileTemplate": f"r{res}/tiles/{{tile}}.{{metric}}",
+                "positionsTemplate": f"r{res}/tiles/{{tile}}.positions.bin",
+                "tileParentResolution": TILE_PARENT_RES,
+            })
+            print(f"  r{res}: {len(groups):,} tiles", file=sys.stderr)
+        lod_fragments.append(fragment)
         print(f"  r{res}: {len(universe):,} cells, {len(values_by_year)} year(s)", file=sys.stderr)
 
     if args.vnp46:
-        source_url = "https://ladsweb.modaps.eosdis.nasa.gov/archive/allData/5000/VNP46A4/"
+        source_url = "https://doi.org/10.5067/VIIRS/VNP46A4.002"
         source_hash = None
         licence = "NASA Black Marble (VNP46A4), free to use with attribution"
         spatial = 500
@@ -305,7 +363,7 @@ def main(argv: list[str] | None = None) -> None:
     src.add_argument("--year", default="2016", help="year the GeoTIFF shows")
     src.add_argument("--vnp46", action="store_true",
                      help="read VNP46A4 annual tiles instead of a GeoTIFF")
-    src.add_argument("--years", default="2012-2024",
+    src.add_argument("--years", default="2012-2025",
                      help="VNP46A4 years, e.g. 2012-2024 or 2016,2020,2024")
     src.add_argument("--tiles-dir", default="downloads/vnp46a4",
                      help="where VNP46A4 .h5 tiles are (or get downloaded to)")
@@ -313,7 +371,7 @@ def main(argv: list[str] | None = None) -> None:
                      help="fail instead of downloading missing tiles")
     src.add_argument("--keep-quality", default=None,
                      help="VNP46A4 quality values to keep (default 0,2: "
-                          "persistent + gap-filled; 1 = ephemeral is dropped)")
+                          "good + gap-filled; 1 = poor quality is dropped)")
     parser.add_argument("--out", required=True, help="Output dataset directory")
     parser.add_argument(
         "--bbox",
@@ -323,6 +381,8 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument(
         "--resolutions", default="8,7", help="comma-separated H3 resolutions, finest first"
     )
+    parser.add_argument("--tiled", default="8",
+                        help="resolutions written as tiles and streamed on zoom")
     parser.add_argument("--metric-prefix", default="light",
                         help="metrics are written as <prefix>_<year>")
     parser.add_argument("--label", default="Night light")

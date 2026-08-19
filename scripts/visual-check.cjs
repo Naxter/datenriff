@@ -50,6 +50,7 @@ const VIEWS = [
   { id: 'vacancy', q: 'mode=vacancy' },
   { id: 'families', q: 'mode=families' },
   { id: 'afterdark', q: 'mode=afterdark' },
+  { id: 'afterdark-2012', q: 'mode=afterdark&t=0' },
   { id: 'wind', q: 'mode=wind' },
   { id: 'wind-2005', q: 'mode=wind&t=0.42' },
   { id: 'rain', q: 'mode=rain' },
