@@ -43,6 +43,50 @@ body {
   inset: 0;
 }
 
+/* ---------------- masthead, top centre ---------------- */
+
+/* On a wide screen the two children keep their own places (centre and
+   right), so this wrapper stays out of the layout entirely. On a phone it
+   becomes the column they stack in — which is why they cannot overlap
+   there any more, rather than being nudged apart by hand. */
+.topblock {
+  display: contents;
+}
+
+.wordmark {
+  position: absolute;
+  top: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  pointer-events: none;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.wordmark__name {
+  font-family: var(--serif);
+  font-size: 20px;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.66em;
+  /* tracking hangs off the last letter; pull the line back to stay centred */
+  text-indent: 0.66em;
+  color: var(--ink);
+}
+
+/* tracked to the same width as the name above it: the two read as one mark */
+.wordmark__sub {
+  font-family: var(--sans);
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.404em;
+  text-indent: 0.404em;
+  color: var(--ink-faint);
+  margin-top: 8px;
+}
+
 /* ---------------- header, top right ---------------- */
 
 .header {
@@ -85,6 +129,25 @@ body {
   color: var(--ink-soft);
   margin: 12px 0 0;
   line-height: 1.5;
+}
+
+.header__source {
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin: 14px 0 0;
+  pointer-events: auto;
+}
+
+.header__source--extra {
+  margin-top: 4px;
+}
+
+.header__source a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .header__date {
@@ -752,28 +815,6 @@ body {
   color: var(--ink);
 }
 
-/* ---------------- attribution, bottom left ---------------- */
-
-.attribution {
-  position: absolute;
-  left: 40px;
-  /* clears both tiers of the nav below it; attribution may never be
-     covered, it is a licence condition */
-  bottom: 108px;
-  z-index: 10;
-  font-size: 10.5px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--ink-faint);
-  line-height: 1.7;
-  pointer-events: none;
-}
-
-.attribution a {
-  color: inherit;
-  pointer-events: auto;
-}
-
 /* ---------------- loading veil ---------------- */
 
 .veil {
@@ -863,8 +904,13 @@ body {
   transform: none;
 }
 
-/* the UI stays out until the intro is over; attribution is exempt (licence) */
-.atlas--intro .header,
+/* The UI stays out until the intro is over. The data credit is exempt: it
+   is a licence condition, and the reveal already shows the sculpture, so
+   only the title, subtitle and date of the header fade. */
+.atlas--intro .header__title,
+.atlas--intro .header__subtitle,
+.atlas--intro .header__date,
+.atlas--intro .wordmark,
 .atlas--intro .modenav,
 .atlas--intro .legend,
 .atlas--intro .export,
@@ -894,20 +940,49 @@ body {
 @media (max-width: 760px) {
   /* Portrait phones: the UI stacks up the left edge instead of ringing the
      frame, so nothing overlaps the sculpture or itself. */
-  .header {
-    right: 20px;
+  /* the top is one centred column: nothing shares a line, so nothing can
+     collide however long a mode title or a source credit gets */
+  .topblock {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: absolute;
+    top: 76px;
     left: 20px;
-    top: 18px;
+    right: 20px;
+    z-index: 10;
   }
-  .header__kicker {
-    font-size: 9px;
-    letter-spacing: 0.26em;
-    margin-bottom: 6px;
+  .wordmark {
+    position: static;
+    transform: none;
+  }
+  .wordmark__name {
+    font-size: 17px;
+    letter-spacing: 0.5em;
+    text-indent: 0.5em;
+  }
+  .wordmark__sub {
+    font-size: 8px;
+    letter-spacing: 0.2em;
+    text-indent: 0.2em;
+    margin-top: 6px;
+  }
+  .header {
+    position: static;
+    max-width: none;
+    text-align: center;
+    margin-top: 18px;
   }
   .header__subtitle {
     font-size: 12px;
     margin-top: 8px;
   }
+  .header__source {
+    font-size: 9px;
+    margin-top: 10px;
+  }
+  /* the controls keep the top-left corner; the title column starts below
+     them, so the two never share a line */
   .export {
     left: 20px;
     top: 18px;
@@ -918,7 +993,7 @@ body {
   }
   .stories {
     left: 20px;
-    top: 48px;
+    top: 46px;
     gap: 12px;
   }
   .stories__item {
@@ -955,12 +1030,6 @@ body {
   }
   /* Attribution stays visible: the Destatis (DL-DE-BY-2.0) and NASA terms
      make the credit a licence condition, not decoration. */
-  .attribution {
-    left: 20px;
-    bottom: 196px;
-    font-size: 9px;
-    letter-spacing: 0.1em;
-  }
   .timeline {
     bottom: 238px;
     padding: 8px 14px;

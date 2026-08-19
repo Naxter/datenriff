@@ -12,7 +12,7 @@ import { ModeNav } from '../components/ModeNav';
 import { Timeline } from '../components/Timeline';
 import { Legend } from '../components/Legend';
 import { Tooltip } from '../components/Tooltip';
-import { Attribution } from '../components/Attribution';
+import { Wordmark } from '../components/Wordmark';
 import { Toolbar } from '../components/Toolbar';
 import { StoryPlayer } from '../components/StoryPlayer';
 import { Veil } from '../components/Veil';
@@ -198,7 +198,12 @@ export default function App() {
   return (
     <div className={`atlas${introOn ? ' atlas--intro' : ''}`}>
       {ctx && scene && <SculptureView scene={scene} engine={ctx.engine} />}
-      {scene && <Header mode={mode} />}
+      {scene && (
+        <div className="topblock">
+          <Wordmark />
+          <Header mode={mode} scene={scene} />
+        </div>
+      )}
       {manifest && <ModeNav />}
       {ready && mode.time && <Timeline mode={mode} />}
       {shown && shownTarget && (
@@ -207,7 +212,6 @@ export default function App() {
       {shown && <Tooltip mode={shownMode} scene={scene} builder={ctx.builder} />}
       {ready && <Toolbar builder={ctx.builder} scene={scene} />}
       {ready && <StoryPlayer mode={mode} />}
-      {scene && <Attribution scene={scene} />}
       <Veil
         visible={status !== 'ready' || !scene}
         intro={introOn ? introPhase : null}
