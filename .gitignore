@@ -16,6 +16,11 @@ apps/web/public/data/
 pipelines/**/work/
 pipelines/**/downloads/
 
+# Local secrets (EARTHDATA_TOKEN etc.) - never commit
+.env
+.env.*
+!.env.example
+
 # Tooling
 *.log
 .DS_Store
