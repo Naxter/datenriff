@@ -1,0 +1,247 @@
+{
+  "about": {
+    "de": {
+      "title": "Über Datenriff",
+      "lead": "Ein Atlas, der Deutschland nicht einfärbt, sondern aufstellt. Jede Zelle ist eine Säule: ihre Höhe ist eine Menge, ihre Farbe eine Eigenschaft. Diese Seite erklärt, warum das so gebaut ist und was die Zahlen dahinter aushalten.",
+      "sections": [
+        {
+          "id": "form",
+          "heading": "Warum Säulen und keine eingefärbte Karte",
+          "stop": { "mode": "people" },
+          "paragraphs": [
+            "Eine Choroplethenkarte — Landkreise in fünf Farbstufen — beantwortet eine Frage schlecht, die hier die wichtigste ist: wie viel wovon, und wo genau. Farbe kann etwa sieben Stufen sicher unterscheiden, Fläche verzerrt (ein leerer Landkreis ist groß, ein voller klein), und Grenzen erfinden Kanten, die es in den Daten nicht gibt.",
+            "Höhe kann mehr. Das Auge liest Silhouetten sehr genau, vergleicht Nachbarn ohne Legende und erkennt Muster, für die eine Farbskala zu grob ist. Deshalb trägt die Höhe immer die Menge — Einwohner, Wohnungen, Millimeter Regen — und die Farbe eine zweite, unabhängige Eigenschaft. Man sieht beides gleichzeitig, ohne zwischen zwei Karten zu springen.",
+            "Der Preis ist die Perspektive: Säulen verdecken einander, und was hinten steht, ist kleiner. Deshalb kippt die Kamera je nach Modus, deshalb kann man drehen und zoomen, und deshalb steht die Skulptur auf Papier statt auf einem Sockel — die Schatten fallen auf die Ebene und verankern die Nadeln, ohne eine Kiste um das Land zu ziehen."
+          ]
+        },
+        {
+          "id": "zellen",
+          "heading": "Was eine Zelle ist",
+          "stop": { "mode": "people", "zoom": "city" },
+          "paragraphs": [
+            "Das Land ist in Sechsecke geteilt (H3), nicht in Verwaltungsgrenzen. Sechsecke haben gleich weit entfernte Nachbarn, keine Ecken, an denen vier Flächen zusammenstoßen, und sie sind überall gleich groß — eine Zelle in Berlin ist so groß wie eine in der Uckermark, also vergleicht man Dichten und nicht Kreisflächen.",
+            "Es gibt vier Auflösungsstufen: aus der Landesansicht ungefähr 1,2 km je Zelle, beim Hineinzoomen 460 m, 175 m und schließlich 66 m. Die feinen Stufen werden nicht am Stück geladen, sondern in Kacheln, und nur die, die gerade im Bild sind. Sonst wären es Millionen Säulen für einen Blick auf Bayern.",
+            "Beim Wechsel zwischen den Stufen bleibt die alte Kachel stehen, bis ihr Ersatz da ist. Das ist der Grund, warum beim Zoomen nichts blinkt: getauscht wird Kachel für Kachel, nicht Bild für Bild."
+          ]
+        },
+        {
+          "id": "quellen",
+          "heading": "Woher die Zahlen kommen",
+          "stop": { "mode": "rain" },
+          "paragraphs": [
+            "Fünf Pipelines, alle aus amtlichen oder wissenschaftlichen Quellen, alle mit Datum: der Zensus 2022 des Statistischen Bundesamtes (Stichtag 15. Mai 2022), die Jahresniederschläge des Deutschen Wetterdienstes, das Marktstammdatenregister der Bundesnetzagentur für Windleistung, die Nachtlicht-Jahreskomposite VNP46A4 der NASA und CORINE Land Cover 5 ha des Bundesamtes für Kartographie und Geodäsie.",
+            "Nichts davon ist live. Jeder Modus nennt oben rechts seinen Stichtag, und der Tooltip zeigt den Wert des Jahres, das die Zeitleiste gerade anzeigt — nicht den des letzten Jahres. Wer die Quelle prüfen will, findet neben jedem Modus den Link dorthin.",
+            "Die Nennung der Quellen ist keine Höflichkeit, sondern Lizenzbedingung (Datenlizenz Deutschland — Namensnennung 2.0 und CC BY 4.0). Deshalb lässt sie sich nirgends ausblenden, auch nicht im Export."
+          ]
+        },
+        {
+          "id": "grenzen",
+          "heading": "Warum Werte gekappt werden",
+          "stop": { "mode": "rent" },
+          "paragraphs": [
+            "Eine Farbskala braucht zwei Enden. Setzt man sie auf das Minimum und Maximum der Daten, entscheidet ein einziger Ausreißer über das Bild: eine Zelle mit 39 €/m² zieht die Skala so weit auseinander, dass zwischen Görlitz und München kein Unterschied mehr sichtbar ist. Deshalb enden die Skalen vor dem Extrem, und die Zellen darüber laufen in die dunkelste Farbe.",
+            "Das ist ehrlich, solange man sagt, wie viel dabei anliegt. Bei der Miete liegen 7,7 % der Zellen unter dem hellen und 0,8 % über dem dunklen Ende; beim Regen sind es in einem trockenen Jahr 1,2 % unten. Beim Durchschnittsalter ist das Klemmen Absicht: die Zellen jenseits der Enden sind Studentenwohnheime und Pflegeheime, und würde man sie einbeziehen, verschwände genau der Kontrast, wegen dem der Modus existiert.",
+            "Die Höhe wird nicht gekappt und bleibt linear. Eine doppelt so hohe Säule bedeutet den doppelten Wert — sonst wäre das Bild dekorativ statt lesbar. Nur bei Anteilen, die bei 1 enden, gibt es eine eigene Höhengrenze, sonst stünde jede Stadt als geschlossene Wand da.",
+            "Zwei Dinge werden dagegen in der Pipeline unterdrückt, nicht in der Farbe: Änderungsraten mit winzigem Nenner (zwei Einwohner werden vier — plus 100 %) und Zellen ohne Wert. Fehlend ist nicht null. Eine Zelle ohne Angabe bleibt leer, statt als Nullwert eine Aussage zu behaupten, die niemand gemacht hat."
+          ]
+        },
+        {
+          "id": "genauigkeit",
+          "heading": "Was die Zahlen nicht können",
+          "stop": { "mode": "change", "step": 0 },
+          "paragraphs": [
+            "Der Zensus 2022 ist anonymisiert: jeder Wert im 100-Meter-Gitter wird leicht zufällig verändert, damit sich keine Person zurückrechnen lässt. In großen Zellen fällt das nicht auf, in kleinen schon — deshalb sind einzelne Zellen kein Faktencheck über eine Straße, sondern ein Beitrag zum Muster über eine Region.",
+            "Fernerkundung hat andere Grenzen. Die Waldmaske ist aus Satellitendaten abgeleitet und fällt etwas großzügiger aus als die forstliche Definition; Nachtlicht misst, was nach oben strahlt, nicht wie hell es auf der Straße ist. Wo solche Abweichungen bekannt sind, stehen sie in der Dokumentation der jeweiligen Pipeline.",
+            "Und Vergleiche über die Zeit sind nur so gut wie die Definitionen: zwischen 2011 und 2022 hat sich am Zensus einiges geändert. Der Modus CHANGE zeigt deshalb Veränderung als Anteil und unterdrückt kleine Nenner, statt eine Genauigkeit zu behaupten, die die Quellen nicht hergeben."
+          ]
+        },
+        {
+          "id": "colophon",
+          "heading": "Kolophon",
+          "stop": { "mode": "land" },
+          "paragraphs": [
+            "Datenriff ist ein unabhängiges Projekt. Der Code liegt offen, die Daten kommen aus den genannten Quellen und werden nicht mitgeliefert — sie entstehen aus den Pipelines im Repository.",
+            "Gerendert wird mit deck.gl auf WebGL2; die Skulptur ist eine einzige Geometrie, die zwischen zwei Zuständen morpht, damit ein Moduswechsel eine Bewegung ist und kein Schnitt. Es gibt keine Analyse-Werkzeuge, keine Cookies und keine externen Schriften — was der Browser speichert, sind Sprache und Anzeigeeinstellungen."
+          ]
+        }
+      ]
+    },
+    "en": {
+      "title": "About Datenriff",
+      "lead": "An atlas that stands Germany up instead of colouring it in. Every cell is a column: its height is a quantity, its colour a property. This page explains why it is built that way, and what the numbers behind it can and cannot bear.",
+      "sections": [
+        {
+          "id": "form",
+          "heading": "Why columns and not a coloured map",
+          "stop": { "mode": "people" },
+          "paragraphs": [
+            "A choropleth — districts in five shades — answers the central question badly: how much of what, and exactly where. Colour separates about seven steps reliably, area misleads (an empty district is large, a crowded one small), and administrative borders invent edges that the data does not have.",
+            "Height carries more. The eye reads silhouettes precisely, compares neighbours without consulting a legend, and picks up patterns too fine for a colour ramp. So height always carries the quantity — people, dwellings, millimetres of rain — and colour carries a second, independent property. You see both at once instead of moving between two maps.",
+            "The cost is perspective: columns hide each other, and what stands behind looks smaller. That is why the camera tilts differently per mode, why you can rotate and zoom, and why the sculpture stands on paper rather than a plinth — the shadows fall onto the plane and anchor the needles without drawing a box around the country."
+          ]
+        },
+        {
+          "id": "cells",
+          "heading": "What a cell is",
+          "stop": { "mode": "people", "zoom": "city" },
+          "paragraphs": [
+            "The country is divided into hexagons (H3), not administrative units. Hexagons have equidistant neighbours, no corners where four areas meet, and one size everywhere — a cell in Berlin is the same size as one in the Uckermark, so you compare densities rather than district areas.",
+            "There are four levels of detail: roughly 1.2 km per cell in the country view, then 460 m, 175 m and finally 66 m as you zoom. The fine levels are not loaded whole but in tiles, and only the tiles in view. Anything else would mean millions of columns for one look at Bavaria.",
+            "When the level changes, the old tile stays until its replacement has arrived. That is why zooming does not flicker: the swap happens tile by tile, not frame by frame."
+          ]
+        },
+        {
+          "id": "sources",
+          "heading": "Where the numbers come from",
+          "stop": { "mode": "rain" },
+          "paragraphs": [
+            "Five pipelines, all from official or scientific sources, all dated: the 2022 German census (reference date 15 May 2022), annual precipitation from the German weather service, the market master data register of the federal network agency for wind capacity, NASA's VNP46A4 annual night-light composites, and CORINE Land Cover at 5 ha from the federal cartography agency.",
+            "None of it is live. Each mode names its reference date, and the tooltip shows the value for the year the timeline is on — not the most recent one. A link to the source sits beside every mode.",
+            "Naming the sources is a licence condition rather than a courtesy (Datenlizenz Deutschland — Namensnennung 2.0 and CC BY 4.0). That is why it cannot be hidden in any view, including the export."
+          ]
+        },
+        {
+          "id": "limits",
+          "heading": "Why values are capped",
+          "stop": { "mode": "rent" },
+          "paragraphs": [
+            "A colour ramp needs two ends. Pin them to the data's minimum and maximum and a single outlier decides the picture: one cell at €39/m² stretches the scale until Görlitz and Munich look alike. So the ramps stop short of the extremes, and cells beyond them sit at the darkest colour.",
+            "That is honest as long as the amount is stated. For rent, 7.7 % of cells fall below the pale end and 0.8 % above the dark one; for rainfall in a dry year, 1.2 % below. For average age the clipping is deliberate: the cells beyond the ends are halls of residence and care homes, and pulling them in would erase exactly the contrast the mode exists to show.",
+            "Height is never capped and stays linear. A column twice as tall means twice the value — otherwise the picture would be decorative rather than readable. Only shares, which end at 1, get their own height ceiling, or every city would stand as a solid wall.",
+            "Two things are suppressed in the pipeline instead of hidden in the colour: rates of change with a tiny denominator (two residents become four — up 100 %), and cells with no value at all. Missing is not zero. A cell without a figure stays empty rather than asserting a nought nobody reported."
+          ]
+        },
+        {
+          "id": "accuracy",
+          "heading": "What the numbers cannot do",
+          "stop": { "mode": "change", "step": 0 },
+          "paragraphs": [
+            "The 2022 census is anonymised: every value in the 100-metre grid is perturbed slightly so that no individual can be recovered. In large cells this is invisible; in small ones it is not — so a single cell is not a fact-check about one street, it is a contribution to the pattern across a region.",
+            "Remote sensing has its own limits. The forest mask is derived from satellite data and runs a little wider than the forestry definition; night light measures what shines upward, not how bright the street is. Where such deviations are known, they are written down in the relevant pipeline's documentation.",
+            "And comparisons over time are only as good as the definitions: plenty changed in the census between 2011 and 2022. That is why CHANGE shows change as a share and suppresses small denominators, rather than claiming a precision the sources do not support."
+          ]
+        },
+        {
+          "id": "colophon",
+          "heading": "Colophon",
+          "stop": { "mode": "land" },
+          "paragraphs": [
+            "Datenriff is an independent project. The code is open; the data comes from the sources named above and is not shipped with it — it is produced by the pipelines in the repository.",
+            "Rendering is deck.gl on WebGL2; the sculpture is one geometry morphing between two states, so that a mode change is a movement rather than a cut. There are no analytics, no cookies and no external fonts — what the browser stores is your language and your display settings."
+          ]
+        }
+      ]
+    }
+  },
+  "impressum": {
+    "de": {
+      "title": "Impressum",
+      "lead": "Angaben gemäß § 5 Digitale-Dienste-Gesetz (DDG).",
+      "placeholder": true,
+      "sections": [
+        {
+          "id": "anbieter",
+          "heading": "Diensteanbieter",
+          "paragraphs": [
+            "[NAME] — bitte vollständigen bürgerlichen Namen eintragen",
+            "[STRASSE UND HAUSNUMMER]",
+            "[POSTLEITZAHL UND ORT]",
+            "Deutschland"
+          ]
+        },
+        {
+          "id": "kontakt",
+          "heading": "Kontakt",
+          "paragraphs": [
+            "E-Mail: [E-MAIL-ADRESSE]",
+            "Eine elektronische Kontaktmöglichkeit ist gesetzlich vorgeschrieben; eine Telefonnummer ist es nicht, solange eine schnelle Kontaktaufnahme anders möglich ist."
+          ]
+        },
+        {
+          "id": "verantwortlich",
+          "heading": "Inhaltlich verantwortlich",
+          "paragraphs": [
+            "[NAME], Anschrift wie oben."
+          ]
+        },
+        {
+          "id": "streit",
+          "heading": "Streitbeilegung",
+          "paragraphs": [
+            "Zur Teilnahme an einem Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle sind wir nicht verpflichtet und nicht bereit."
+          ]
+        },
+        {
+          "id": "inhalte",
+          "heading": "Haftung für Inhalte und Links",
+          "paragraphs": [
+            "Die Inhalte dieser Seiten werden mit Sorgfalt erstellt. Für die Richtigkeit, Vollständigkeit und Aktualität der dargestellten Daten wird keine Gewähr übernommen; maßgeblich sind die jeweils genannten amtlichen Quellen.",
+            "Diese Seite verlinkt auf externe Websites der Datenanbieter. Für deren Inhalte sind ausschließlich die jeweiligen Anbieter verantwortlich."
+          ]
+        },
+        {
+          "id": "hinweis",
+          "heading": "Hinweis",
+          "paragraphs": [
+            "PLATZHALTER — dieses Impressum ist noch nicht ausgefüllt und ersetzt keine rechtliche Prüfung. Vor der Veröffentlichung müssen die Angaben in eckigen Klammern durch die tatsächlichen Daten ersetzt werden."
+          ]
+        }
+      ]
+    }
+  },
+  "datenschutz": {
+    "de": {
+      "title": "Datenschutzerklärung",
+      "lead": "Diese Website verarbeitet so wenig personenbezogene Daten wie technisch möglich. Es gibt keine Analyse-Werkzeuge, keine Werbung, keine eingebetteten Inhalte Dritter und keine Einwilligungsbanner — weil nichts vorliegt, wofür eine Einwilligung nötig wäre.",
+      "sections": [
+        {
+          "id": "verantwortlich",
+          "heading": "Verantwortlicher",
+          "paragraphs": [
+            "[NAME], [ANSCHRIFT], [E-MAIL] — die Angaben entsprechen dem Impressum und sind dort einzutragen."
+          ]
+        },
+        {
+          "id": "server",
+          "heading": "Aufruf der Website (Server-Logs)",
+          "paragraphs": [
+            "Die Website wird bei Cloudflare, Inc. gehostet (Cloudflare Pages). Beim Abruf verarbeitet der Hoster technisch notwendige Verbindungsdaten, darunter die IP-Adresse, Datum und Uhrzeit, die abgerufene Datei, den Referrer und Angaben zu Browser und Betriebssystem.",
+            "Zweck ist die Auslieferung der Seite und die Abwehr von Angriffen. Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO — das berechtigte Interesse, die Website stabil und sicher bereitzustellen. Mit dem Hoster besteht ein Vertrag zur Auftragsverarbeitung nach Art. 28 DSGVO; für Übermittlungen in die USA stützt sich Cloudflare auf die Standardvertragsklauseln beziehungsweise das EU-US Data Privacy Framework.",
+            "Diese Logs werden von uns nicht ausgewertet und nicht mit anderen Daten zusammengeführt."
+          ]
+        },
+        {
+          "id": "speicherung",
+          "heading": "Einstellungen auf Ihrem Gerät",
+          "paragraphs": [
+            "Die Anwendung speichert im lokalen Speicher (localStorage) Ihres Browsers zwei Dinge: die gewählte Sprache und Ihre Anzeigeeinstellungen, etwa Schattenstärke, Qualitätsstufe und Farbpalette.",
+            "Das sind keine Cookies, es findet keine Übertragung an einen Server statt, und es entsteht kein Profil. Da diese Speicherung für den von Ihnen ausdrücklich gewünschten Dienst unbedingt erforderlich ist, ist sie nach § 25 Abs. 2 Nr. 2 TDDDG einwilligungsfrei. Sie können die Einträge jederzeit über die Einstellungen Ihres Browsers löschen; die Anwendung startet dann mit den Standardwerten."
+          ]
+        },
+        {
+          "id": "schriften",
+          "heading": "Schriften und externe Dienste",
+          "paragraphs": [
+            "Die verwendeten Schriftarten werden von diesem Server ausgeliefert. Es besteht keine Verbindung zu Google Fonts oder einem anderen Content-Delivery-Netzwerk, und es wird keine IP-Adresse an Dritte übermittelt.",
+            "Die Anwendung lädt ausschließlich eigene Datendateien nach. Externe Links zu den Datenquellen werden erst durch Ihren Klick aufgerufen; ab dann gelten die Datenschutzbestimmungen der jeweiligen Anbieter."
+          ]
+        },
+        {
+          "id": "rechte",
+          "heading": "Ihre Rechte",
+          "paragraphs": [
+            "Sie haben das Recht auf Auskunft (Art. 15 DSGVO), Berichtigung (Art. 16), Löschung (Art. 17), Einschränkung der Verarbeitung (Art. 18), Datenübertragbarkeit (Art. 20) und Widerspruch gegen Verarbeitungen auf Grundlage berechtigter Interessen (Art. 21).",
+            "Außerdem können Sie sich bei einer Datenschutz-Aufsichtsbehörde beschweren (Art. 77 DSGVO), in der Regel bei der Behörde Ihres Wohnsitzes."
+          ]
+        },
+        {
+          "id": "stand",
+          "heading": "Stand",
+          "paragraphs": [
+            "PLATZHALTER — dieser Text beschreibt den tatsächlichen technischen Stand der Anwendung, ersetzt aber keine rechtliche Prüfung. Vor der Veröffentlichung sind die Angaben in eckigen Klammern zu ergänzen."
+          ]
+        }
+      ]
+    }
+  }
+}

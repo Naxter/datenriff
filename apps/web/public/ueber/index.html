@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Über Datenriff</title>
+    <meta name="description" content="Ein Atlas, der Deutschland nicht einfärbt, sondern aufstellt. Jede Zelle ist eine Säule: ihre Höhe ist eine Menge, ihre Farbe eine Eigenschaft. Diese…" />
+    <link rel="canonical" href="https://datenriff.pages.dev/ueber/" />
+    <link rel="alternate" hreflang="en" href="https://datenriff.pages.dev/about/" />
+    <link rel="alternate" hreflang="de" href="https://datenriff.pages.dev/ueber/" />
+    <link rel="stylesheet" href="/fonts.css" />
+    <style>
+  :root {
+    --paper: #f7f0ea; --ink: #221c15; --soft: rgba(34,28,21,0.66);
+    --faint: rgba(34,28,21,0.14); --accent: #c41e78;
+    --serif: 'Instrument Serif', 'Iowan Old Style', Georgia, serif;
+    --sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --paper: #17130f; --ink: #efe7dd; --soft: rgba(239,231,221,0.66);
+            --faint: rgba(239,231,221,0.16); --accent: #ef7fb4; }
+  }
+  * { box-sizing: border-box; }
+  body { background: var(--paper); color: var(--ink); font-family: var(--sans);
+         font-size: 16px; line-height: 1.65; margin: 0; padding: 3rem 1.4rem 5rem;
+         -webkit-font-smoothing: antialiased; }
+  main { max-width: 44rem; margin: 0 auto; }
+  nav { display: flex; flex-wrap: wrap; gap: 1.2rem; font-size: 0.8rem;
+        letter-spacing: 0.14em; text-transform: uppercase;
+        padding-bottom: 2.2rem; border-bottom: 1px solid var(--faint); }
+  nav a { color: var(--soft); text-decoration: none; }
+  nav a:hover, nav a:focus-visible { color: var(--ink); }
+  nav a[aria-current] { color: var(--ink); }
+  h1 { font-family: var(--serif); font-weight: 400; font-size: clamp(2.2rem, 6vw, 3.2rem);
+       line-height: 1.06; margin: 2.6rem 0 1.2rem; }
+  h2 { font-family: var(--serif); font-weight: 400; font-size: 1.7rem;
+       margin: 2.8rem 0 0.6rem; }
+  p { margin: 0 0 1rem; }
+  .lead { font-size: 1.08rem; color: var(--soft); margin-bottom: 2.2rem; }
+  .placeholder { border-left: 2px solid var(--accent); padding-left: 1rem;
+                 color: var(--soft); font-size: 0.95rem; }
+  footer { margin-top: 4rem; padding-top: 1.4rem; border-top: 1px solid var(--faint);
+           font-size: 0.85rem; color: var(--soft); }
+  footer a { color: inherit; }
+  a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+</style>
+  </head>
+  <body>
+    <main>
+      <nav>
+        <a href="/">Zum Atlas</a>
+        <a href="/ueber/" aria-current="page">Über</a>
+        <a href="/impressum/">Impressum</a>
+        <a href="/datenschutz/">Datenschutz</a>
+      </nav>
+      <h1>Über Datenriff</h1>
+      <p class="lead">Ein Atlas, der Deutschland nicht einfärbt, sondern aufstellt. Jede Zelle ist eine Säule: ihre Höhe ist eine Menge, ihre Farbe eine Eigenschaft. Diese Seite erklärt, warum das so gebaut ist und was die Zahlen dahinter aushalten.</p>
+
+    <section id="form">
+      <h2>Warum Säulen und keine eingefärbte Karte</h2>
+      <p>Eine Choroplethenkarte — Landkreise in fünf Farbstufen — beantwortet eine Frage schlecht, die hier die wichtigste ist: wie viel wovon, und wo genau. Farbe kann etwa sieben Stufen sicher unterscheiden, Fläche verzerrt (ein leerer Landkreis ist groß, ein voller klein), und Grenzen erfinden Kanten, die es in den Daten nicht gibt.</p>
+      <p>Höhe kann mehr. Das Auge liest Silhouetten sehr genau, vergleicht Nachbarn ohne Legende und erkennt Muster, für die eine Farbskala zu grob ist. Deshalb trägt die Höhe immer die Menge — Einwohner, Wohnungen, Millimeter Regen — und die Farbe eine zweite, unabhängige Eigenschaft. Man sieht beides gleichzeitig, ohne zwischen zwei Karten zu springen.</p>
+      <p>Der Preis ist die Perspektive: Säulen verdecken einander, und was hinten steht, ist kleiner. Deshalb kippt die Kamera je nach Modus, deshalb kann man drehen und zoomen, und deshalb steht die Skulptur auf Papier statt auf einem Sockel — die Schatten fallen auf die Ebene und verankern die Nadeln, ohne eine Kiste um das Land zu ziehen.</p>
+    </section>
+
+    <section id="zellen">
+      <h2>Was eine Zelle ist</h2>
+      <p>Das Land ist in Sechsecke geteilt (H3), nicht in Verwaltungsgrenzen. Sechsecke haben gleich weit entfernte Nachbarn, keine Ecken, an denen vier Flächen zusammenstoßen, und sie sind überall gleich groß — eine Zelle in Berlin ist so groß wie eine in der Uckermark, also vergleicht man Dichten und nicht Kreisflächen.</p>
+      <p>Es gibt vier Auflösungsstufen: aus der Landesansicht ungefähr 1,2 km je Zelle, beim Hineinzoomen 460 m, 175 m und schließlich 66 m. Die feinen Stufen werden nicht am Stück geladen, sondern in Kacheln, und nur die, die gerade im Bild sind. Sonst wären es Millionen Säulen für einen Blick auf Bayern.</p>
+      <p>Beim Wechsel zwischen den Stufen bleibt die alte Kachel stehen, bis ihr Ersatz da ist. Das ist der Grund, warum beim Zoomen nichts blinkt: getauscht wird Kachel für Kachel, nicht Bild für Bild.</p>
+    </section>
+
+    <section id="quellen">
+      <h2>Woher die Zahlen kommen</h2>
+      <p>Fünf Pipelines, alle aus amtlichen oder wissenschaftlichen Quellen, alle mit Datum: der Zensus 2022 des Statistischen Bundesamtes (Stichtag 15. Mai 2022), die Jahresniederschläge des Deutschen Wetterdienstes, das Marktstammdatenregister der Bundesnetzagentur für Windleistung, die Nachtlicht-Jahreskomposite VNP46A4 der NASA und CORINE Land Cover 5 ha des Bundesamtes für Kartographie und Geodäsie.</p>
+      <p>Nichts davon ist live. Jeder Modus nennt oben rechts seinen Stichtag, und der Tooltip zeigt den Wert des Jahres, das die Zeitleiste gerade anzeigt — nicht den des letzten Jahres. Wer die Quelle prüfen will, findet neben jedem Modus den Link dorthin.</p>
+      <p>Die Nennung der Quellen ist keine Höflichkeit, sondern Lizenzbedingung (Datenlizenz Deutschland — Namensnennung 2.0 und CC BY 4.0). Deshalb lässt sie sich nirgends ausblenden, auch nicht im Export.</p>
+    </section>
+
+    <section id="grenzen">
+      <h2>Warum Werte gekappt werden</h2>
+      <p>Eine Farbskala braucht zwei Enden. Setzt man sie auf das Minimum und Maximum der Daten, entscheidet ein einziger Ausreißer über das Bild: eine Zelle mit 39 €/m² zieht die Skala so weit auseinander, dass zwischen Görlitz und München kein Unterschied mehr sichtbar ist. Deshalb enden die Skalen vor dem Extrem, und die Zellen darüber laufen in die dunkelste Farbe.</p>
+      <p>Das ist ehrlich, solange man sagt, wie viel dabei anliegt. Bei der Miete liegen 7,7 % der Zellen unter dem hellen und 0,8 % über dem dunklen Ende; beim Regen sind es in einem trockenen Jahr 1,2 % unten. Beim Durchschnittsalter ist das Klemmen Absicht: die Zellen jenseits der Enden sind Studentenwohnheime und Pflegeheime, und würde man sie einbeziehen, verschwände genau der Kontrast, wegen dem der Modus existiert.</p>
+      <p>Die Höhe wird nicht gekappt und bleibt linear. Eine doppelt so hohe Säule bedeutet den doppelten Wert — sonst wäre das Bild dekorativ statt lesbar. Nur bei Anteilen, die bei 1 enden, gibt es eine eigene Höhengrenze, sonst stünde jede Stadt als geschlossene Wand da.</p>
+      <p>Zwei Dinge werden dagegen in der Pipeline unterdrückt, nicht in der Farbe: Änderungsraten mit winzigem Nenner (zwei Einwohner werden vier — plus 100 %) und Zellen ohne Wert. Fehlend ist nicht null. Eine Zelle ohne Angabe bleibt leer, statt als Nullwert eine Aussage zu behaupten, die niemand gemacht hat.</p>
+    </section>
+
+    <section id="genauigkeit">
+      <h2>Was die Zahlen nicht können</h2>
+      <p>Der Zensus 2022 ist anonymisiert: jeder Wert im 100-Meter-Gitter wird leicht zufällig verändert, damit sich keine Person zurückrechnen lässt. In großen Zellen fällt das nicht auf, in kleinen schon — deshalb sind einzelne Zellen kein Faktencheck über eine Straße, sondern ein Beitrag zum Muster über eine Region.</p>
+      <p>Fernerkundung hat andere Grenzen. Die Waldmaske ist aus Satellitendaten abgeleitet und fällt etwas großzügiger aus als die forstliche Definition; Nachtlicht misst, was nach oben strahlt, nicht wie hell es auf der Straße ist. Wo solche Abweichungen bekannt sind, stehen sie in der Dokumentation der jeweiligen Pipeline.</p>
+      <p>Und Vergleiche über die Zeit sind nur so gut wie die Definitionen: zwischen 2011 und 2022 hat sich am Zensus einiges geändert. Der Modus CHANGE zeigt deshalb Veränderung als Anteil und unterdrückt kleine Nenner, statt eine Genauigkeit zu behaupten, die die Quellen nicht hergeben.</p>
+    </section>
+
+    <section id="colophon">
+      <h2>Kolophon</h2>
+      <p>Datenriff ist ein unabhängiges Projekt. Der Code liegt offen, die Daten kommen aus den genannten Quellen und werden nicht mitgeliefert — sie entstehen aus den Pipelines im Repository.</p>
+      <p>Gerendert wird mit deck.gl auf WebGL2; die Skulptur ist eine einzige Geometrie, die zwischen zwei Zuständen morpht, damit ein Moduswechsel eine Bewegung ist und kein Schnitt. Es gibt keine Analyse-Werkzeuge, keine Cookies und keine externen Schriften — was der Browser speichert, sind Sprache und Anzeigeeinstellungen.</p>
+    </section>
+
+      <footer>
+        <p>Datenriff — Vertikaler Atlas Deutschland · <a href="/">Zum Atlas</a></p>
+      </footer>
+    </main>
+  </body>
+</html>

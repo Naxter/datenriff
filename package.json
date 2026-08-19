@@ -10,7 +10,7 @@
   ],
   "scripts": {
     "dev": "npm run dev -w @datenriff/web",
-    "build": "npm run build -w @datenriff/web",
+    "build": "npm run build:pages && npm run build -w @datenriff/web",
     "preview": "npm run preview -w @datenriff/web",
     "build:packages": "tsc -p packages/data-contracts && tsc -p packages/color-scales && tsc -p packages/sculpture-core",
     "typecheck": "npm run build:packages && npm run typecheck -w @datenriff/web",
@@ -20,7 +20,9 @@
     "deploy": "npm run build && node scripts/prune-dist.mjs && wrangler pages deploy apps/web/dist --project-name datenriff",
     "build:manifest": "node scripts/build-manifest.mjs",
     "visual": "node scripts/visual-check.cjs --gpu",
-    "visual:update": "node scripts/visual-check.cjs --gpu --update"
+    "visual:update": "node scripts/visual-check.cjs --gpu --update",
+    "build:pages": "node scripts/build-pages.mjs",
+    "build:fonts": "node scripts/vendor-fonts.mjs"
   },
   "devDependencies": {
     "pixelmatch": "^7.2.0",

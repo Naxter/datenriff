@@ -1,5 +1,10 @@
 /* Warm paper canvas, typographic UI at the edges, no chrome. */
 
+/* Self-hosted: a font CDN would announce every visitor to a third party
+ * before the page has asked them anything. Regenerate with
+ * scripts/vendor-fonts.mjs. */
+@import './fonts.css';
+
 :root {
   --paper: #f7f0ea;
   --paper-veil: rgba(247, 240, 234, 0.86);
@@ -1173,4 +1178,143 @@ body {
   .veil {
     transition: none;
   }
+}
+
+/* ---- Standing pages: the three links, and About over the atlas ---- */
+
+/* Centred under the sculpture, below the timeline. Fine print, but the two
+   legal ones are a legal requirement in every view, so they never hide. */
+.pagelinks {
+  position: absolute;
+  left: 50%;
+  bottom: 0.7rem;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: baseline;
+  gap: 0.55rem;
+  font-size: 0.68rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  z-index: 6;
+  pointer-events: auto;
+}
+.pagelinks__link {
+  background: none;
+  border: 0;
+  padding: 0.2rem 0;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: var(--ink-soft);
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 160ms ease;
+}
+.pagelinks__link:hover,
+.pagelinks__link:focus-visible {
+  color: var(--ink);
+}
+.pagelinks__dot { color: var(--ink-faint); }
+/* the crawlable twin of the About button; readers never see it */
+.pagelinks__hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.atlas--intro .pagelinks { opacity: 0; pointer-events: none; }
+
+/* The panel sits on the paper; the sculpture slides out from under it
+   rather than being covered, which is the whole point of reading here. */
+.about {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: min(27rem, 34vw);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--paper);
+  border-right: 1px solid var(--hairline);
+  z-index: 45;
+  animation: about-in 280ms ease both;
+}
+.about--still { animation: none; }
+@keyframes about-in {
+  from { transform: translateX(-14px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+.atlas--about .atlas__canvas,
+.atlas--about .export,
+.atlas--about .modenav,
+.atlas--about .timeline {
+  transform: translateX(min(13.5rem, 17vw));
+  transition: transform 420ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+/* the timeline is centred by a transform of its own; compose, do not replace */
+.atlas--about .timeline { transform: translateX(calc(-50% + min(13.5rem, 17vw))); }
+.about--still ~ .atlas__canvas,
+.atlas--about.atlas--still .atlas__canvas { transition: none; }
+
+.about__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.1rem 1.5rem 0.6rem;
+}
+.about__eyebrow {
+  font-size: 0.68rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.about__close {
+  background: none;
+  border: 0;
+  font-size: 1.35rem;
+  line-height: 1;
+  color: var(--ink-soft);
+  cursor: pointer;
+  padding: 0 0.2rem;
+}
+.about__close:hover { color: var(--ink); }
+.about__scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 1.5rem 3rem;
+  scrollbar-width: thin;
+}
+.about__title {
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: 2rem;
+  line-height: 1.1;
+  margin: 0.2rem 0 0.7rem;
+}
+.about__lead { color: var(--ink-soft); font-size: 0.95rem; margin: 0 0 2rem; }
+.about__section { margin: 0 0 2.2rem; scroll-margin-top: 2rem; }
+.about__section h3 {
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: 1.32rem;
+  margin: 0 0 0.5rem;
+}
+.about__section p { font-size: 0.9rem; line-height: 1.68; margin: 0 0 0.85rem; }
+.about__more a { color: var(--ink-soft); font-size: 0.85rem; }
+
+@media (max-width: 760px) {
+  /* a sheet over the lower two thirds; the sculpture keeps the top */
+  .about {
+    top: auto;
+    bottom: 0;
+    width: 100%;
+    height: 62%;
+    border-right: 0;
+    border-top: 1px solid var(--hairline);
+  }
+  .atlas--about .atlas__canvas { transform: none; }
+  .pagelinks { font-size: 0.62rem; gap: 0.4rem; }
 }

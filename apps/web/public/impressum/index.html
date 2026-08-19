@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Impressum — Datenriff</title>
+    <meta name="description" content="Angaben gemäß § 5 Digitale-Dienste-Gesetz (DDG)." />
+    <link rel="canonical" href="https://datenriff.pages.dev/impressum/" />
+
+    <link rel="stylesheet" href="/fonts.css" />
+    <style>
+  :root {
+    --paper: #f7f0ea; --ink: #221c15; --soft: rgba(34,28,21,0.66);
+    --faint: rgba(34,28,21,0.14); --accent: #c41e78;
+    --serif: 'Instrument Serif', 'Iowan Old Style', Georgia, serif;
+    --sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --paper: #17130f; --ink: #efe7dd; --soft: rgba(239,231,221,0.66);
+            --faint: rgba(239,231,221,0.16); --accent: #ef7fb4; }
+  }
+  * { box-sizing: border-box; }
+  body { background: var(--paper); color: var(--ink); font-family: var(--sans);
+         font-size: 16px; line-height: 1.65; margin: 0; padding: 3rem 1.4rem 5rem;
+         -webkit-font-smoothing: antialiased; }
+  main { max-width: 44rem; margin: 0 auto; }
+  nav { display: flex; flex-wrap: wrap; gap: 1.2rem; font-size: 0.8rem;
+        letter-spacing: 0.14em; text-transform: uppercase;
+        padding-bottom: 2.2rem; border-bottom: 1px solid var(--faint); }
+  nav a { color: var(--soft); text-decoration: none; }
+  nav a:hover, nav a:focus-visible { color: var(--ink); }
+  nav a[aria-current] { color: var(--ink); }
+  h1 { font-family: var(--serif); font-weight: 400; font-size: clamp(2.2rem, 6vw, 3.2rem);
+       line-height: 1.06; margin: 2.6rem 0 1.2rem; }
+  h2 { font-family: var(--serif); font-weight: 400; font-size: 1.7rem;
+       margin: 2.8rem 0 0.6rem; }
+  p { margin: 0 0 1rem; }
+  .lead { font-size: 1.08rem; color: var(--soft); margin-bottom: 2.2rem; }
+  .placeholder { border-left: 2px solid var(--accent); padding-left: 1rem;
+                 color: var(--soft); font-size: 0.95rem; }
+  footer { margin-top: 4rem; padding-top: 1.4rem; border-top: 1px solid var(--faint);
+           font-size: 0.85rem; color: var(--soft); }
+  footer a { color: inherit; }
+  a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+</style>
+  </head>
+  <body>
+    <main>
+      <nav>
+        <a href="/">Zum Atlas</a>
+        <a href="/ueber/">Über</a>
+        <a href="/impressum/" aria-current="page">Impressum</a>
+        <a href="/datenschutz/">Datenschutz</a>
+      </nav>
+      <h1>Impressum</h1>
+      <p class="lead">Angaben gemäß § 5 Digitale-Dienste-Gesetz (DDG).</p>
+
+    <section id="anbieter">
+      <h2>Diensteanbieter</h2>
+      <p>[NAME] — bitte vollständigen bürgerlichen Namen eintragen</p>
+      <p>[STRASSE UND HAUSNUMMER]</p>
+      <p>[POSTLEITZAHL UND ORT]</p>
+      <p>Deutschland</p>
+    </section>
+
+    <section id="kontakt">
+      <h2>Kontakt</h2>
+      <p>E-Mail: [E-MAIL-ADRESSE]</p>
+      <p>Eine elektronische Kontaktmöglichkeit ist gesetzlich vorgeschrieben; eine Telefonnummer ist es nicht, solange eine schnelle Kontaktaufnahme anders möglich ist.</p>
+    </section>
+
+    <section id="verantwortlich">
+      <h2>Inhaltlich verantwortlich</h2>
+      <p>[NAME], Anschrift wie oben.</p>
+    </section>
+
+    <section id="streit">
+      <h2>Streitbeilegung</h2>
+      <p>Zur Teilnahme an einem Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle sind wir nicht verpflichtet und nicht bereit.</p>
+    </section>
+
+    <section id="inhalte">
+      <h2>Haftung für Inhalte und Links</h2>
+      <p>Die Inhalte dieser Seiten werden mit Sorgfalt erstellt. Für die Richtigkeit, Vollständigkeit und Aktualität der dargestellten Daten wird keine Gewähr übernommen; maßgeblich sind die jeweils genannten amtlichen Quellen.</p>
+      <p>Diese Seite verlinkt auf externe Websites der Datenanbieter. Für deren Inhalte sind ausschließlich die jeweiligen Anbieter verantwortlich.</p>
+    </section>
+
+    <section id="hinweis">
+      <h2>Hinweis</h2>
+      <p class="placeholder">PLATZHALTER — dieses Impressum ist noch nicht ausgefüllt und ersetzt keine rechtliche Prüfung. Vor der Veröffentlichung müssen die Angaben in eckigen Klammern durch die tatsächlichen Daten ersetzt werden.</p>
+    </section>
+
+      <footer>
+        <p>Datenriff — Vertikaler Atlas Deutschland · <a href="/">Zum Atlas</a></p>
+      </footer>
+    </main>
+  </body>
+</html>
