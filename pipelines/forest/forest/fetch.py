@@ -44,7 +44,7 @@ class CurlRange(RangeSource):
     Falls back to urllib where curl is missing.
     """
 
-    def __init__(self, url: str, timeout: int = 300):
+    def __init__(self, url: str, timeout: int = 900):
         self.url = url
         self.timeout = timeout
         self.size = HttpRange(url).size
@@ -56,11 +56,19 @@ class CurlRange(RangeSource):
         # Zenodo rate-limits and then drops the connection mid-range, so a
         # read that fails or comes back short is retried rather than fatal.
         for attempt in range(6):
-            out = subprocess.run(
-                ["curl", "-sSL", "--retry", "3", "--retry-delay", "5",
-                 "--retry-all-errors", "-r", f"{start}-{end}", self.url],
-                capture_output=True, timeout=self.timeout,
-            )
+            try:
+                out = subprocess.run(
+                    ["curl", "-sSL", "--retry", "3", "--retry-delay", "5",
+                     "--retry-all-errors", "-r", f"{start}-{end}", self.url],
+                    capture_output=True, timeout=self.timeout,
+                )
+            except subprocess.TimeoutExpired:
+                # under the tightest throttling a megabyte can outlast the
+                # timeout; that is slow, not broken, so it is worth retrying
+                last = f"timed out after {self.timeout}s"
+                log(f"    retry {attempt + 1}/6 for bytes {start}-{end}: {last}")
+                time.sleep(5 * (attempt + 1))
+                continue
             if out.returncode == 0 and len(out.stdout) == want:
                 return out.stdout
             last = (out.stderr.decode(errors="replace")[:160] or

@@ -13,7 +13,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = process.argv[2] ?? join(ROOT, 'apps', 'web', 'public', 'data');
 
 // Pipeline outputs, in display order. Each owns its own cell universe.
-const DATASETS = ['zensus', 'afterdark', 'energy', 'rain', 'land'];
+const DATASETS = ['zensus', 'afterdark', 'energy', 'rain', 'land', 'forest'];
 
 // Country outline (lon, lat) for the faint boundary line and for clipping
 // raster sources; the census cells themselves come from the official grids.

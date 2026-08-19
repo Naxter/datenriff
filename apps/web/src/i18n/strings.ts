@@ -165,6 +165,10 @@ const MODE_TEXT: Record<Lang, Record<string, { label: string; subtitle: string }
     wind: { label: 'Wind', subtitle: 'Die Energiewende als Landschaft' },
     rain: { label: 'Regen', subtitle: 'Ein Jahr Niederschlag, vom trockenen Osten zu den Alpen' },
     land: { label: 'Boden', subtitle: 'Woraus der Boden besteht, und wie viel davon bebaut ist' },
+    forest: {
+      label: 'Wald',
+      subtitle: 'Wo der Wald steht, und wie viel davon seit 1985 getroffen wurde',
+    },
   },
 };
 
@@ -190,6 +194,9 @@ const METRIC_TEXT: Record<Lang, Record<string, string>> = {
     rain_mm: 'Jahresniederschlag',
     built_share: 'Bebaute Fläche',
     land_class: 'Bodenbedeckung',
+    forest_share: 'Waldanteil',
+    disturbed_share: 'Gestörter Wald seit 1985',
+    disturbance_agent: 'Ursache der Störung',
   },
 };
 
@@ -217,6 +224,12 @@ const LAND_CLASSES: Record<Lang, string[]> = {
     'Offene Natur',
     'Wasser & Feuchtgebiet',
   ],
+};
+
+/** Disturbance causes, in the order forest/raster.py writes them. */
+const FOREST_AGENTS: Record<Lang, string[]> = {
+  en: [],
+  de: ['Wind & Borkenkäfer', 'Feuer', 'Holzernte', 'Gemischt'],
 };
 
 export function translate(lang: Lang, key: string): string {
@@ -250,6 +263,9 @@ export function metricText(lang: Lang, id: string, fallback: string): string {
 export function categoryText(lang: Lang, metricId: string, index: number, fallback: string): string {
   if (metricId.startsWith('land_class')) {
     return LAND_CLASSES[lang]?.[index] ?? fallback;
+  }
+  if (metricId.startsWith('disturbance_agent')) {
+    return FOREST_AGENTS[lang]?.[index] ?? fallback;
   }
   return fallback;
 }

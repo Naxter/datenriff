@@ -56,6 +56,7 @@ const VIEWS = [
   { id: 'rain', q: 'mode=rain' },
   { id: 'rain-2001', q: 'mode=rain&t=0' },
   { id: 'land', q: 'mode=land' },
+  { id: 'forest', q: 'mode=forest' },
   { id: 'land-2012', q: 'mode=land&t=0' },
   { id: 'people-de', q: 'mode=people&lang=de' },
   { id: 'people-mobile', q: 'mode=people&quality=mobile' },

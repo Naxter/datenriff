@@ -351,6 +351,43 @@ MODES.push({
   attribution: BKG_ATTRIBUTION,
 });
 
+const EFDA_ATTRIBUTION = {
+  label: 'Data: European Forest Disturbance Atlas',
+  url: 'https://zenodo.org/records/13333034',
+  referenceDate: '2023-12-31',
+};
+
+// Where the forest stands, and how much of it has been hit. Height is the
+// share of the cell under canopy, so the map is the forest itself — the
+// Harz, the Bavarian Forest, the Black Forest as ridges. Colour is the part
+// of that canopy disturbed at least once since 1985, which is why the
+// bark-beetle years show as a stain across the middle of the country.
+MODES.push({
+  id: 'forest',
+  family: 'nature',
+  label: 'Forest',
+  subtitle: 'Where the forest stands, and how much of it has been hit',
+  dataset: 'forest',
+  heightMetric: 'forest_share',
+  colorMetric: 'disturbed_share',
+  // a dense, low field like LAND: a frontal camera keeps the ridges apart
+  camera: { pitch: 48, bearing: -8 },
+  // another share bounded at 1, so it needs its own ceiling or the wooded
+  // uplands stand up as one wall
+  heightScale: { type: 'linear', maxMeters: 22_000 },
+  // p90 of a cell is 0.34 and p99 is 0.64; ending at half keeps the
+  // beetle-struck uplands legible without pinning ordinary forestry there
+  colorScale: { type: 'linear', domain: [0, 0.5], palette: 'forest' },
+  tooltip: {
+    fields: [
+      { metric: 'forest_share', label: 'Forest cover', format: 'percent' },
+      { metric: 'disturbed_share', label: 'Disturbed since 1985', format: 'percent' },
+      { metric: 'disturbance_agent', label: 'Main cause', format: 'category' },
+    ],
+  },
+  attribution: EFDA_ATTRIBUTION,
+});
+
 const boundModes = new Map<string, SculptureMode>();
 
 /** A mode adapted to what a dataset actually carries: time steps whose
