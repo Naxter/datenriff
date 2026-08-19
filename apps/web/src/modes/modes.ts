@@ -203,9 +203,10 @@ const NASA_ATTRIBUTION = {
   url: 'https://www.earthdata.nasa.gov/data/projects/black-marble',
 };
 
-/** VNP46A4 annual composites exist from 2012; the mode is bound to the
- *  years the dataset actually carries (see `bindMode`). */
-const BLACK_MARBLE_YEARS = Array.from({ length: 13 }, (_, i) => String(2012 + i));
+/** VNP46A4 annual composites exist from 2012, one per finished year; the
+ *  mode is bound to the years the dataset actually carries (see `bindMode`),
+ *  so the spare years cost nothing until they are published. */
+const BLACK_MARBLE_YEARS = Array.from({ length: 19 }, (_, i) => String(2012 + i));
 
 // Proves the renderer is not a census viewer: a satellite raster, a
 // different cell universe and its own resolution, same contracts.
