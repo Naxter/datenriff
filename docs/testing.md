@@ -41,7 +41,7 @@ data:
 | Chrome / Edge, Windows, discrete GPU | ✓ | development target; all checks above |
 | Chromium headless, D3D11 | ✓ | `PICK_GPU=1`, `npm run visual` |
 | Chromium headless, SwiftShader | partial | renders with `?shadows=0`; on some machines the first frame takes >25 s |
-| Firefox desktop | untested | expected fine (WebGL2); run `npx playwright install firefox` and `--browser firefox` is not wired yet |
+| Firefox desktop | untested here | playwright's Firefox 153 will not start in this environment (`spawn UNKNOWN`, "corrupted shared library"), so the check has to run on a real desktop: open the app, confirm shadows, hover tooltip, a timeline scrub and a story flight |
 | Safari macOS / iOS | untested | WebGL2 since Safari 15; the mobile quality profile (r7, no shadows) is what a phone gets |
 | Chrome Android | untested | `?quality=mobile` reproduces the profile on desktop |
 
