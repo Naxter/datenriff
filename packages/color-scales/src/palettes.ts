@@ -68,6 +68,10 @@ export const PALETTES: Record<string, Palette> = {
   vacancy: seq('#EFEAE1', '#DCC9A8', '#C99A6B', '#B06542', '#7E3220'),
   // building age: old stock cool and quiet, new build bright
   vintage: seq('#3C4A5C', '#7A8B9C', '#C3C7C2', '#E4C98A', '#F2E3B8'),
+  // forest disturbance: untouched canopy sits quiet and green, ground that
+  // has been cut or killed burns through to rust. Sequential, because the
+  // question is how much, not which kind — the cause has its own colours.
+  forest: seq('#DDE6D4', '#A8C79B', '#C9C179', '#D2954B', '#B4552C', '#71241A'),
   // household size: singles pale, large households deep green
   household: seq('#F2EEE4', '#CBD8C2', '#94B58F', '#557F5F', '#2A4A3C'),
   age: seq('#2F8A7D', '#9EC6B6', '#F2EBDF', '#C98FA8', '#77365C'),
