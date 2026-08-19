@@ -12,6 +12,24 @@ export interface UrlState {
   focus?: string;
 }
 
+/** The query as the page was opened, frozen.
+ *
+ *  The view state rewrites the URL as you pan, so anything read from
+ *  `window.location.search` later is reading a moving target. Flags that
+ *  decide how the page was *launched* — shadows, quality, language, intro —
+ *  must come from here, or a shadow pass can be switched on under a page
+ *  that was started without one, which reloads it. */
+const LAUNCH = new URLSearchParams(window.location.search);
+
+export function launchParam(name: string): string | null {
+  return LAUNCH.get(name);
+}
+
+/** The whole frozen query, for callers that read several flags at once. */
+export function launchParams(): URLSearchParams {
+  return new URLSearchParams(LAUNCH);
+}
+
 export function readUrlState(): UrlState {
   const params = new URLSearchParams(window.location.search);
   const state: UrlState = {};
@@ -49,7 +67,14 @@ export function writeUrlState(
 ): void {
   clearTimeout(writeTimer);
   writeTimer = setTimeout(() => {
-    const params = new URLSearchParams();
+    // Start from what is already there. Rebuilding from scratch silently
+    // dropped every flag this function does not know about — ?shadows=0,
+    // ?quality=, ?intro=, ?lang= — 350 ms after load, which made them
+    // useless for the very testing they exist for.
+    const params = new URLSearchParams(window.location.search);
+    params.delete('t');
+    params.delete('palette');
+    params.delete('focus');
     params.set('mode', modeId);
     if (timeT < 1) params.set('t', timeT.toFixed(2));
     if (palette) params.set('palette', palette);
