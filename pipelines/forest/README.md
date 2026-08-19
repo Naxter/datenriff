@@ -11,14 +11,25 @@ maps annual forest disturbances across 38 European countries from Landsat,
 1985–2023, at 30 m. Open data under CC BY 4.0 — the source must be named,
 and the app does that while the mode is on screen.
 
+The country archive is 3.1 GB and holds nine layers, of which this pipeline
+reads three — about 87 MB. Zenodo serves byte ranges, so `forest.fetch`
+opens the zip where it lies, reads its index, and pulls only those members:
+
 ```bash
 cd pipelines/forest
-curl -sL -o downloads/germany.zip \
-  https://zenodo.org/api/records/13333034/files/germany.zip/content
-python -c "import zipfile; zipfile.ZipFile('downloads/germany.zip').extractall('downloads/germany')"
+PYTHONPATH=".;../zensus;../mastr" ../zensus/.venv/Scripts/python \
+  -m forest.fetch --country germany --out downloads/germany
 ```
 
-3.1 GB compressed. Nine layers ship per country; three are read:
+Two things about that download, both learned the hard way. Zenodo **rate-
+limits**: it will serve a range at 2 MB/s and then, a few requests later,
+at 20 KB/s, and drop connections mid-transfer — the fetch retries, and an
+interrupted run picks up the members it already has. And it stalls
+indefinitely on multi-megabyte ranges requested through urllib while
+answering the same request to curl, so the range source shells out to curl
+where it can find it.
+
+Nine layers ship per country; three are read:
 
 | File | What it holds |
 | --- | --- |
