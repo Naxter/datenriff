@@ -88,6 +88,26 @@ export const PALETTES: Record<string, Palette> = {
     neutral: hexToRgb('#E4DDD2'),
   },
 
+  // land cover, in the order of classes.py: 0 urban fabric · 1 industry &
+  // transport · 2 urban green & sport · 3 arable & crops · 4 pasture ·
+  // 5 forest · 6 open nature · 7 water & wetland. Built things read warm
+  // and hard, growing things green, water blue — the map should be
+  // readable without the legend.
+  land: {
+    kind: 'categorical',
+    colors: [
+      hexToRgb('#B2402F'),
+      hexToRgb('#6E5B52'),
+      hexToRgb('#C9A55C'),
+      hexToRgb('#E4C87A'),
+      hexToRgb('#A8C079'),
+      hexToRgb('#2F6B4A'),
+      hexToRgb('#9AA98C'),
+      hexToRgb('#4E86B4'),
+    ],
+    neutral: hexToRgb('#E4DDD2'),
+  },
+
   // solar · wind · biomass · hydro · storage
   energy: {
     kind: 'categorical',

@@ -22,37 +22,25 @@ const candidates = [
 ];
 
 const args = ['-m', 'unittest', 'discover', '-s', 'tests', '-t', '.', '-v'];
-const BLACK_MARBLE = join(ROOT, 'pipelines', 'black-marble');
-const MASTR = join(ROOT, 'pipelines', 'mastr');
-const DWD = join(ROOT, 'pipelines', 'dwd');
+const sep = win ? ';' : ':';
+// every pipeline reuses the census binary writer, so it goes on PYTHONPATH;
+// tests that need h3/pyproj/h5py skip themselves when those are missing
+const PIPELINES = ['zensus', 'black-marble', 'mastr', 'dwd', 'clc5'].map((name) =>
+  join(ROOT, 'pipelines', name),
+);
 
 for (const [cmd, pre] of candidates) {
   const probe = spawnSync(cmd, [...pre, '--version'], { stdio: 'ignore' });
   if (probe.error || probe.status !== 0) continue;
-  const census = spawnSync(cmd, [...pre, ...args], { cwd: PIPELINE, stdio: 'inherit' });
-  if (census.status !== 0) process.exit(census.status ?? 1);
-  // black-marble reuses the census binary writer; its own tests are stdlib-only
-  const sep = win ? ';' : ':';
-  const nightLights = spawnSync(cmd, [...pre, ...args], {
-    cwd: BLACK_MARBLE,
-    stdio: 'inherit',
-    env: { ...process.env, PYTHONPATH: `.${sep}${PIPELINE}` },
-  });
-  if (nightLights.status !== 0) process.exit(nightLights.status ?? 1);
-  // mastr likewise; stdlib + h3 only
-  const mastr = spawnSync(cmd, [...pre, ...args], {
-    cwd: MASTR,
-    stdio: 'inherit',
-    env: { ...process.env, PYTHONPATH: `.${sep}${PIPELINE}` },
-  });
-  if (mastr.status !== 0) process.exit(mastr.status ?? 1);
-  // dwd: the reprojection tests skip themselves without pyproj
-  const dwd = spawnSync(cmd, [...pre, ...args], {
-    cwd: DWD,
-    stdio: 'inherit',
-    env: { ...process.env, PYTHONPATH: `.${sep}${PIPELINE}` },
-  });
-  process.exit(dwd.status ?? 1);
+  for (const cwd of PIPELINES) {
+    const run = spawnSync(cmd, [...pre, ...args], {
+      cwd,
+      stdio: 'inherit',
+      env: { ...process.env, PYTHONPATH: `.${sep}${PIPELINE}` },
+    });
+    if (run.status !== 0) process.exit(run.status ?? 1);
+  }
+  process.exit(0);
 }
 
 console.error('No Python interpreter found (tried venv, python3, python, py -3).');

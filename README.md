@@ -46,9 +46,12 @@ Then open <http://localhost:8080/prototype/>.
 | HOMES | dwellings | share built 2014 or later |
 | VACANCY | dwellings | vacancy rate |
 | FAMILIES | inhabitants | average household size |
-| AFTER DARK | night-light brightness | brightness — a NASA satellite raster on the same renderer |
+| AFTER DARK | night-light radiance | radiance, played 2012–2025 — a NASA satellite product on the same renderer |
+| WIND | installed wind power | the same, played 1990 onwards |
+| RAIN | annual precipitation | the same, played year by year |
+| LAND | artificial share of the cell | dominant land cover |
 
-Planned: RAIN, ENERGY, LAND, FOREST — see the [roadmap](docs/roadmap.md).
+Planned: FOREST — see the [roadmap](docs/roadmap.md).
 
 Each mode is a data definition, not code: a height metric, a colour metric and
 a scale. Switching modes blends both on the GPU. Some modes carry curated

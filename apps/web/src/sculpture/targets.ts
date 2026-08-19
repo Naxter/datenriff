@@ -152,7 +152,7 @@ export class TargetBuilder {
     const zeroAt = mode.heightScale.zeroAt ?? 0;
     const scale = elevationScaleFor(
       height.stats,
-      TARGET_MAX_HEIGHT_METERS,
+      mode.heightScale.maxMeters ?? TARGET_MAX_HEIGHT_METERS,
       mode.heightScale.calibrationQuantile ?? 0.995,
       PEAKEDNESS,
       zeroAt,

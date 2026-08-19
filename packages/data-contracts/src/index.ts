@@ -177,6 +177,11 @@ export interface HeightScaleDefinition {
    *  those from zero turns the sculpture into a slab whose front edge hides
    *  the country behind it. The tooltip keeps showing the real value. */
   zeroAt?: number;
+  /** Tallest column in metres (default 100 km). A bounded quantity needs
+   *  its own ceiling: with a share, half the cells of a city sit near 1
+   *  and would all stand at full height, which is a wall rather than a
+   *  relief. Counts do not have that problem — few cells reach their p99.5. */
+  maxMeters?: number;
 }
 
 export interface TooltipFieldDefinition {
