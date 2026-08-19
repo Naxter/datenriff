@@ -21,7 +21,14 @@
           "heading": "Was eine Zelle ist",
           "stop": {
             "mode": "people",
-            "zoom": "city"
+            "camera": {
+              "label": "Berlin",
+              "longitude": 13.405,
+              "latitude": 52.52,
+              "zoom": 9.9,
+              "pitch": 58,
+              "bearing": -18
+            }
           },
           "paragraphs": [
             "Das Land ist in Sechsecke geteilt (H3), nicht in Verwaltungsgrenzen. Sechsecke haben gleich weit entfernte Nachbarn, keine Ecken, an denen vier Flächen zusammenstoßen, und sie sind überall gleich groß — eine Zelle in Berlin ist so groß wie eine in der Uckermark, also vergleicht man Dichten und nicht Kreisflächen.",
@@ -102,7 +109,14 @@
           "heading": "What a cell is",
           "stop": {
             "mode": "people",
-            "zoom": "city"
+            "camera": {
+              "label": "Berlin",
+              "longitude": 13.405,
+              "latitude": 52.52,
+              "zoom": 9.9,
+              "pitch": 58,
+              "bearing": -18
+            }
           },
           "paragraphs": [
             "The country is divided into hexagons (H3), not administrative units. Hexagons have equidistant neighbours, no corners where four areas meet, and one size everywhere — a cell in Berlin is the same size as one in the Uckermark, so you compare densities rather than district areas.",

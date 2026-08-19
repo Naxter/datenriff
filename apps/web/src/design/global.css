@@ -1247,15 +1247,30 @@ body {
   from { transform: translateX(-14px); opacity: 0; }
   to { transform: none; opacity: 1; }
 }
-.atlas--about .atlas__canvas,
-.atlas--about .export,
-.atlas--about .modenav,
-.atlas--about .timeline {
+/* The canvas moves half the panel's width, which re-centres the sculpture in
+   what is left of the frame. The left-anchored controls have to clear the
+   whole width or they stay underneath it — half a shift left them covered. */
+.atlas--about .atlas__canvas {
   transform: translateX(min(13.5rem, 17vw));
   transition: transform 420ms cubic-bezier(0.22, 0.61, 0.36, 1);
 }
+/* The navigation clears the panel; the tools step aside instead, because
+   moving them right lands them under the wordmark, and nobody needs Export
+   while reading. They come back the moment the panel closes. */
+.atlas--about .modenav {
+  transform: translateX(calc(min(27rem, 34vw) + 1.5rem));
+  transition: transform 420ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+.atlas--about .export {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 240ms ease;
+}
 /* the timeline is centred by a transform of its own; compose, do not replace */
-.atlas--about .timeline { transform: translateX(calc(-50% + min(13.5rem, 17vw))); }
+.atlas--about .timeline {
+  transform: translateX(calc(-50% + min(13.5rem, 17vw)));
+  transition: transform 420ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
 .about--still ~ .atlas__canvas,
 .atlas--about.atlas--still .atlas__canvas { transition: none; }
 
@@ -1319,9 +1334,10 @@ body {
     top: auto;
     bottom: 0;
     width: 100%;
-    height: 62%;
+    height: 56%;
     border-right: 0;
     border-top: 1px solid var(--hairline);
   }
-  .atlas--about .atlas__canvas { transform: none; }
+  .atlas--about .atlas__canvas,
+  .atlas--about .modenav { transform: none; }
 }
