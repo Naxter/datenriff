@@ -109,7 +109,7 @@ export const MODES: SculptureMode[] = [
     colorScale: { type: 'linear', domain: [5, 15], palette: 'rent' },
     tooltip: {
       fields: [
-        { metric: 'homes', label: 'Homes', format: 'integer' },
+        { metric: 'homes', label: 'Rented dwellings', format: 'integer' },
         { metric: 'rent', label: 'Net cold rent', format: 'currencyPerSqm' },
       ],
     },
@@ -127,7 +127,7 @@ export const MODES: SculptureMode[] = [
     colorScale: { type: 'categorical', palette: 'heating', saturationMetric: 'heating_dominance' },
     tooltip: {
       fields: [
-        { metric: 'homes', label: 'Homes', format: 'integer' },
+        { metric: 'homes', label: 'Rented dwellings', format: 'integer' },
         { metric: 'heating_category', label: 'Dominant source', format: 'category' },
       ],
     },
@@ -143,7 +143,7 @@ MODES.push(
     label: 'Homes',
     subtitle: 'Housing stock, and where it was built recently',
     dataset: 'zensus',
-    heightMetric: 'homes',
+    heightMetric: 'homes_total',
     colorMetric: 'homes_new_share',
     heightScale: { type: 'linear' },
     // Nationally 5 % of homes are this new, and p95 of a cell is 0.22, so the
@@ -152,7 +152,7 @@ MODES.push(
     colorScale: { type: 'linear', domain: [0, 0.3], palette: 'vintage' },
     tooltip: {
       fields: [
-        { metric: 'homes', label: 'Dwellings', format: 'integer' },
+        { metric: 'homes_total', label: 'Dwellings', format: 'integer' },
         { metric: 'homes_new_share', label: 'Built 2014 or later', format: 'percent' },
       ],
     },
@@ -164,13 +164,13 @@ MODES.push(
     label: 'Vacancy',
     subtitle: 'Where flats stand empty',
     dataset: 'zensus',
-    heightMetric: 'homes',
+    heightMetric: 'homes_total',
     colorMetric: 'vacancy_rate',
     heightScale: { type: 'linear' },
     colorScale: { type: 'linear', domain: [0, 20], palette: 'vacancy' },
     tooltip: {
       fields: [
-        { metric: 'homes', label: 'Dwellings', format: 'integer' },
+        { metric: 'homes_total', label: 'Dwellings', format: 'integer' },
         { metric: 'vacancy_rate', label: 'Vacancy rate', format: 'decimal1' },
       ],
     },
