@@ -1,7 +1,7 @@
 // A mode is data, not code: adding one means adding an entry here plus the
 // metrics in the dataset. No renderer changes.
 
-import type { SculptureDataset, SculptureMode } from '@datenriff/data-contracts';
+import type { ModeFamily, SculptureDataset, SculptureMode } from '@datenriff/data-contracts';
 
 const CENSUS_ATTRIBUTION = {
   label: 'Data: Destatis, Zensus 2022',
@@ -24,6 +24,7 @@ const RHINE_MAIN = { longitude: 8.68, latitude: 50.11, zoom: 8.4 };
 export const MODES: SculptureMode[] = [
   {
     id: 'people',
+    family: 'population',
     label: 'People',
     subtitle: "Germany's population landscape",
     dataset: 'zensus',
@@ -50,6 +51,7 @@ export const MODES: SculptureMode[] = [
   },
   {
     id: 'change',
+    family: 'population',
     label: 'Change',
     subtitle: 'How the human topography shifted, 2011 → 2022',
     dataset: 'zensus',
@@ -79,6 +81,7 @@ export const MODES: SculptureMode[] = [
   },
   {
     id: 'age',
+    family: 'population',
     label: 'Age',
     subtitle: 'Where Germany is young, and where it is old',
     dataset: 'zensus',
@@ -96,6 +99,7 @@ export const MODES: SculptureMode[] = [
   },
   {
     id: 'rent',
+    family: 'housing',
     label: 'Rent',
     subtitle: 'Housing mass, priced — expensive regions glow',
     dataset: 'zensus',
@@ -113,6 +117,7 @@ export const MODES: SculptureMode[] = [
   },
   {
     id: 'heating',
+    family: 'housing',
     label: 'Heating',
     subtitle: "Germany's heating landscape by energy source",
     dataset: 'zensus',
@@ -134,6 +139,7 @@ export const MODES: SculptureMode[] = [
 MODES.push(
   {
     id: 'homes',
+    family: 'housing',
     label: 'Homes',
     subtitle: 'Housing stock, and where it was built recently',
     dataset: 'zensus',
@@ -153,6 +159,7 @@ MODES.push(
   },
   {
     id: 'vacancy',
+    family: 'housing',
     label: 'Vacancy',
     subtitle: 'Where flats stand empty',
     dataset: 'zensus',
@@ -181,6 +188,7 @@ MODES.push(
   },
   {
     id: 'families',
+    family: 'population',
     label: 'Families',
     subtitle: 'How many people share a home',
     dataset: 'zensus',
@@ -212,6 +220,7 @@ const BLACK_MARBLE_YEARS = Array.from({ length: 19 }, (_, i) => String(2012 + i)
 // different cell universe and its own resolution, same contracts.
 MODES.push({
   id: 'afterdark',
+  family: 'energy',
   label: 'After Dark',
   // deliberately not "light pollution": the product measures light leaving
   // the ground, not its ecological effect (plan §19)
@@ -246,6 +255,7 @@ const WIND_YEARS = Array.from({ length: 41 }, (_, i) => String(1990 + i));
 // stay in — they are the North Sea's story.
 MODES.push({
   id: 'wind',
+  family: 'energy',
   label: 'Wind',
   subtitle: 'Wind power, built up year by year since 1990',
   dataset: 'energy',
@@ -275,6 +285,7 @@ const RAIN_YEARS = Array.from({ length: 60 }, (_, i) => String(1971 + i));
 // plane instead of 300 mm above it, so that relief stays readable.
 MODES.push({
   id: 'rain',
+  family: 'nature',
   label: 'Rain',
   subtitle: 'A year of rainfall, from the dry east to the Alps',
   dataset: 'rain',
@@ -301,6 +312,7 @@ const BKG_ATTRIBUTION = {
 // gains a timeline the same way WIND and RAIN do.
 MODES.push({
   id: 'land',
+  family: 'nature',
   label: 'Land',
   subtitle: 'What the ground is made of, and how much of it is built',
   dataset: 'land',
@@ -391,4 +403,23 @@ export function datasetServesMode(
 /** Modes any loaded dataset can serve. */
 export function availableModes(datasets: SculptureDataset[]): SculptureMode[] {
   return MODES.filter((mode) => datasets.some((d) => datasetServesMode(d, mode)));
+}
+
+/** Family labels in navigation order. A family with no available mode is
+ *  never shown, so a clone with only census data sees two of them. */
+export const FAMILIES: { id: ModeFamily; label: string }[] = [
+  { id: 'population', label: 'Population' },
+  { id: 'housing', label: 'Housing' },
+  { id: 'nature', label: 'Nature' },
+  { id: 'energy', label: 'Energy' },
+];
+
+/** Available modes grouped into families, empty families dropped. */
+export function modeFamilies(
+  modes: SculptureMode[],
+): { id: ModeFamily; label: string; modes: SculptureMode[] }[] {
+  return FAMILIES.map((family) => ({
+    ...family,
+    modes: modes.filter((mode) => (mode.family ?? 'population') === family.id),
+  })).filter((family) => family.modes.length > 0);
 }

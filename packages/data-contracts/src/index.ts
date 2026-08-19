@@ -167,6 +167,10 @@ export type ColorScaleDefinition =
   | DivergingScaleDefinition
   | CategoricalScaleDefinition;
 
+/** The four families the bottom navigation groups modes into. A flat row
+ *  of every mode stopped being readable at about ten. */
+export type ModeFamily = 'population' | 'housing' | 'nature' | 'energy';
+
 export interface HeightScaleDefinition {
   /** Height stays linear; only the calibration anchor varies. */
   type: 'linear';
@@ -239,6 +243,9 @@ export interface SculptureMode {
   stories?: CameraStory[];
   heightMetric: string;
   colorMetric: string;
+  /** Family the mode is filed under in the navigation. Presentation only:
+   *  the URL and the store still speak in mode ids. */
+  family?: ModeFamily;
   heightScale: HeightScaleDefinition;
   colorScale: ColorScaleDefinition;
   time?: TimeDefinition;
