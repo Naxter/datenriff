@@ -85,6 +85,9 @@ function Slider({
   );
 }
 
+/** A few that suit paper, and a free picker for anything else. */
+const BORDER_COLORS = ['#221c15', '#8a8378', '#b81d74', '#2f6b4a', '#3e6fb8'];
+
 export function SettingsDialog({ onClose }: Props) {
   const settings = useAtlasStore((s) => s.settings);
   const update = useAtlasStore((s) => s.updateSettings);
@@ -175,6 +178,42 @@ export function SettingsDialog({ onClose }: Props) {
           ]}
           onChange={set('labels')}
         />
+        <Segment
+          label={t('settings.border')}
+          value={settings.border ? 'on' : 'off'}
+          choices={[
+            { value: 'off', label: t('settings.off') },
+            { value: 'on', label: t('settings.on') },
+          ]}
+          onChange={(v) => update({ border: v === 'on' })}
+        />
+        {settings.border && (
+          <div className="settings__row">
+            <span className="settings__label">{t('settings.borderColor')}</span>
+            <div className="settings__swatches">
+              {BORDER_COLORS.map((hex) => (
+                <button
+                  key={hex}
+                  type="button"
+                  className={`settings__swatch${
+                    settings.borderColor.toLowerCase() === hex ? ' settings__swatch--active' : ''
+                  }`}
+                  style={{ background: hex }}
+                  aria-label={hex}
+                  aria-pressed={settings.borderColor.toLowerCase() === hex}
+                  onClick={() => update({ borderColor: hex })}
+                />
+              ))}
+              <input
+                type="color"
+                className="settings__color"
+                value={settings.borderColor}
+                aria-label={t('settings.borderColor')}
+                onChange={(e) => update({ borderColor: e.target.value })}
+              />
+            </div>
+          </div>
+        )}
         <Segment
           label={t('settings.motion')}
           value={settings.motion}

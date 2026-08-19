@@ -1,7 +1,7 @@
 // Layer factory shared by the interactive view and the poster export, so
 // both render the identical sculpture.
 
-import { ColumnLayer, SolidPolygonLayer, TextLayer } from '@deck.gl/layers';
+import { ColumnLayer, PathLayer, SolidPolygonLayer, TextLayer } from '@deck.gl/layers';
 import { MorphColumnLayer, type FadeBox } from './morphColumnLayer';
 import type { Layer, PickingInfo } from '@deck.gl/core';
 import { hexColumnRadius } from '@datenriff/sculpture-core';
@@ -112,6 +112,8 @@ export interface SculptureLayerOptions {
   outgoingLayer?: Layer;
   /** Fine-LOD tile layers, drawn between sculpture and labels. */
   fineLayers?: Layer[];
+  /** Optional outline of the country, off unless the viewer asks for it. */
+  border?: { color: [number, number, number] } | null;
   pickable: boolean;
   onHover?: (info: PickingInfo) => void;
 }
@@ -142,6 +144,23 @@ export function createSculptureLayers(o: SculptureLayerOptions): Layer[] {
       ...SHADOW_OFF,
       material: { ambient: 1, diffuse: 0, shininess: 1, specularColor: [0, 0, 0] },
     }),
+    // The country outline is off by default — the columns draw the land, and
+    // that is the point of the thing. It earns its place on a sparse mode,
+    // where the coast is hard to read from the data alone.
+    o.border && o.scene.boundary.length > 0
+      ? new PathLayer({
+          id: 'border',
+          data: o.scene.boundary,
+          getPath: (ring: [number, number][]) => ring,
+          getColor: o.border.color,
+          getWidth: 1.4,
+          widthUnits: 'pixels',
+          widthMinPixels: 1,
+          parameters: { depthCompare: 'always' },
+          pickable: false,
+          ...SHADOW_OFF,
+        })
+      : undefined,
     o.outgoingLayer,
     createColumnLayer({
       id: 'sculpture',

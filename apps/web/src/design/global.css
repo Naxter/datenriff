@@ -916,6 +916,35 @@ body {
   transition: opacity 400ms ease;
 }
 
+.settings__swatches {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.settings__swatch {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid var(--hairline);
+  padding: 0;
+  cursor: pointer;
+}
+
+.settings__swatch--active {
+  outline: 1px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.settings__color {
+  width: 26px;
+  height: 20px;
+  padding: 0;
+  border: 1px solid var(--hairline);
+  background: none;
+  cursor: pointer;
+}
+
 /* ---------------- loading veil ---------------- */
 
 .veil {

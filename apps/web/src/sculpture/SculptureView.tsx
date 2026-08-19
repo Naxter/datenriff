@@ -31,6 +31,13 @@ import {
 } from './exportBridge';
 import { createLighting, tuneLighting } from './lighting';
 import { labelTierCap, shadowPassPossible, shadowsEnabled } from './quality';
+
+/** '#221c15' -> [34, 28, 21]; the settings keep the colour as CSS hex so a
+ *  colour input can edit it directly. */
+function hexToRgb(hex: string): [number, number, number] {
+  const n = Number.parseInt(hex.slice(1), 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
 import { resolveReducedMotion } from '../state/settings';
 import {
   createColumnLayer,
@@ -461,6 +468,7 @@ export function SculptureView({ scene, engine }: Props) {
     elevationScale: heightScale,
     outgoingLayer,
     fineLayers,
+    border: settings.border ? { color: hexToRgb(settings.borderColor) } : null,
     // stays pickable: the country layer still draws the far field, and the
     // tiles carry no metric values, so hover reads the country cell
     pickable: !exporting,
