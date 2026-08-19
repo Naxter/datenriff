@@ -1210,6 +1210,9 @@ body {
 /* Centred under the sculpture, below the timeline. Fine print, but the two
    legal ones are a legal requirement in every view, so they never hide. */
 .pagelinks {
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: calc(100vw - 2rem);
   position: absolute;
   left: 50%;
   bottom: 0.7rem;
@@ -1225,6 +1228,7 @@ body {
   pointer-events: auto;
 }
 .pagelinks__link {
+  white-space: nowrap;
   background: none;
   border: 0;
   padding: 0.2rem 0;
@@ -1365,6 +1369,28 @@ body {
   }
   .atlas--about .atlas__canvas,
   .atlas--about .modenav { transform: none; }
+}
+
+/* Small phones (320 px and the like): the type scale has to come down or
+   the header sits on the sculpture and the legend title is squeezed out. */
+@media (max-width: 380px) {
+  /* On a small screen the sculpture fills the frame and the type sits on
+     top of it. The paper veil already exists for this: a soft wash keeps
+     the words readable without hiding what is behind them. */
+  .topblock,
+  .legend {
+    background: var(--paper-veil);
+    box-shadow: 0 0 18px 18px var(--paper-veil);
+    border-radius: 2px;
+  }
+  .header__title { font-size: 34px; }
+  .header__subtitle,
+  .header__date { font-size: 11px; }
+  .wordmark__name { font-size: 15px; }
+  .legend { max-width: calc(100vw - 32px); }
+  .legend__title,
+  .legend__height { white-space: normal; }
+  .pagelinks { font-size: 0.58rem; gap: 0.32rem; }
 }
 
 /* ---- The atlas could not be drawn ---- */

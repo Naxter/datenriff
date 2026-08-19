@@ -61,6 +61,11 @@ const VIEWS = [
   { id: 'land-2015', q: 'mode=land&t=0.333' },
   { id: 'people-de', q: 'mode=people&lang=de' },
   { id: 'people-mobile', q: 'mode=people&quality=mobile' },
+  // real phones, where the layout actually changes
+  { id: 'phone-people', q: 'mode=people', viewport: { width: 390, height: 844 } },
+  { id: 'phone-rain', q: 'mode=rain', viewport: { width: 390, height: 844 } },
+  { id: 'phone-small', q: 'mode=people', viewport: { width: 320, height: 568 } },
+  { id: 'phone-landscape', q: 'mode=people', viewport: { width: 844, height: 390 } },
   { id: 'people-berlin', q: 'mode=people&view=13.405,52.520,9.90,58,-18', wait: 6000 },
   { id: 'people-focus-bayern', q: 'mode=people&focus=state:DE-09', wait: 11000, threshold: 2 },
 ];
@@ -82,7 +87,8 @@ const VIEWS = [
       ? ['--enable-gpu', '--ignore-gpu-blocklist', '--use-angle=d3d11']
       : ['--enable-unsafe-swiftshader', '--use-angle=swiftshader'],
   });
-  const page = await browser.newPage({ viewport: { width: 1400, height: 900 } });
+  const DESKTOP = { width: 1400, height: 900 };
+  const page = await browser.newPage({ viewport: DESKTOP });
   page.on('pageerror', (err) => console.error('[pageerror]', err.message));
 
   const results = [];
@@ -90,6 +96,10 @@ const VIEWS = [
     if (ONLY && !ONLY.includes(view.id)) continue;
     // pin the language: it otherwise follows the browser's locale, and a
     // baseline shot on a German machine would not match an English one
+    // a view may ask for a different screen; the phone layout has its own
+    // breakpoint and was never exercised, which is how a nav covering the
+    // legal links shipped
+    await page.setViewportSize(view.viewport ?? DESKTOP);
     const lang = view.q.includes('lang=') ? '' : '&lang=en';
     const url = `${BASE}/?${view.q}${lang}&intro=0${GPU ? '' : '&shadows=0'}`;
     await page.goto(url, { waitUntil: 'domcontentloaded' });
