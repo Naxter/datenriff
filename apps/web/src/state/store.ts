@@ -4,7 +4,7 @@ import type { AtlasManifest, CameraStop } from '@datenriff/data-contracts';
 import type { SceneData } from '../data/loader';
 import { detectQuality, type QualityProfile } from '../sculpture/quality';
 import { loadSettings, saveSettings, type Settings } from './settings';
-import { detectLang, persistLang } from '../i18n';
+import { applyDocumentLang, detectLang, persistLang } from '../i18n';
 import type { Lang } from '../i18n/strings';
 import type { FocusGeometry } from '../sculpture/focus';
 
@@ -110,6 +110,7 @@ export const useAtlasStore = create<AtlasState>((set) => ({
     }),
   setLang: (lang) => {
     persistLang(lang);
+    applyDocumentLang(lang);
     set({ lang });
   },
   setSettingsOpen: (settingsOpen) => set({ settingsOpen }),

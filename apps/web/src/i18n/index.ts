@@ -33,6 +33,13 @@ export function detectLang(): Lang {
   return navigator.language?.toLowerCase().startsWith('de') ? 'de' : 'en';
 }
 
+/** Tell the document which language it is in. index.html ships `lang="de"`
+ *  as a static guess; a screen reader otherwise pronounces an English page
+ *  with a German voice, and the fallback screen picks the wrong words. */
+export function applyDocumentLang(lang: Lang): void {
+  document.documentElement.lang = lang;
+}
+
 export function persistLang(lang: Lang): void {
   try {
     localStorage.setItem(KEY, lang);
