@@ -61,7 +61,12 @@ export interface ModeTarget extends MorphTarget {
 }
 
 export class TargetBuilder {
+  /** Built targets, newest last. Each holds heights and colours for every
+   *  cell — megabytes at the fine LODs — so the map is capped and the
+   *  least recently used entry is dropped rather than kept for a mode the
+   *  viewer may never return to. */
   private readonly cache = new Map<string, ModeTarget>();
+  private static readonly CACHE_LIMIT = 6;
   /** The dataset this builder serves; modes are bound to it. */
   get dataset() {
     return this.scene.dataset;
@@ -103,6 +108,16 @@ export class TargetBuilder {
     );
   }
 
+  private remember(key: string, target: ModeTarget): ModeTarget {
+    this.cache.set(key, target);
+    while (this.cache.size > TargetBuilder.CACHE_LIMIT) {
+      const oldest = this.cache.keys().next().value;
+      if (oldest === undefined) break;
+      this.cache.delete(oldest);
+    }
+    return target;
+  }
+
   /** Per-cell focus masks, cached per focus. */
   private readonly masks = new Map<string, Uint8Array>();
 
@@ -138,8 +153,7 @@ export class TargetBuilder {
         if (base.timeColors) target.timeColors!.set(step, d.colors);
       }
     }
-    this.cache.set(key, target);
-    return target;
+    return this.remember(key, target);
   }
 
   private buildBase(mode: SculptureMode, palette: string | null = null): ModeTarget {
@@ -205,8 +219,7 @@ export class TargetBuilder {
       }
     }
 
-    this.cache.set(key, target);
-    return target;
+    return this.remember(key, target);
   }
 }
 

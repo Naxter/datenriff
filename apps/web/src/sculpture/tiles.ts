@@ -162,7 +162,17 @@ export class TileManager {
 
   destroy(): void {
     this.worker.terminate();
+    // Terminating stops the thread; it does not drop these handlers, and
+    // both close over `this`, which holds the scene and every buffer in it.
+    // A dataset switch made one of these per switch, so the old scenes were
+    // still reachable and nothing was collected.
+    this.worker.onmessage = null;
+    this.worker.onerror = null;
+    this.onChange = null;
     this.ready.clear();
+    this.pendingBounds.clear();
+    this.needed.clear();
+    for (const entry of this.lods) entry.index = null;
   }
 
   /** The finest tiled LOD the current zoom qualifies for. */
