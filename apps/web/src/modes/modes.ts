@@ -146,9 +146,10 @@ MODES.push(
     heightMetric: 'homes',
     colorMetric: 'homes_new_share',
     heightScale: { type: 'linear' },
-    // Destatis rounds cell values independently, so a handful of tiny cells
-    // report a share slightly above 1; the domain clips them.
-    colorScale: { type: 'linear', domain: [0, 0.6], palette: 'vintage' },
+    // Nationally 5 % of homes are this new, and p95 of a cell is 0.22, so the
+    // ramp ends at 0.3 — about 3 % of cells clip. Destatis also rounds cell
+    // values independently, which leaves a few tiny cells above 1.
+    colorScale: { type: 'linear', domain: [0, 0.3], palette: 'vintage' },
     tooltip: {
       fields: [
         { metric: 'homes', label: 'Dwellings', format: 'integer' },

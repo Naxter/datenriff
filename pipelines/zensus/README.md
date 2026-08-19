@@ -142,8 +142,10 @@ plus the city labels and the country outline.
 
 ## Rules
 
-- **Suppression is not zero**: special tokens (`–`, `.`, `x`, …) are treated as
-  *missing* and never enter sums.
+- **Suppression is not zero, and zero is not suppression**: `.`, `/`, `x` mean
+  the number is withheld or unknown and stay *missing*; the dash `–` means the
+  count really is zero ("Genau Null oder auf Null geändert") and enters the
+  data as `0.0`. Confusing the two silently drops whole cells out of a share.
 - **Aggregate by semantics**: counts → SUM; averages → weighted mean; shares →
   SUM(numerator)/SUM(denominator); categories → category sums + argmax +
   dominance. Implemented in `aggregate.py`.

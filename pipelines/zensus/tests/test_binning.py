@@ -2,6 +2,7 @@ import unittest
 
 from zensus_pipeline.binning import (
     accumulate_categories,
+    accumulate_share,
     accumulate_sum,
     accumulate_weighted,
     batched_cells,
@@ -27,6 +28,27 @@ class TestAccumulators(unittest.TestCase):
     def test_sum_skips_missing(self):
         pairs = [("a", {"v": 5}), ("a", {"v": None}), ("b", {"v": 7}), ("a", {"v": 3})]
         self.assertEqual(accumulate_sum(pairs, "v"), {"a": 8, "b": 7})
+
+    def test_share_keeps_the_denominator_of_a_zero_numerator(self):
+        # Three cells of 100 homes, one of which has 20 new ones: 20/300.
+        # Reading the two nil cells as missing would drop their 200 homes
+        # from the denominator and report 20/100 — the bug this guards.
+        pairs = [
+            ("a", {"n": 20.0, "d": 100.0}),
+            ("a", {"n": 0.0, "d": 100.0}),
+            ("a", {"n": 0.0, "d": 100.0}),
+        ]
+        num, den = accumulate_share(pairs, "n", "d")
+        self.assertEqual(num["a"], 20.0)
+        self.assertEqual(den["a"], 300.0)
+
+    def test_share_drops_a_withheld_numerator(self):
+        # None means the number is unknown, so the cell cannot be counted
+        # either way — neither part enters the pool.
+        pairs = [("a", {"n": 20.0, "d": 100.0}), ("a", {"n": None, "d": 100.0})]
+        num, den = accumulate_share(pairs, "n", "d")
+        self.assertEqual(num["a"], 20.0)
+        self.assertEqual(den["a"], 100.0)
 
     def test_weighted_mean_and_weights(self):
         pairs = [

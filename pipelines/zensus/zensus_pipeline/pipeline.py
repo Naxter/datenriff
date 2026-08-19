@@ -145,7 +145,9 @@ def stream_rows(
             if centre_cols:
                 x = parse_value(row.get(centre_cols[0]))
                 y = parse_value(row.get(centre_cols[1]))
-                if x is None or y is None:
+                # A nil dash parses to 0.0, which is a valid float but not a
+                # position: EPSG:3035 over Germany is millions of metres.
+                if not x or not y:
                     skipped += 1
                     continue
             else:
@@ -185,7 +187,7 @@ def load_weight_lookup(
             elif centre_cols:
                 x = parse_value(row.get(centre_cols[0]))
                 y = parse_value(row.get(centre_cols[1]))
-                if x is not None and y is not None:
+                if x and y:
                     lookup[f"{x:.0f}:{y:.0f}"] = value
     print(f"  {len(lookup):,} weight cells", file=sys.stderr)
     return lookup
