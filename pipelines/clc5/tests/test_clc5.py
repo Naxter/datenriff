@@ -279,6 +279,40 @@ class TestPipeline(unittest.TestCase):
             self.assertEqual(sum(t["count"] for t in index["tiles"]), len(cells))
             self.assertLess(lods[7]["count"], lods[8]["count"], "r7 pools r8")
 
+    def test_a_second_vintage_shares_the_first_universe(self):
+        """Two years of the same dataset must line up cell for cell, and a
+        cell the second year does not cover is missing, not zero built."""
+        import math
+
+        from clc5 import pipeline
+
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            out, cells, _, _ = self.run_pipeline(tmp, gap=10_000.0)
+            first = (out / "r8" / "cells.txt").read_text()
+
+            # a second vintage covering only the western block
+            src = tmp / "clc5_2012.gpkg"
+            write_gpkg(src, [("112", gpkg_blob(wkb_multipolygon([[list(self.BLOCK)]])))])
+            pipeline.main([
+                "--input", str(src), "--year", "2012", "--out", str(out),
+                "--resolutions", "8,7", "--tiled", "8",
+            ])
+
+            self.assertEqual((out / "r8" / "cells.txt").read_text(), first, "universe is fixed")
+            n = len(cells)
+            older = struct.unpack(
+                f"<{n}f", (out / "r8" / "built_share_2012.f32").read_bytes()
+            )
+            self.assertEqual(len(older), n, "both vintages have the same length")
+            self.assertTrue(any(math.isnan(v) for v in older), "uncovered cells are missing")
+            self.assertTrue(any(v == 1.0 for v in older), "the covered block is still built")
+
+            manifest = json.loads((out / "dataset.json").read_text(encoding="utf-8"))
+            ids = {m["id"] for m in manifest["metrics"]}
+            self.assertIn("built_share_2012", ids)
+            self.assertIn("built_share_2021", ids)
+
     def test_a_cell_on_the_seam_reports_a_partial_share(self):
         """The share is an area fraction, not a flag: a cell that is part
         urban and part forest must land strictly between 0 and 100."""
@@ -288,6 +322,75 @@ class TestPipeline(unittest.TestCase):
             self.assertTrue(mixed, "no cell straddles the two blocks")
             self.assertTrue(all(0.0 <= v <= 1.0 for v in share))
             self.assertEqual(set(klass) - {255}, {0, 5}, "the dominant class is still one of two")
+
+
+try:  # the converter is a tool, not part of the pipeline
+    import pyogrio  # noqa: F401
+
+    HAVE_PYOGRIO = True
+except ImportError:  # pragma: no cover
+    HAVE_PYOGRIO = False
+
+
+@unittest.skipUnless(HAVE_PYOGRIO, "pyogrio not installed")
+class TestShapefileConversion(unittest.TestCase):
+    """The older vintages are shapefiles. They are converted once instead of
+    parsed, so what this checks is that the converted file is something
+    gpkg.py reads back unchanged — holes included, since a shapefile marks
+    them by winding direction and WKB by position."""
+
+    def write_shapefile(self, path: Path):
+        import numpy as np
+        from pyogrio.raw import write
+
+        square = [(0.0, 0.0), (2000.0, 0.0), (2000.0, 2000.0), (0.0, 2000.0), (0.0, 0.0)]
+        hole = [(500.0, 500.0), (500.0, 1500.0), (1500.0, 1500.0), (1500.0, 500.0), (500.0, 500.0)]
+        far = [(x + 9000.0, y) for x, y in square]
+        geoms = np.array(
+            [wkb_polygon([square, hole]), wkb_polygon([far])], dtype=object
+        )
+        write(
+            str(path), geoms, [np.array(["112", "312"], dtype=object)], ["CLC12"],
+            driver="ESRI Shapefile", geometry_type="Polygon", crs="EPSG:25832",
+        )
+
+    def test_converted_file_reads_back_with_its_hole(self):
+        from clc5 import convert
+
+        with tempfile.TemporaryDirectory() as tmp:
+            shp = Path(tmp) / "clc5_2012.shp"
+            gpkg_path = Path(tmp) / "clc5_2012.gpkg"
+            self.write_shapefile(shp)
+            count = convert.convert(shp, gpkg_path, layer="clc5", chunk=1)
+            self.assertEqual(count, 2, "chunking must not drop or repeat features")
+
+            rows = dict(gpkg.read_features(gpkg_path, "clc5", "CLC12"))
+            self.assertEqual(sorted(rows), ["112", "312"])
+            rings = rows["112"][0]
+            self.assertEqual(len(rings), 2, "the hole survives as a second ring")
+            outer, inner = rings
+            self.assertGreater(
+                abs(shoelace(outer)), abs(shoelace(inner)), "ring 0 is the outer one"
+            )
+
+    def test_it_refuses_to_append_to_an_existing_file(self):
+        from clc5 import convert
+
+        with tempfile.TemporaryDirectory() as tmp:
+            shp = Path(tmp) / "clc5_2012.shp"
+            out = Path(tmp) / "out.gpkg"
+            self.write_shapefile(shp)
+            convert.convert(shp, out, layer="clc5")
+            with self.assertRaises(SystemExit):
+                convert.convert(shp, out, layer="clc5")
+
+
+def shoelace(ring) -> float:
+    """Signed area of a ring; the sign tells outer from hole in a shapefile."""
+    import numpy as np
+
+    x, y = ring[:, 0], ring[:, 1]
+    return 0.5 * float((x * np.roll(y, -1) - y * np.roll(x, -1)).sum())
 
 
 if __name__ == "__main__":
