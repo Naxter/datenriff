@@ -56,6 +56,7 @@ const VIEWS = [
   { id: 'rain', q: 'mode=rain' },
   { id: 'rain-2001', q: 'mode=rain&t=0' },
   { id: 'land', q: 'mode=land' },
+  { id: 'land-2012', q: 'mode=land&t=0' },
   { id: 'people-mobile', q: 'mode=people&quality=mobile' },
   { id: 'people-berlin', q: 'mode=people&view=13.405,52.520,9.90,58,-18', wait: 6000 },
   { id: 'people-focus-bayern', q: 'mode=people&focus=state:DE-09', wait: 11000, threshold: 2 },

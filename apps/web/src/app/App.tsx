@@ -180,12 +180,16 @@ export default function App() {
     const a = target.timeHeights?.get(steps[seg.i]!);
     const b = target.timeHeights?.get(steps[seg.i + 1]!);
     if (!a || !b) return;
+    // A mode whose colour does not follow the steps (LAND: height is the
+    // built share, colour the land cover) still has to hand the engine
+    // colours. Without them it freezes whatever is on screen, which during
+    // the entry morph is the flat state at alpha 0 — transparent columns.
     ctx.engine.scrub(
       a,
       b,
       seg.local,
-      target.timeColors?.get(steps[seg.i]!),
-      target.timeColors?.get(steps[seg.i + 1]!),
+      target.timeColors?.get(steps[seg.i]!) ?? target.colors,
+      target.timeColors?.get(steps[seg.i + 1]!) ?? target.colors,
     );
     bumpSculpture();
   }, [ctx, ready, modeId, timeT, palette, focus, bumpSculpture]);
