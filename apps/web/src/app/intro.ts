@@ -5,6 +5,7 @@
 
 import { readUrlState } from '../state/url';
 import { useAtlasStore, type IntroPhase } from '../state/store';
+import { launchParams } from '../state/url';
 
 const SEEN_KEY = 'datenriff:intro-seen';
 
@@ -19,7 +20,7 @@ export const INTRO_TAGLINE = '83 million people, mapped as a landscape.';
 /** Decide once, before the first scene renders. `?intro=1` forces it (for
  *  checking the staging), `?intro=0` skips it. */
 export function introEligible(reducedMotion: boolean): boolean {
-  const params = new URLSearchParams(window.location.search);
+  const params = launchParams();
   const forced = params.get('intro');
   if (forced === '1') return true;
   if (forced === '0' || reducedMotion) return false;

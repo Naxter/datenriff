@@ -5,6 +5,7 @@
 
 import type { SculptureDataset, SculptureLOD } from '@datenriff/data-contracts';
 import type { Settings, Tri } from '../state/settings';
+import { launchParam } from '../state/url';
 
 export type QualityId = 'mobile' | 'desktop';
 
@@ -43,7 +44,7 @@ const MOBILE: QualityProfile = {
 /** `?quality=mobile|desktop` overrides everything (how it is tested), then
  *  the viewer's setting, then device detection. */
 export function detectQuality(setting: Settings['quality'] = 'auto'): QualityProfile {
-  const forced = new URLSearchParams(window.location.search).get('quality');
+  const forced = launchParam('quality');
   if (forced === 'mobile') return MOBILE;
   if (forced === 'desktop') return DESKTOP;
   if (setting === 'mobile') return MOBILE;
@@ -57,9 +58,7 @@ export function detectQuality(setting: Settings['quality'] = 'auto'): QualityPro
 /** Shadows: `?shadows=0` wins (software renderers cannot run the shadow
  *  pass), then the viewer's setting, then the profile. */
 export function shadowsEnabled(profile: QualityProfile, setting: Tri = 'auto'): boolean {
-  if (new URLSearchParams(window.location.search).get('shadows') === '0') {
-    return false;
-  }
+  if (launchParam('shadows') === '0') return false;
   if (setting === 'on') return true;
   if (setting === 'off') return false;
   return profile.shadows;
@@ -71,9 +70,7 @@ export function shadowsEnabled(profile: QualityProfile, setting: Tri = 'auto'): 
  *  whenever the device could plausibly want shadows means the viewer's
  *  on/off is only the shadow ink, which needs no reload. */
 export function shadowPassPossible(profile: QualityProfile, setting: Tri = 'auto'): boolean {
-  if (new URLSearchParams(window.location.search).get('shadows') === '0') {
-    return false;
-  }
+  if (launchParam('shadows') === '0') return false;
   return profile.shadows || setting === 'on';
 }
 

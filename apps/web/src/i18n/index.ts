@@ -14,6 +14,7 @@ import {
   unitText,
   type Lang,
 } from './strings';
+import { launchParam } from '../state/url';
 
 export type { Lang };
 export { LANGS, LOCALE };
@@ -21,7 +22,7 @@ export { LANGS, LOCALE };
 const KEY = 'datenriff:lang';
 
 export function detectLang(): Lang {
-  const forced = new URLSearchParams(window.location.search).get('lang');
+  const forced = launchParam('lang');
   if (forced && (LANGS as string[]).includes(forced)) return forced as Lang;
   try {
     const stored = localStorage.getItem(KEY);

@@ -11,6 +11,7 @@ import {
 } from '../state/settings';
 import { useAtlasStore } from '../state/store';
 import { useI18n } from '../i18n';
+import { launchParam } from '../state/url';
 
 interface Props {
   onClose: () => void;
@@ -102,8 +103,8 @@ export function SettingsDialog({ onClose }: Props) {
   }, [onClose]);
 
   const { t } = useI18n();
-  const forcedQuality = new URLSearchParams(window.location.search).get('quality');
-  const forcedShadowsOff = new URLSearchParams(window.location.search).get('shadows') === '0';
+  const forcedQuality = launchParam('quality');
+  const forcedShadowsOff = launchParam('shadows') === '0';
   const set = <K extends keyof Settings>(key: K) => (v: Settings[K]) => update({ [key]: v });
 
   return (
