@@ -81,7 +81,7 @@ METRICS: dict[str, list[str]] = {
         "--input", f"{D}/Zensus2022_Durchschn_Haushaltsgroesse_100m-Gitter.csv",
         "--rule", "wmean", "--value-column", "DurchschnHHGroesse",
         "--weight-input", POP, "--weight-value-column", "Einwohner",
-        "--metric", "household_size", "--label", "Average household size", "--unit", "people",
+        "--metric", "household_size", "--label", "Average household size", "--unit", "per home",
         "--source-url", "https://www.destatis.de/static/DE/zensus/gitterdaten/Durchschnittliche_Haushaltsgroesse_in_Gitterzellen.zip",
     ],
 }

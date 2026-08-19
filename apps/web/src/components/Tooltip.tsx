@@ -11,7 +11,7 @@ import type { TargetBuilder } from '../sculpture/targets';
 import { useAtlasStore } from '../state/store';
 import { useI18n, type Lang } from '../i18n';
 import { dec1Format, intFormat } from '../i18n/format';
-import { categoryText } from '../i18n/strings';
+import { categoryText, unitText } from '../i18n/strings';
 
 // nearest labelled city within maxKm, used as the headline
 function nearestCity(scene: SceneData, index: number, maxKm = 35): string | null {
@@ -42,11 +42,15 @@ function formatField(
   if (Number.isNaN(value)) return '—';
   const intFmt = intFormat(locale);
   const dec1Fmt = dec1Format(locale);
+  // a bare number carries whatever unit the pipeline declared, so night
+  // light reads "12,4 nW/cm²/sr" rather than "12,4"
+  const declared = metricForScene(scene, field.metric).unit;
+  const suffix = declared ? ` ${unitText(lang, declared)}` : '';
   switch (field.format) {
     case 'integer':
-      return intFmt.format(Math.round(value));
+      return `${intFmt.format(Math.round(value))}${suffix}`;
     case 'decimal1':
-      return dec1Fmt.format(value);
+      return `${dec1Fmt.format(value)}${suffix}`;
     case 'percent': {
       const pct = value * 100;
       return `${pct > 0 ? '+' : ''}${dec1Fmt.format(pct)} %`;
