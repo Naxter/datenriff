@@ -56,9 +56,10 @@ export async function renderPoster(
 export async function composePoster(
   base: HTMLCanvasElement,
   ctx: PosterContext,
+  dpr = EXPORT_DPR,
 ): Promise<void> {
   const format = currentFormat();
-  const composed = await renderPoster(base, ctx, format, EXPORT_DPR);
+  const composed = await renderPoster(base, ctx, format, dpr);
   const blob = await new Promise<Blob | null>((resolve) =>
     composed.toBlob(resolve, 'image/png'),
   );
@@ -82,14 +83,19 @@ function drawOverlay(
   const u = Math.min(W, H) / 2160;
   c.textBaseline = 'alphabetic';
 
-  // header, top right
+  // masthead, centred — the same lockup the screen carries, so a printed
+  // poster and the app do not disagree about what this is called
   const right = W - MARGIN;
   c.fillStyle = INK;
-  c.globalAlpha = 0.6;
-  c.font = `600 ${30 * u}px Inter, sans-serif`;
-  c.textAlign = 'right';
-  drawTracked(c, 'VERTICAL ATLAS — GERMANY', right, MARGIN + 10 * u, 10 * u);
+  c.textAlign = 'center';
+  c.font = `400 ${56 * u}px "Instrument Serif", Georgia, serif`;
+  const markWidth = drawTracked(c, 'DATENRIFF', W / 2, MARGIN + 46 * u, 37 * u);
+  c.globalAlpha = 0.4;
+  c.font = `600 ${22 * u}px Inter, sans-serif`;
+  // tracked to the width of the name above it, as on screen
+  drawTrackedToWidth(c, 'VERTICAL ATLAS — GERMANY', W / 2, MARGIN + 86 * u, markWidth);
   c.globalAlpha = 1;
+  c.textAlign = 'right';
   c.font = `400 ${190 * u}px "Instrument Serif", Georgia, serif`;
   c.fillText(mode.label.toUpperCase(), right, MARGIN + 190 * u);
   c.globalAlpha = 0.62;
@@ -102,12 +108,12 @@ function drawOverlay(
 
   drawLegend(c, ctx, right, H - MARGIN, u);
 
-  // attribution, bottom left
+  // the data credit stays on the poster: it is a licence condition, and a
+  // poster travels further than the page it came from
   c.textAlign = 'left';
   c.globalAlpha = 0.45;
   c.font = `500 ${26 * u}px Inter, sans-serif`;
-  drawTracked(c, scene.dataset.source.label.toUpperCase(), MARGIN, H - MARGIN - 44 * u, 2.2 * u);
-  drawTracked(c, 'DATENRIFF · VERTICAL ATLAS', MARGIN, H - MARGIN, 2.2 * u);
+  drawTracked(c, scene.dataset.source.label.toUpperCase(), MARGIN, H - MARGIN, 2.2 * u);
   c.globalAlpha = 1;
 }
 
@@ -182,13 +188,28 @@ function drawLegend(
 }
 
 /** Letter-spaced text; canvas has no letter-spacing in every browser. */
+/** Letter-spaced text; returns the width it drew, which the masthead needs
+ *  to line its two rows up. */
+function drawTrackedToWidth(
+  c: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  y: number,
+  target: number,
+): number {
+  const chars = [...text];
+  const bare = chars.reduce((sum, ch) => sum + c.measureText(ch).width, 0);
+  const tracking = chars.length > 1 ? (target - bare) / (chars.length - 1) : 0;
+  return drawTracked(c, text, x, y, tracking);
+}
+
 function drawTracked(
   c: CanvasRenderingContext2D,
   text: string,
   x: number,
   y: number,
   tracking: number,
-): void {
+): number {
   const chars = [...text];
   const widths = chars.map((ch) => c.measureText(ch).width);
   const total = widths.reduce((a, b) => a + b, 0) + tracking * (chars.length - 1);
@@ -200,6 +221,7 @@ function drawTracked(
     cx += widths[i]! + tracking;
   });
   c.textAlign = align;
+  return total;
 }
 
 const nf = new Intl.NumberFormat('de-DE', { maximumFractionDigits: 0 });
