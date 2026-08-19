@@ -120,6 +120,8 @@ Run a pipeline first — see pipelines/zensus/README.md.`,
     boundary: '/data/boundary.json',
     // state outlines for FOCUS (scripts/fetch-states.mjs); optional
     ...(existsSync(join(OUT, 'states.json')) ? { states: '/data/states.json' } : {}),
+    // national outline for the optional border (same script); optional
+    ...(existsSync(join(OUT, 'outline.json')) ? { outline: '/data/outline.json' } : {}),
   };
   writeFileSync(join(OUT, 'manifest.json'), JSON.stringify(manifest, null, 2));
   writeFileSync(

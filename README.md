@@ -143,7 +143,8 @@ Marktstammdatenregister (Bundesnetzagentur, DL-DE-BY-2.0); RAIN from the
 Deutscher Wetterdienst's gridded annual precipitation (DL-DE-BY-2.0). The FOCUS
 control picks cells by the state outlines of BKG VG2500 (© GeoBasis-DE /
 BKG, DL-DE-BY-2.0; `node scripts/fetch-states.mjs`), credited whenever a
-state is in focus. Attribution and the reference date travel in the
+state is in focus; the same script derives the national outline for the
+optional country border, which is off by default. Attribution and the reference date travel in the
 manifest and stay visible in the app, on desktop and mobile alike — for these
 sources the credit is a licence condition, not decoration.
 

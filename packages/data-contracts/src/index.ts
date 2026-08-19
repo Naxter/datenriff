@@ -133,6 +133,9 @@ export interface AtlasManifest {
   boundary?: string;
   /** State outlines for the FOCUS control (BKG VG2500). */
   states?: string;
+  /** National outline (BKG VG2500) for the optional country border. Loaded
+   *  only when a viewer switches the border on: 130 KB nobody else needs. */
+  outline?: string;
 }
 
 export type SequentialScaleType = 'linear' | 'sqrt' | 'log1p';

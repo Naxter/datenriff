@@ -18,6 +18,21 @@ export function loadStates(manifest: AtlasManifest): Promise<StatesFile | null> 
   return statesPromise;
 }
 
+let outlinePromise: Promise<[number, number][][] | null> | null = null;
+
+/** The national border (BKG VG2500), fetched the first time a viewer asks
+ *  for it. 130 KB that the default view has no use for. */
+export function loadOutline(manifest: AtlasManifest): Promise<[number, number][][] | null> {
+  if (!manifest.outline) return Promise.resolve(null);
+  if (!outlinePromise) {
+    outlinePromise = fetch(manifest.outline)
+      .then((res) => (res.ok ? (res.json() as Promise<{ rings: [number, number][][] }>) : null))
+      .then((file) => file?.rings ?? null)
+      .catch(() => null);
+  }
+  return outlinePromise;
+}
+
 export function cityFocus(city: CityLabel): FocusGeometry {
   return {
     kind: 'city',

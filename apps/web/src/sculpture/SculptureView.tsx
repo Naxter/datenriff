@@ -31,6 +31,7 @@ import {
 } from './exportBridge';
 import { createLighting, tuneLighting } from './lighting';
 import { labelTierCap, shadowPassPossible, shadowsEnabled } from './quality';
+import { loadOutline } from '../data/focusData';
 
 /** '#221c15' -> [34, 28, 21]; the settings keep the colour as CSS hex so a
  *  colour input can edit it directly. */
@@ -86,6 +87,13 @@ export function SculptureView({ scene, engine }: Props) {
 
   const quality = useAtlasStore((s) => s.quality);
   const settings = useAtlasStore((s) => s.settings);
+  // the border outline arrives only if someone switches the border on
+  const manifest = useAtlasStore((st) => st.manifest);
+  const [borderRings, setBorderRings] = useState<[number, number][][] | null>(null);
+  useEffect(() => {
+    if (!settings.border || !manifest || borderRings) return;
+    void loadOutline(manifest).then(setBorderRings);
+  }, [settings.border, manifest, borderRings]);
 
   const [viewState, setViewState] = useState<MapViewState>(() => {
     const shared = readUrlState().view;
@@ -468,7 +476,10 @@ export function SculptureView({ scene, engine }: Props) {
     elevationScale: heightScale,
     outgoingLayer,
     fineLayers,
-    border: settings.border ? { color: hexToRgb(settings.borderColor) } : null,
+    border:
+      settings.border && borderRings
+        ? { color: hexToRgb(settings.borderColor), rings: borderRings }
+        : null,
     // stays pickable: the country layer still draws the far field, and the
     // tiles carry no metric values, so hover reads the country cell
     pickable: !exporting,
