@@ -113,7 +113,7 @@ export interface SculptureLayerOptions {
   /** Fine-LOD tile layers, drawn between sculpture and labels. */
   fineLayers?: Layer[];
   /** Optional outline of the country, off unless the viewer asks for it. */
-  border?: { color: [number, number, number] } | null;
+  border?: { color: [number, number, number]; rings: [number, number][][] } | null;
   pickable: boolean;
   onHover?: (info: PickingInfo) => void;
 }
@@ -147,10 +147,10 @@ export function createSculptureLayers(o: SculptureLayerOptions): Layer[] {
     // The country outline is off by default — the columns draw the land, and
     // that is the point of the thing. It earns its place on a sparse mode,
     // where the coast is hard to read from the data alone.
-    o.border && o.scene.boundary.length > 0
+    o.border && o.border.rings.length > 0
       ? new PathLayer({
           id: 'border',
-          data: o.scene.boundary,
+          data: o.border.rings,
           getPath: (ring: [number, number][]) => ring,
           getColor: o.border.color,
           getWidth: 1.4,
