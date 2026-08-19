@@ -128,8 +128,23 @@ plus the city labels and the country outline.
 ## Notes on the V1.1 metrics
 
 - **Vacancy** is published as a *rate*, not as numerator and denominator, so
-  it cannot use the share rule. It aggregates as a dwelling-weighted mean
-  (`--weight-input` the dwellings file).
+  it cannot use the share rule. It aggregates as a dwelling-weighted mean,
+  weighted by `Insgesamt_Wohnungen` from the building-age table — the rate
+  is a share of *all* dwellings. The rent table's `AnzahlWohnungen` counts
+  only rented dwellings (see `homes` below) and weighting by it both skewed
+  the mean and dropped every cell that table does not list.
+- **Two dwelling counts, and they are not interchangeable.** `homes` is the
+  rent table's `AnzahlWohnungen`: rented dwellings in residential buildings,
+  without halls of residence or rent-free lettings — 20.8 million, and the
+  correct weight for the rent average. `homes_total` is the building-age
+  table's `Insgesamt_Wohnungen`: the whole stock, 42.5 million. Modes that
+  are about housing stock stand on `homes_total`.
+- **The `KLAMMERN` marker is not a quality filter.** The vacancy table flags
+  93.7 % of its published numbers "statistically relatively uncertain", so
+  suppressing them would delete the mode. It does not even select the
+  outliers — the *unflagged* values are the more extreme ones (mean 27.7 %
+  against 20.6 %, and 56.8 % of them above a fifth against 34.3 %).
+  Deliberately unused.
 - **Built 2014 or later** is a genuine share (`a2014und_spaeter` over
   `Insgesamt_Wohnungen`). Destatis rounds cell values independently, so a
   few tiny cells report slightly above 100 %; the mode's colour domain clips

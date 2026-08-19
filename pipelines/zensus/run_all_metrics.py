@@ -22,7 +22,12 @@ from zensus_pipeline.pipeline import main as pipeline_main
 
 D = "downloads"
 POP = f"{D}/Zensus2022_Bevoelkerungszahl_100m-Gitter.csv"
+# Counts only *rented* dwellings in residential buildings, without halls of
+# residence and rent-free lettings — 20.8 of Germany's 42.5 million. Right
+# for the rent average, wrong as a stand-in for the housing stock.
 RENT = f"{D}/Durchschnittliche_Nettokaltmiete_und_Anzahl_der_Wohnungen/Zensus2022_Durchschn_Nettokaltmiete_Anzahl_der_Wohnungen_100m-Gitter.csv"
+# The building-age table carries the only per-cell count of *all* dwellings.
+BAUJAHR = f"{D}/Zensus2022_Wohnungen_nach_Baujahresklassen_100m-Gitterzellen.csv"
 DOWNLOAD_DATE = "2026-08-18"
 
 METRICS: dict[str, list[str]] = {
@@ -45,8 +50,13 @@ METRICS: dict[str, list[str]] = {
     ],
     "homes": [
         "--input", RENT, "--rule", "sum", "--value-column", "AnzahlWohnungen",
-        "--metric", "homes", "--label", "Homes", "--unit", "homes",
+        "--metric", "homes", "--label", "Rented dwellings", "--unit", "homes",
         "--source-url", "https://www.destatis.de/static/DE/zensus/gitterdaten/Durchschnittliche_Nettokaltmiete_und_Anzahl_der_Wohnungen.zip",
+    ],
+    "homes_total": [
+        "--input", BAUJAHR, "--rule", "sum", "--value-column", "Insgesamt_Wohnungen",
+        "--metric", "homes_total", "--label", "Dwellings", "--unit", "homes",
+        "--source-url", "https://www.destatis.de/static/DE/zensus/gitterdaten/Wohnungen_nach_Baujahresklassen_in_Gitterzellen.zip",
     ],
     "rent": [
         "--input", RENT, "--rule", "wmean", "--value-column", "durchschnMieteQM",
@@ -62,11 +72,15 @@ METRICS: dict[str, list[str]] = {
         "--metric", "heating", "--label", "Heating energy source",
         "--source-url", "https://www.destatis.de/static/DE/zensus/gitterdaten/Zensus2022_Energietraeger.zip",
     ],
-    # published as a rate, so a dwelling-weighted mean, not a pooled share
+    # Published as a rate, so a dwelling-weighted mean, not a pooled share.
+    # The rate is a share of *all* dwellings, so it weights by all of them:
+    # the rented count both skewed the average and dropped every cell the
+    # rent table does not list (measured against the published 1 km table,
+    # mean error 2.96 -> 2.10 points, and half again as many cells kept).
     "vacancy_rate": [
         "--input", f"{D}/Zensus2022_Leerstandsquote_100m-Gitter.csv",
         "--rule", "wmean", "--value-column", "Leerstandsquote",
-        "--weight-input", RENT, "--weight-value-column", "AnzahlWohnungen",
+        "--weight-input", BAUJAHR, "--weight-value-column", "Insgesamt_Wohnungen",
         "--metric", "vacancy_rate", "--label", "Vacancy rate", "--unit", "%",
         "--source-url", "https://www.destatis.de/static/DE/zensus/gitterdaten/Leerstandsquote_in_Gitterzellen.zip",
     ],
