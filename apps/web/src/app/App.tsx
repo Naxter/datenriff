@@ -236,8 +236,11 @@ export default function App() {
       {shown && <Tooltip mode={shownMode} scene={scene} builder={ctx.builder} />}
       {ready && <Toolbar builder={ctx.builder} />}
       {ready && <StoryPlayer mode={mode} />}
-      {ready && <PageLinks />}
-      {ready && <AboutPanel />}
+      {/* neither needs the scene, and both must survive a dataset switch:
+          the panel would lose the reader's place, and the legal links have
+          to be reachable from every view, including the error screen */}
+      <PageLinks />
+      <AboutPanel />
       <Veil
         visible={status !== 'ready' || !scene}
         intro={introOn ? introPhase : null}
