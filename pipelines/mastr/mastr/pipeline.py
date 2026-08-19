@@ -94,7 +94,12 @@ def run(args: argparse.Namespace) -> None:
     out.mkdir(parents=True, exist_ok=True)
     resolutions = sorted({int(r) for r in args.resolutions.split(",")}, reverse=True)
     base_res = resolutions[0]
-    last_year = int(args.last_year) if args.last_year else _dt.date.today().year
+    # The last *complete* year. Running in August and stopping at "this
+    # year" put a part-year on the end of the timeline and dated the whole
+    # dataset to a 31 December that has not happened yet, so the newest step
+    # was always an undercount presented as the present.
+    today = _dt.date.today()
+    last_year = int(args.last_year) if args.last_year else today.year - 1
     years = list(range(int(args.first_year), last_year + 1))
     west, south, east, north = (float(v) for v in args.bbox.split(","))
 
@@ -213,7 +218,8 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--onshore-only", action="store_true")
     parser.add_argument("--resolutions", default="8,7")
     parser.add_argument("--first-year", default=str(FIRST_YEAR))
-    parser.add_argument("--last-year", default=None, help="default: this year")
+    parser.add_argument("--last-year", default=None,
+                        help="default: last complete year")
     parser.add_argument("--metric-prefix", default="wind_mw")
     parser.add_argument("--label", default="Wind power")
     parser.add_argument("--dataset-id", default="energy")
