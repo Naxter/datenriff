@@ -102,12 +102,24 @@ body {
   left: 40px;
   bottom: 34px;
   z-index: 10;
+}
+
+/* first tier: the families. Second tier: the modes of the open one. The
+   two are told apart by size and tracking, not by boxes or rules. */
+.modenav__families {
   display: flex;
   gap: 22px;
   flex-wrap: wrap;
 }
 
-.modenav__item {
+.modenav__modes {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.modenav__family {
   appearance: none;
   background: none;
   border: none;
@@ -117,6 +129,33 @@ body {
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.22em;
+  color: var(--ink-faint);
+  text-transform: uppercase;
+  border-bottom: 1px solid transparent;
+  transition: color 160ms ease;
+}
+
+.modenav__family:hover,
+.modenav__family:focus-visible {
+  color: var(--ink);
+  outline: none;
+}
+
+.modenav__family--active {
+  color: var(--ink);
+  border-bottom-color: var(--ink);
+}
+
+.modenav__item {
+  appearance: none;
+  background: none;
+  border: none;
+  padding: 4px 0;
+  cursor: pointer;
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
   color: var(--ink-faint);
   text-transform: uppercase;
   border-bottom: 1px solid transparent;
@@ -718,7 +757,9 @@ body {
 .attribution {
   position: absolute;
   left: 40px;
-  bottom: 78px;
+  /* clears both tiers of the nav below it; attribution may never be
+     covered, it is a licence condition */
+  bottom: 108px;
   z-index: 10;
   font-size: 10.5px;
   letter-spacing: 0.08em;
@@ -887,16 +928,26 @@ body {
     left: 20px;
     right: 20px;
     bottom: 16px;
-    gap: 12px 16px;
   }
-  .modenav__item {
+  .modenav__families {
+    gap: 8px 14px;
+  }
+  .modenav__modes {
+    gap: 8px 12px;
+    margin-top: 6px;
+  }
+  .modenav__family {
     font-size: 10px;
     letter-spacing: 0.16em;
+  }
+  .modenav__item {
+    font-size: 9.5px;
+    letter-spacing: 0.12em;
   }
   .legend {
     left: 20px;
     right: 20px;
-    bottom: 74px;
+    bottom: 102px;
     width: auto;
   }
   .legend__palettes {
@@ -906,12 +957,12 @@ body {
      make the credit a licence condition, not decoration. */
   .attribution {
     left: 20px;
-    bottom: 168px;
+    bottom: 196px;
     font-size: 9px;
     letter-spacing: 0.1em;
   }
   .timeline {
-    bottom: 210px;
+    bottom: 238px;
     padding: 8px 14px;
   }
   .timeline input[type='range'] {
