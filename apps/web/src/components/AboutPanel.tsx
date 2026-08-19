@@ -61,24 +61,48 @@ export function AboutPanel() {
   const { lang, t } = useI18n();
   const [doc, setDoc] = useState<Doc | null>(null);
   const scroller = useRef<HTMLDivElement>(null);
+  /** Where the reader was before the tour started driving. */
+  const before = useRef<{ modeId: string; timeT: number } | null>(null);
   const close = useCallback(() => {
+    // the tour moved the mode, the year and the camera on the reader's
+    // behalf; closing it should hand back what they were looking at
     playStory(null);
+    const was = before.current;
+    if (was) {
+      if (useAtlasStore.getState().modeId !== was.modeId) setMode(was.modeId);
+      setTimeT(was.timeT);
+      before.current = null;
+    }
     setOpen(false);
-  }, [playStory, setOpen]);
+  }, [playStory, setMode, setTimeT, setOpen]);
 
   // A toggles it, like E and S; Escape closes it
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement | null)?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA') return;
-      if (e.key === 'Escape' && useAtlasStore.getState().aboutOpen) setOpen(false);
+      if (e.key === 'Escape' && useAtlasStore.getState().aboutOpen) close();
       if ((e.key === 'a' || e.key === 'A') && !e.metaKey && !e.ctrlKey && !e.altKey) {
-        setOpen(!useAtlasStore.getState().aboutOpen);
+        e.preventDefault();
+        if (useAtlasStore.getState().aboutOpen) close();
+        else setOpen(true);
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [setOpen]);
+  }, [setOpen, close]);
+
+  // remember the view the moment the panel opens
+  useEffect(() => {
+    if (!open) {
+      before.current = null;
+      return;
+    }
+    if (!before.current) {
+      const s = useAtlasStore.getState();
+      before.current = { modeId: s.modeId, timeT: s.timeT };
+    }
+  }, [open]);
 
   // the prose is only fetched once somebody wants to read it
   useEffect(() => {

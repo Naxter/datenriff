@@ -73,6 +73,8 @@ const EN: Dict = {
   'family.energy': 'Energy',
 
   'legend.colourRamp': 'Colour ramp',
+  'legend.height': 'Height',
+  'legend.colour': 'Colour',
   'source.prefix': 'Data:',
   'legend.populationChange': 'Population change',
 
@@ -138,6 +140,8 @@ const DE: Dict = {
   'family.energy': 'Energie',
 
   'legend.colourRamp': 'Farbskala',
+  'legend.height': 'Höhe',
+  'legend.colour': 'Farbe',
   'source.prefix': 'Daten:',
   'legend.populationChange': 'Bevölkerungsveränderung',
 

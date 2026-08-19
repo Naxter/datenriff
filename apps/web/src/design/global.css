@@ -412,8 +412,12 @@ body {
 
 .focus__panel {
   position: absolute;
-  top: calc(100% + 12px);
+  /* The button sits in the bottom row, so the panel rises from it. Opening
+     downward put 430 of its 483 px below the fold. */
+  bottom: calc(100% + 12px);
   left: 0;
+  max-height: min(60vh, 520px);
+  overflow-y: auto;
   z-index: 30;
   width: min(84vw, 420px);
   background: var(--paper);
@@ -1434,3 +1438,17 @@ body {
 }
 .unsupported__links a:hover,
 .unsupported__links button:hover { color: var(--ink); }
+
+/* The legend says what each channel encodes: height first, then colour. */
+.legend__height {
+  margin: 0 0 6px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--ink-quiet);
+}
+.legend__key {
+  font-size: 9.5px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}

@@ -117,9 +117,33 @@ export function Legend({ mode, scene, colorStats }: Props) {
     return [base, ...SEQUENTIAL_CHOICES.filter((p) => p !== base)].slice(0, 7);
   }, [mode.colorScale.palette]);
 
+  // The ramp explains colour. In most modes height is a different metric
+  // and was never named on screen, so the reader saw a landscape without
+  // being told what made it tall.
+  const heightId = mode.time
+    ? mode.time.metricTemplate.replace(
+        '{step}',
+        mode.time.steps[nearestStep(timeT, mode.time.steps.length)]!,
+      )
+    : mode.heightMetric;
+  const heightLabel =
+    heightId === stepMetric
+      ? null
+      : i18n.metric(heightId, metricForScene(scene, heightId).label);
+
   return (
     <div className="legend">
-      <p className="legend__title">{title}</p>
+      {heightLabel && (
+        <p className="legend__height">
+          <span className="legend__key">{i18n.t('legend.height')}</span> {heightLabel}
+        </p>
+      )}
+      <p className="legend__title">
+        {isSequential || mode.colorScale.type === 'categorical' ? (
+          <span className="legend__key">{i18n.t('legend.colour')}</span>
+        ) : null}{' '}
+        {title}
+      </p>
       {body}
       {isSequential && (
         <div className="legend__palettes" role="group" aria-label={i18n.t('legend.colourRamp')}>

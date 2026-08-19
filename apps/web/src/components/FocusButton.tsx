@@ -45,6 +45,9 @@ export function FocusButton({ scene }: Props) {
       if ((e.key === 'f' || e.key === 'F') && !e.metaKey && !e.ctrlKey && !e.altKey) {
         const tag = (e.target as HTMLElement | null)?.tagName;
         if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+        // opening focuses the search field, and without this the keypress
+        // that opened it lands there as a literal "f"
+        e.preventDefault();
         setOpen(!useAtlasStore.getState().focusOpen);
       }
     };
