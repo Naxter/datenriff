@@ -30,7 +30,7 @@ import {
   deliverCapture,
 } from './exportBridge';
 import { createLighting, tuneLighting } from './lighting';
-import { labelTierCap, shadowsEnabled } from './quality';
+import { labelTierCap, shadowPassPossible, shadowsEnabled } from './quality';
 import { resolveReducedMotion } from '../state/settings';
 import {
   createColumnLayer,
@@ -471,30 +471,30 @@ export function SculptureView({ scene, engine }: Props) {
   // One LightingEffect for the life of the page. Swapping instances leaves
   // deck 9.1's pipeline cache holding stale shadow bindings ("texture
   // value" errors, blank frame), so strength and angle are tuned on the
-  // existing effect in place (`tuneLighting`), and switching shadows off
-  // just sets their ink to zero. Only switching them *on* after starting
-  // without needs the shadow pass created — that reloads the page (the URL
-  // carries the view). Texture-using layers (labels) opt out via
-  // `shadowEnabled: false`. `?shadows=0` forces off — software renderers
-  // cannot complete the shadow pass at all.
+  // existing effect in place (`tuneLighting`) and the viewer's on/off is
+  // only the shadow ink — which is instant and needs no reload.
+  //
+  // The pass itself is created whenever the device could want it, not only
+  // when shadows currently show. Texture-using layers (labels) opt out via
+  // `shadowEnabled: false`. `?shadows=0` forces it off entirely — software
+  // renderers cannot complete the pass at all.
   const shadowsWanted = shadowsEnabled(quality, settings.shadows);
-  const effectHasShadows = useRef(shadowsWanted);
+  const canShadow = useRef(shadowPassPossible(quality, settings.shadows));
   const effects = useMemo(
-    () => [
-      createLighting(effectHasShadows.current, settings.shadowStrength, settings.lightElevation),
-    ],
+    () => [createLighting(canShadow.current, settings.shadowStrength, settings.lightElevation)],
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
   useEffect(() => {
     tuneLighting(
       effects[0]!,
-      shadowsWanted ? settings.shadowStrength : 0,
+      shadowsWanted && canShadow.current ? settings.shadowStrength : 0,
       settings.lightElevation,
     );
   }, [effects, shadowsWanted, settings.shadowStrength, settings.lightElevation]);
+  // a phone that started without the pass and is asked for shadows anyway
   useEffect(() => {
-    if (shadowsWanted && !effectHasShadows.current) window.location.reload();
+    if (shadowsWanted && !canShadow.current) window.location.reload();
   }, [shadowsWanted]);
 
   const finishCapture = () => {

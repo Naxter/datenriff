@@ -65,6 +65,18 @@ export function shadowsEnabled(profile: QualityProfile, setting: Tri = 'auto'): 
   return profile.shadows;
 }
 
+/** Can this page run the shadow pass at all? Decided once, at mount: the
+ *  pass has to exist in the LightingEffect from the start, and swapping the
+ *  effect later leaves deck 9.1 holding stale shadow bindings. Creating it
+ *  whenever the device could plausibly want shadows means the viewer's
+ *  on/off is only the shadow ink, which needs no reload. */
+export function shadowPassPossible(profile: QualityProfile, setting: Tri = 'auto'): boolean {
+  if (new URLSearchParams(window.location.search).get('shadows') === '0') {
+    return false;
+  }
+  return profile.shadows || setting === 'on';
+}
+
 /** City-label tier cap: the setting, else the profile's. 0 = no labels. */
 export function labelTierCap(profile: QualityProfile, setting: Settings['labels'] = 'auto'): number {
   if (setting === 'none') return 0;
