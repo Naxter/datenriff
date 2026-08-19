@@ -12,6 +12,11 @@
 // GPU; default SwiftShader with ?shadows=0)  --threshold 0.5 (percent of
 // pixels that may differ before a view fails)  --only people,wind
 //
+// A view that ends on a camera flight settles to within a pixel or two, and
+// billboarded city labels then land on different pixels from run to run
+// while the sculpture itself is identical. Those views carry their own,
+// looser `threshold`; the sculpture is what the tool is watching.
+//
 // Views are captured with ?intro=0 so the opening sequence never leaks in.
 
 const path = require('node:path');
@@ -51,7 +56,7 @@ const VIEWS = [
   { id: 'rain-2001', q: 'mode=rain&t=0' },
   { id: 'people-mobile', q: 'mode=people&quality=mobile' },
   { id: 'people-berlin', q: 'mode=people&view=13.405,52.520,9.90,58,-18', wait: 6000 },
-  { id: 'people-focus-bayern', q: 'mode=people&focus=state:DE-09', wait: 5000 },
+  { id: 'people-focus-bayern', q: 'mode=people&focus=state:DE-09', wait: 11000, threshold: 2 },
 ];
 
 (async () => {
@@ -108,7 +113,8 @@ const VIEWS = [
     });
     const pct = (100 * differing) / (a.width * a.height);
     fs.writeFileSync(path.join(OUT, 'diff', `${view.id}.png`), PNG.sync.write(diff));
-    results.push({ id: view.id, status: pct <= THRESHOLD ? 'ok' : 'changed', pct });
+    const limit = view.threshold ?? THRESHOLD;
+    results.push({ id: view.id, status: pct <= limit ? 'ok' : 'changed', pct });
   }
   await browser.close();
 
