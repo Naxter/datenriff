@@ -25,7 +25,7 @@ const args = ['-m', 'unittest', 'discover', '-s', 'tests', '-t', '.', '-v'];
 const sep = win ? ';' : ':';
 // every pipeline reuses the census binary writer, so it goes on PYTHONPATH;
 // tests that need h3/pyproj/h5py skip themselves when those are missing
-const PIPELINES = ['zensus', 'black-marble', 'mastr', 'dwd', 'clc5'].map((name) =>
+const PIPELINES = ['zensus', 'black-marble', 'mastr', 'dwd', 'clc5', 'forest'].map((name) =>
   join(ROOT, 'pipelines', name),
 );
 
