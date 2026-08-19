@@ -5,6 +5,11 @@ export type Tri = 'auto' | 'on' | 'off';
 
 export interface Settings {
   shadows: Tri;
+  /** A thin line around the country. Off by default: the data draws the
+   *  land, which is the whole idea — but on a sparse mode it helps. */
+  border: boolean;
+  /** Any CSS hex; the picker offers a few and takes a custom one. */
+  borderColor: string;
   /** Shadow ink alpha on the paper plane. */
   shadowStrength: number;
   /** Key light elevation above the plane, degrees. */
@@ -16,6 +21,8 @@ export interface Settings {
 
 export const DEFAULT_SETTINGS: Settings = {
   shadows: 'auto',
+  border: false,
+  borderColor: '#221c15',
   shadowStrength: 0.22,
   lightElevation: 62,
   quality: 'auto',
@@ -52,8 +59,12 @@ function sanitize(s: Settings): Settings {
     typeof v === 'number' && Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d;
   const oneOf = <T extends string>(v: unknown, allowed: readonly T[], d: T): T =>
     allowed.includes(v as T) ? (v as T) : d;
+  const hex = (v: unknown, d: string) =>
+    typeof v === 'string' && /^#[0-9a-fA-F]{6}$/.test(v) ? v : d;
   return {
     shadows: oneOf(s.shadows, ['auto', 'on', 'off'], 'auto'),
+    border: typeof s.border === 'boolean' ? s.border : DEFAULT_SETTINGS.border,
+    borderColor: hex(s.borderColor, DEFAULT_SETTINGS.borderColor),
     shadowStrength: clamp(s.shadowStrength, SHADOW_STRENGTH_RANGE, DEFAULT_SETTINGS.shadowStrength),
     lightElevation: clamp(s.lightElevation, LIGHT_ELEVATION_RANGE, DEFAULT_SETTINGS.lightElevation),
     quality: oneOf(s.quality, ['auto', 'desktop', 'mobile'], 'auto'),
