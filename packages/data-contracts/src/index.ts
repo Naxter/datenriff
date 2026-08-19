@@ -7,6 +7,10 @@
 export type AggregationRule =
   | 'sum'
   | 'weightedMean'
+  /** Weighted harmonic mean: the right rule for a per-unit average whose
+   *  unit count is implied, e.g. persons per home. Pooling the arithmetic
+   *  mean of such a value over-weights the large households. */
+  | 'harmonicMean'
   | 'share'
   | 'categoricalDominant';
 
@@ -111,6 +115,14 @@ export interface TimeDefinition {
   steps: string[];
   /** Metric id template, `{step}` replaced by the step label. */
   metricTemplate: string;
+  /** Colour's own series, when it is a different metric that also has one.
+   *  Without this, colour only follows the step if it *is* the height
+   *  metric — which left LAND scrubbing its built share under a land cover
+   *  frozen at the newest vintage. */
+  colorMetricTemplate?: string;
+  /** Saturation's series, for a categorical colour whose dominance is
+   *  published per step as well. */
+  saturationMetricTemplate?: string;
 }
 
 export interface SculptureDataset {

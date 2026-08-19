@@ -96,9 +96,13 @@ export function Legend({ mode, scene, colorStats }: Props) {
   // when colour follows the timeline (a year of night light), the title
   // names the year currently shown, not the latest one
   const timeT = useAtlasStore((s) => s.timeT);
+  const colorTemplate = mode.time
+    ? (mode.time.colorMetricTemplate ??
+      (mode.colorMetric === mode.heightMetric ? mode.time.metricTemplate : undefined))
+    : undefined;
   const stepMetric =
-    mode.time && mode.colorMetric === mode.heightMetric
-      ? mode.time.metricTemplate.replace(
+    mode.time && colorTemplate
+      ? colorTemplate.replace(
           '{step}',
           mode.time.steps[nearestStep(timeT, mode.time.steps.length)]!,
         )

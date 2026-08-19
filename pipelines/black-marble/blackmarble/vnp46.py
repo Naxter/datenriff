@@ -215,7 +215,14 @@ def sample_tile(
     rings=None,
 ) -> Iterator[tuple[float, float, float]]:
     """Yield (lon, lat, radiance) for pixel centres inside the bbox (and the
-    clip rings, if given) that pass the quality mask and the floor."""
+    clip rings, if given) that pass the quality mask.
+
+    A pixel below ``floor`` is dark, not absent: it is clamped to zero and
+    kept. Dropping it instead removed it from the cell's denominator, so a
+    cell's mean became the mean of whatever happened to be lit — reading
+    dim countryside up to 2.5x too bright. Worse over time: the share of
+    sub-floor pixels fell from 62 % in 2012 to 45 % in 2024, so the
+    timeline was partly animating its own survivor set."""
     import numpy as np
 
     from .pipeline import mask_in_rings
@@ -230,7 +237,8 @@ def sample_tile(
     if c0 >= c1 or r0 >= r1:
         return
     block = radiance[r0:r1, c0:c1]
-    ok = ~np.isnan(block) & (block > floor)
+    # fill and bad quality are the only reasons to drop a pixel
+    ok = ~np.isnan(block)
     if quality is not None:
         q = quality[r0:r1, c0:c1]
         ok &= np.isin(q, list(keep_quality))
@@ -242,7 +250,7 @@ def sample_tile(
     keep = (lons >= west) & (lons <= east) & (lats >= south) & (lats <= north)
     if rings is not None:
         keep &= mask_in_rings(lons, lats, rings)
-    values = block[rows_idx, cols_idx]
+    values = np.where(block > floor, block, 0.0)[rows_idx, cols_idx]
     for lon, lat, value in zip(lons[keep], lats[keep], values[keep]):
         yield float(lon), float(lat), float(value)
 

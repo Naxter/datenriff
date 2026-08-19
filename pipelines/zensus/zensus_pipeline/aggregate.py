@@ -97,6 +97,41 @@ def aggregate_weighted_mean_to_parent(
     return {parent: weighted_mean(pairs) for parent, pairs in grouped.items()}
 
 
+def weighted_harmonic_mean(
+    pairs: Iterable[tuple[float | None, float | None]],
+) -> float | None:
+    """SUM(w) / SUM(w/v) — the pooled value of a per-unit average.
+
+    Household size is persons per home. Averaging it arithmetically over
+    cells answers "the average of the averages"; what is wanted is total
+    persons over total homes, and the homes of a cell are w/v. The two
+    differ by about 7 % nationally, always upwards, because a big household
+    contributes more persons and therefore more weight.
+    """
+    weight = 0.0
+    units = 0.0
+    for value, w in pairs:
+        if value is None or w is None or w <= 0 or value <= 0:
+            continue
+        weight += w
+        units += w / value
+    if units <= 0:
+        return None
+    return weight / units
+
+
+def aggregate_harmonic_mean_to_parent(
+    values: Mapping[str, float | None],
+    weights: Mapping[str, float | None],
+    parent_of: Callable[[str], str],
+) -> dict[str, float | None]:
+    """Aggregate a per-unit average one level up, pooling the implied units."""
+    grouped: dict[str, list[tuple[float | None, float | None]]] = defaultdict(list)
+    for cell, value in values.items():
+        grouped[parent_of(cell)].append((value, weights.get(cell)))
+    return {parent: weighted_harmonic_mean(pairs) for parent, pairs in grouped.items()}
+
+
 def aggregate_share_to_parent(
     numerators: Mapping[str, float | None],
     denominators: Mapping[str, float | None],

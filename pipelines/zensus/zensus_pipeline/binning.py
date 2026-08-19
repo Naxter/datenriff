@@ -68,6 +68,26 @@ def accumulate_weighted(
     return means, dict(den)
 
 
+def accumulate_harmonic(
+    cell_payloads: Iterable[tuple[str, dict]],
+    value_key: str,
+    weight_key: str,
+) -> tuple[dict[str, float], dict[str, float]]:
+    """Per-unit average per cell: SUM(w) / SUM(w/v). Returns (value, weight)
+    so coarser levels pool the same way."""
+    weight: dict[str, float] = defaultdict(float)
+    units: dict[str, float] = defaultdict(float)
+    for cell, payload in cell_payloads:
+        value = payload.get(value_key)
+        w = payload.get(weight_key)
+        if value is None or w is None or w <= 0 or value <= 0:
+            continue
+        weight[cell] += w
+        units[cell] += w / value
+    means = {cell: weight[cell] / units[cell] for cell in units if units[cell] > 0}
+    return means, {cell: weight[cell] for cell in means}
+
+
 def accumulate_share(
     cell_payloads: Iterable[tuple[str, dict]],
     numerator_key: str,

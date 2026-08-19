@@ -10,6 +10,8 @@ Rules:
 
   sum       counts (population, homes):
               --value-column Einwohner
+  hmean     per-unit averages (persons per home): SUM(w)/SUM(w/v), so the
+            units are pooled rather than the ratios averaged.
   wmean     averages (age, rent), weighted by a count. The weight comes
             from a column in the same file or from a second grid CSV
             joined on the grid id:
@@ -45,6 +47,7 @@ from pathlib import Path
 
 from . import __version__
 from .aggregate import (
+    aggregate_harmonic_mean_to_parent,
     aggregate_categories_to_parent,
     aggregate_share_to_parent,
     aggregate_sum_to_parent,
@@ -53,6 +56,7 @@ from .aggregate import (
     share,
 )
 from .binning import (
+    accumulate_harmonic,
     accumulate_categories,
     accumulate_share,
     accumulate_sum,
@@ -299,7 +303,7 @@ def run(args: argparse.Namespace) -> None:
     weight_lookup = None
     if args.rule == "sum":
         columns = [args.value_column]
-    elif args.rule == "wmean":
+    elif args.rule in ("wmean", "hmean"):
         columns = [args.value_column]
         if args.weight_input:
             weight_lookup = load_weight_lookup(
@@ -313,7 +317,7 @@ def run(args: argparse.Namespace) -> None:
             columns.append(args.weight_column)
             weight_key = args.weight_column
         else:
-            raise SystemExit("wmean needs --weight-column or --weight-input")
+            raise SystemExit(f"{args.rule} needs --weight-column or --weight-input")
     elif args.rule == "share":
         if not args.numerator_column or not args.denominator_column:
             raise SystemExit("share needs --numerator-column and --denominator-column")
@@ -385,6 +389,30 @@ def run(args: argparse.Namespace) -> None:
             stats = compute_stats(aligned)
             if res == country_res:
                 metric_entries.append(metric_entry(args, "f32", "weightedMean", stats))
+            if res in TILED_RESOLUTIONS:
+                write_tiles(res, res_dir, universe,
+                            [(f"{args.metric}.f32", aligned, "f32")],
+                            {args.metric: stats})
+            lod_fragments.append(lod_fragment(res, universe, {args.metric: stats}))
+
+    elif args.rule == "hmean":
+        means, weights = accumulate_harmonic(cell_payloads, args.value_column, weight_key)
+        print(f"  {len(means):,} res-{BASE_RESOLUTION} cells", file=sys.stderr)
+        for res in write_resolutions:
+            values = (
+                dict(means)
+                if res == BASE_RESOLUTION
+                else aggregate_harmonic_mean_to_parent(
+                    means, weights, lambda c, r=res: parent_of(c, r)
+                )
+            )
+            res_dir = out / f"r{res}"
+            universe = ensure_universe(res_dir, values)
+            aligned = [values.get(cell) for cell in universe]
+            write_f32(res_dir / f"{args.metric}.f32", aligned)
+            stats = compute_stats(aligned)
+            if res == country_res:
+                metric_entries.append(metric_entry(args, "f32", "harmonicMean", stats))
             if res in TILED_RESOLUTIONS:
                 write_tiles(res, res_dir, universe,
                             [(f"{args.metric}.f32", aligned, "f32")],
@@ -561,7 +589,7 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--input", required=True, help="Zensus grid CSV file")
     parser.add_argument("--metric", required=True, help="Metric id, e.g. population_2022")
     parser.add_argument(
-        "--rule", default="sum", choices=["sum", "wmean", "share", "category"]
+        "--rule", default="sum", choices=["sum", "wmean", "hmean", "share", "category"]
     )
     parser.add_argument("--label", help="Human-readable metric label")
     parser.add_argument("--unit")
