@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>About Datenriff</title>
+    <meta name="description" content="An atlas that stands Germany up instead of colouring it in. Every cell is a column: its height is a quantity, its colour a property. This page explains…" />
+    <link rel="canonical" href="https://datenriff.pages.dev/about/" />
+    <link rel="alternate" hreflang="de" href="https://datenriff.pages.dev/ueber/" />
+    <link rel="alternate" hreflang="en" href="https://datenriff.pages.dev/about/" />
+    <link rel="stylesheet" href="/fonts.css" />
+    <style>
+  :root {
+    --paper: #f7f0ea; --ink: #221c15; --soft: rgba(34,28,21,0.66);
+    --faint: rgba(34,28,21,0.14); --accent: #c41e78;
+    --serif: 'Instrument Serif', 'Iowan Old Style', Georgia, serif;
+    --sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --paper: #17130f; --ink: #efe7dd; --soft: rgba(239,231,221,0.66);
+            --faint: rgba(239,231,221,0.16); --accent: #ef7fb4; }
+  }
+  * { box-sizing: border-box; }
+  body { background: var(--paper); color: var(--ink); font-family: var(--sans);
+         font-size: 16px; line-height: 1.65; margin: 0; padding: 3rem 1.4rem 5rem;
+         -webkit-font-smoothing: antialiased; }
+  main { max-width: 44rem; margin: 0 auto; }
+  nav { display: flex; flex-wrap: wrap; gap: 1.2rem; font-size: 0.8rem;
+        letter-spacing: 0.14em; text-transform: uppercase;
+        padding-bottom: 2.2rem; border-bottom: 1px solid var(--faint); }
+  nav a { color: var(--soft); text-decoration: none; }
+  nav a:hover, nav a:focus-visible { color: var(--ink); }
+  nav a[aria-current] { color: var(--ink); }
+  h1 { font-family: var(--serif); font-weight: 400; font-size: clamp(2.2rem, 6vw, 3.2rem);
+       line-height: 1.06; margin: 2.6rem 0 1.2rem; }
+  h2 { font-family: var(--serif); font-weight: 400; font-size: 1.7rem;
+       margin: 2.8rem 0 0.6rem; }
+  p { margin: 0 0 1rem; }
+  .lead { font-size: 1.08rem; color: var(--soft); margin-bottom: 2.2rem; }
+  .placeholder { border-left: 2px solid var(--accent); padding-left: 1rem;
+                 color: var(--soft); font-size: 0.95rem; }
+  footer { margin-top: 4rem; padding-top: 1.4rem; border-top: 1px solid var(--faint);
+           font-size: 0.85rem; color: var(--soft); }
+  footer a { color: inherit; }
+  a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+</style>
+  </head>
+  <body>
+    <main>
+      <nav>
+        <a href="/">To the atlas</a>
+        <a href="/about/" aria-current="page">About</a>
+        <a href="/impressum/">Legal notice</a>
+        <a href="/datenschutz/">Privacy</a>
+      </nav>
+      <h1>About Datenriff</h1>
+      <p class="lead">An atlas that stands Germany up instead of colouring it in. Every cell is a column: its height is a quantity, its colour a property. This page explains why it is built that way, and what the numbers behind it can and cannot bear.</p>
+
+    <section id="form">
+      <h2>Why columns and not a coloured map</h2>
+      <p>A choropleth — districts in five shades — answers the central question badly: how much of what, and exactly where. Colour separates about seven steps reliably, area misleads (an empty district is large, a crowded one small), and administrative borders invent edges that the data does not have.</p>
+      <p>Height carries more. The eye reads silhouettes precisely, compares neighbours without consulting a legend, and picks up patterns too fine for a colour ramp. So height always carries the quantity — people, dwellings, millimetres of rain — and colour carries a second, independent property. You see both at once instead of moving between two maps.</p>
+      <p>The cost is perspective: columns hide each other, and what stands behind looks smaller. That is why the camera tilts differently per mode, why you can rotate and zoom, and why the sculpture stands on paper rather than a plinth — the shadows fall onto the plane and anchor the needles without drawing a box around the country.</p>
+    </section>
+
+    <section id="cells">
+      <h2>What a cell is</h2>
+      <p>The country is divided into hexagons (H3), not administrative units. Hexagons have equidistant neighbours, no corners where four areas meet, and one size everywhere — a cell in Berlin is the same size as one in the Uckermark, so you compare densities rather than district areas.</p>
+      <p>There are four levels of detail: roughly 1.2 km per cell in the country view, then 460 m, 175 m and finally 66 m as you zoom. The fine levels are not loaded whole but in tiles, and only the tiles in view. Anything else would mean millions of columns for one look at Bavaria.</p>
+      <p>When the level changes, the old tile stays until its replacement has arrived. That is why zooming does not flicker: the swap happens tile by tile, not frame by frame.</p>
+    </section>
+
+    <section id="sources">
+      <h2>Where the numbers come from</h2>
+      <p>Five pipelines, all from official or scientific sources, all dated: the 2022 German census (reference date 15 May 2022), annual precipitation from the German weather service, the market master data register of the federal network agency for wind capacity, NASA's VNP46A4 annual night-light composites, and CORINE Land Cover at 5 ha from the federal cartography agency.</p>
+      <p>None of it is live. Each mode names its reference date, and the tooltip shows the value for the year the timeline is on — not the most recent one. A link to the source sits beside every mode.</p>
+      <p>Naming the sources is a licence condition rather than a courtesy (Datenlizenz Deutschland — Namensnennung 2.0 and CC BY 4.0). That is why it cannot be hidden in any view, including the export.</p>
+    </section>
+
+    <section id="limits">
+      <h2>Why values are capped</h2>
+      <p>A colour ramp needs two ends. Pin them to the data's minimum and maximum and a single outlier decides the picture: one cell at €39/m² stretches the scale until Görlitz and Munich look alike. So the ramps stop short of the extremes, and cells beyond them sit at the darkest colour.</p>
+      <p>That is honest as long as the amount is stated. For rent, 7.7 % of cells fall below the pale end and 0.8 % above the dark one; for rainfall in a dry year, 1.2 % below. For average age the clipping is deliberate: the cells beyond the ends are halls of residence and care homes, and pulling them in would erase exactly the contrast the mode exists to show.</p>
+      <p>Height is never capped and stays linear. A column twice as tall means twice the value — otherwise the picture would be decorative rather than readable. Only shares, which end at 1, get their own height ceiling, or every city would stand as a solid wall.</p>
+      <p>Two things are suppressed in the pipeline instead of hidden in the colour: rates of change with a tiny denominator (two residents become four — up 100 %), and cells with no value at all. Missing is not zero. A cell without a figure stays empty rather than asserting a nought nobody reported.</p>
+    </section>
+
+    <section id="accuracy">
+      <h2>What the numbers cannot do</h2>
+      <p>The 2022 census is anonymised: every value in the 100-metre grid is perturbed slightly so that no individual can be recovered. In large cells this is invisible; in small ones it is not — so a single cell is not a fact-check about one street, it is a contribution to the pattern across a region.</p>
+      <p>Remote sensing has its own limits. The forest mask is derived from satellite data and runs a little wider than the forestry definition; night light measures what shines upward, not how bright the street is. Where such deviations are known, they are written down in the relevant pipeline's documentation.</p>
+      <p>And comparisons over time are only as good as the definitions: plenty changed in the census between 2011 and 2022. That is why CHANGE shows change as a share and suppresses small denominators, rather than claiming a precision the sources do not support.</p>
+    </section>
+
+    <section id="colophon">
+      <h2>Colophon</h2>
+      <p>Datenriff is an independent project. The code is open; the data comes from the sources named above and is not shipped with it — it is produced by the pipelines in the repository.</p>
+      <p>Rendering is deck.gl on WebGL2; the sculpture is one geometry morphing between two states, so that a mode change is a movement rather than a cut. There are no analytics, no cookies and no external fonts — what the browser stores is your language and your display settings.</p>
+    </section>
+
+      <footer>
+        <p>Datenriff — Vertical Atlas Germany · <a href="/">To the atlas</a></p>
+      </footer>
+    </main>
+  </body>
+</html>

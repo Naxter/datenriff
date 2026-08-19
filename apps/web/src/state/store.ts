@@ -45,6 +45,7 @@ interface AtlasState {
   /** Region in focus (a state outline or a city radius); null = whole country. */
   focus: FocusGeometry | null;
   focusOpen: boolean;
+  aboutOpen: boolean;
   modeId: string;
   /** Timeline position for time-enabled modes; 1 = latest step. */
   timeT: number;
@@ -66,6 +67,7 @@ interface AtlasState {
   setSettingsOpen(open: boolean): void;
   setFocus(focus: FocusGeometry | null): void;
   setFocusOpen(open: boolean): void;
+  setAboutOpen(open: boolean): void;
   setMode(id: string): void;
   setTimeT(t: number): void;
   setPalette(palette: string | null): void;
@@ -88,6 +90,7 @@ export const useAtlasStore = create<AtlasState>((set) => ({
   settingsOpen: false,
   focus: null,
   focusOpen: false,
+  aboutOpen: false,
   modeId: 'people',
   timeT: 1,
   palette: null,
@@ -112,6 +115,7 @@ export const useAtlasStore = create<AtlasState>((set) => ({
   setSettingsOpen: (settingsOpen) => set({ settingsOpen }),
   setFocus: (focus) => set({ focus, hover: null }),
   setFocusOpen: (focusOpen) => set({ focusOpen }),
+  setAboutOpen: (aboutOpen) => set({ aboutOpen }),
   setMode: (modeId) => set({ modeId, timeT: 1, hover: null }),
   setTimeT: (timeT) => set({ timeT }),
   setPalette: (palette) => set({ palette }),

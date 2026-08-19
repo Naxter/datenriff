@@ -14,6 +14,8 @@ import { Legend } from '../components/Legend';
 import { Tooltip } from '../components/Tooltip';
 import { Wordmark } from '../components/Wordmark';
 import { Toolbar } from '../components/Toolbar';
+import { PageLinks } from '../components/PageLinks';
+import { AboutPanel } from '../components/AboutPanel';
 import { StoryPlayer } from '../components/StoryPlayer';
 import { Veil } from '../components/Veil';
 import { INTRO_GROWTH_MS, introEligible, runIntro } from './intro';
@@ -29,6 +31,7 @@ export default function App() {
   const palette = useAtlasStore((s) => s.palette);
   const setScene = useAtlasStore((s) => s.setScene);
   const sceneLoading = useAtlasStore((s) => s.sceneLoading);
+  const aboutOpen = useAtlasStore((s) => s.aboutOpen);
   const setError = useAtlasStore((s) => s.setError);
   const bumpSculpture = useAtlasStore((s) => s.bumpSculpture);
 
@@ -216,7 +219,7 @@ export default function App() {
     <div
       className={`atlas${introOn ? ' atlas--intro' : ''}${
         sceneLoading ? ' atlas--loading' : ''
-      }`}
+      }${aboutOpen ? ' atlas--about' : ''}`}
     >
       {ctx && scene && <SculptureView scene={scene} engine={ctx.engine} />}
       {scene && (
@@ -233,6 +236,8 @@ export default function App() {
       {shown && <Tooltip mode={shownMode} scene={scene} builder={ctx.builder} />}
       {ready && <Toolbar builder={ctx.builder} />}
       {ready && <StoryPlayer mode={mode} />}
+      {ready && <PageLinks />}
+      {ready && <AboutPanel />}
       <Veil
         visible={status !== 'ready' || !scene}
         intro={introOn ? introPhase : null}
