@@ -50,12 +50,24 @@ Then open <http://localhost:8080/prototype/>.
 | WIND | installed wind power | the same, played 1990 onwards |
 | RAIN | annual precipitation | the same, played year by year |
 | LAND | artificial share of the cell | dominant land cover |
-
-Planned: FOREST — see the [roadmap](docs/roadmap.md).
+| FOREST | forest cover of the cell | share come down since 1985 |
 
 Each mode is a data definition, not code: a height metric, a colour metric and
 a scale. Switching modes blends both on the GPU. Some modes carry curated
 camera moves; `EXPORT` writes a poster PNG in 16:9, 4:5, 1:1 or 9:16.
+
+Height means the same thing at every level of detail. Counts — people,
+dwellings, megawatts — are drawn per unit area, so a 66 m cell has to hold
+proportionally as many to stand as tall as the 460 m cell above it; averages,
+shares and rates are per-area figures already and carry over unchanged. Only
+the country level is calibrated against its own statistics, and the finer
+levels are derived from it.
+
+The camera rests on composed stops — country, region, city — and flies
+between them; the wheel, a double click and `+`/`−` step, and a pinch is drawn
+to the nearest stop when it ends. Every stop belongs to exactly one level of
+detail, so a reader never comes to rest mid-handover. The ladder on the left
+says which stop is current and whether finer detail is still arriving.
 
 Colour ramps are an option, not a constant: switch them via the dots below the
 legend or by URL (`?palette=glacier|ember|noir|…`). The prototype takes the
