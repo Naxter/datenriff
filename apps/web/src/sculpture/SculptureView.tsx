@@ -21,7 +21,14 @@ import type { SceneData } from '../data/loader';
 import { getMode } from '../modes/modes';
 import { useAtlasStore } from '../state/store';
 import { readUrlState, writeUrlState } from '../state/url';
-import { CAMERA_FOVY, INITIAL_VIEW_STATE, fitViewState, zoomHeightScale } from './camera';
+import {
+  CAMERA_FOVY,
+  DENSITY_HEIGHT_FALLOFF,
+  HEIGHT_FALLOFF,
+  INITIAL_VIEW_STATE,
+  fitViewState,
+  zoomHeightScale,
+} from './camera';
 import {
   CAPTURE_EVENT,
   currentDpr,
@@ -47,6 +54,7 @@ import {
   sculptureRadius,
 } from './layers';
 import type { FadeBox } from './morphColumnLayer';
+import { heightIsCount } from './targets';
 import { TileManager, tileZone } from './tiles';
 import { focusBounds, focusKey } from './focus';
 
@@ -332,9 +340,16 @@ export function SculptureView({ scene, engine }: Props) {
   );
 
   // columns ease down in height as the camera closes in past the country
-  // framing (a 100 km needle would otherwise fill a city frame)
+  // framing (a 100 km needle would otherwise fill a city frame). Where the
+  // fine levels carry a count per unit area they rise steeply with detail,
+  // so those modes ease down faster — see DENSITY_HEIGHT_FALLOFF.
   const countryZoom = fitViewState(scene.lod.bounds, window.innerWidth, window.innerHeight).zoom;
-  const heightScale = zoomHeightScale(viewState.zoom, countryZoom);
+  const perAreaHeight = scene.tileLods.length > 0 && heightIsCount(scene, mode);
+  const heightScale = zoomHeightScale(
+    viewState.zoom,
+    countryZoom,
+    perAreaHeight ? DENSITY_HEIGHT_FALLOFF : HEIGHT_FALLOFF,
+  );
 
   // New object identity → deck re-uploads the attributes. That now happens
   // only when an endpoint buffer actually changed (a new mode, a scrub),

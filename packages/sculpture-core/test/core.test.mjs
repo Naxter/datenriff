@@ -8,6 +8,7 @@ import {
   computeOcclusion,
   computeStats,
   elevationScaleFor,
+  fineElevationScale,
   hexColumnRadius,
 } from '../dist/index.js';
 
@@ -19,6 +20,23 @@ test('hexColumnRadius applies overlap to the H3 edge length', () => {
 test('elevationScaleFor calibrates against p995, not max', () => {
   const stats = { min: 0, max: 10000, p50: 10, p95: 100, p995: 1000 };
   assert.equal(elevationScaleFor(stats, 55000, 0.995), 55);
+});
+
+test('fineElevationScale redraws a count per unit area', () => {
+  // r8 (461.4 m) to r10 (65.9 m): forty-nine cells in the place of one
+  const fine = fineElevationScale(10.16, 461.4, 65.9, true);
+  assert.ok(Math.abs(fine / 10.16 - (461.4 / 65.9) ** 2) < 1e-9);
+  // a cell of the same size keeps the country scale
+  assert.equal(fineElevationScale(10.16, 461.4, 461.4, true), 10.16);
+});
+
+test('fineElevationScale leaves a mean or a share alone', () => {
+  assert.equal(fineElevationScale(58.98, 1220.6, 461.4, false), 58.98);
+});
+
+test('fineElevationScale falls back when a cell radius is missing', () => {
+  assert.equal(fineElevationScale(10.16, 0, 65.9, true), 10.16);
+  assert.equal(fineElevationScale(10.16, 461.4, Number.NaN, true), 10.16);
 });
 
 test('computeElevations zeroes NaN and negatives', () => {
