@@ -4,6 +4,7 @@ import { loadManifest, loadScene, requiredMetrics, resolveDataset } from '../dat
 import { availableModes, datasetServesMode, getMode } from '../modes/modes';
 import { TargetBuilder } from '../sculpture/targets';
 import { SculptureView } from '../sculpture/SculptureView';
+import { ZoomLadder } from '../components/ZoomLadder';
 import { useAtlasStore } from '../state/store';
 import { readUrlState } from '../state/url';
 import { resolveReducedMotion } from '../state/settings';
@@ -275,6 +276,7 @@ export default function App() {
         <Legend mode={shownMode} scene={scene} colorStats={shownTarget.colorStats} />
       )}
       {shown && <Tooltip mode={shownMode} scene={scene} builder={ctx.builder} />}
+      {ready && <ZoomLadder />}
       {ready && <Toolbar builder={ctx.builder} />}
       {ready && <StoryPlayer mode={mode} />}
       {/* neither needs the scene, and both must survive a dataset switch:
