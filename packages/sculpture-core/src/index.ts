@@ -8,6 +8,7 @@ export {
   computeStats,
 } from './metrics.js';
 export { computeOcclusion, applyOcclusion } from './occlusion.js';
+export { locateInMerged, mergeOffsets, type PartOffsets } from './merge.js';
 export {
   MorphEngine,
   cubicInOut,

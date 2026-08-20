@@ -390,47 +390,51 @@ export function SculptureView({ scene, engine }: Props) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const fineLayers = useMemo(() => {
     if (fineOpacity <= 0 || !fineLod || !tileManager) return [];
+    const merged = tileManager.merged();
+    if (!merged) return [];
     const fineRadius = fineLod.cellRadiusMeters * 1.15;
-    return tileManager.tiles().map(
-      (tile) =>
-        new ColumnLayer({
-          id: `tile-${tile.key}`,
-          data: {
-            length: tile.count,
-            attributes: {
-              getPosition: { value: tile.positions, size: 2 },
-              getElevation: { value: tile.heights, size: 1 },
-              getFillColor: { value: tile.colors, size: 4 },
-            },
-          } as never,
-          diskResolution: 6,
-          radius: fineRadius,
-          elevationScale: heightScale,
-          extruded: true,
-          flatShading: true,
-          // picked ahead of the country layer: the tooltip then reads this
-          // cell's own values (the country cell beneath only names the place)
-          pickable: true,
-          onHover: (info: PickingInfo) => {
-            if (info.index < 0) {
-              setHover(null);
-              return;
-            }
-            const fine: Record<string, number> = {};
-            for (const [id, arr] of Object.entries(tile.values)) fine[id] = arr[info.index]!;
-            const lon = tile.positions[info.index * 2]!;
-            const lat = tile.positions[info.index * 2 + 1]!;
-            setHover({ x: info.x, y: info.y, index: nearestCountryCell(lon, lat), fine, lonLat: [lon, lat] });
+    // One layer for every visible tile, not one per tile: same geometry,
+    // a single draw call and a single picking pass.
+    return [
+      new ColumnLayer({
+        id: 'tiles-merged',
+        data: {
+          length: merged.count,
+          attributes: {
+            getPosition: { value: merged.positions, size: 2 },
+            getElevation: { value: merged.heights, size: 1 },
+            getFillColor: { value: merged.colors, size: 4 },
           },
-          opacity: fineOpacity,
-          material: {
-            ambient: 0.64,
-            diffuse: 0.52,
-            shininess: 110,
-            specularColor: [46, 42, 38],
-          },
-        }),
-    );
+        } as never,
+        diskResolution: 6,
+        radius: fineRadius,
+        elevationScale: heightScale,
+        extruded: true,
+        flatShading: true,
+        // picked ahead of the country layer: the tooltip then reads this
+        // cell's own values (the country cell beneath only names the place)
+        pickable: true,
+        onHover: (info: PickingInfo) => {
+          const found = info.index >= 0 ? TileManager.locate(merged, info.index) : null;
+          if (!found) {
+            setHover(null);
+            return;
+          }
+          const fine: Record<string, number> = {};
+          for (const [id, arr] of Object.entries(found.tile.values)) fine[id] = arr[found.local]!;
+          const lon = merged.positions[info.index * 2]!;
+          const lat = merged.positions[info.index * 2 + 1]!;
+          setHover({ x: info.x, y: info.y, index: nearestCountryCell(lon, lat), fine, lonLat: [lon, lat] });
+        },
+        opacity: fineOpacity,
+        material: {
+          ambient: 0.64,
+          diffuse: 0.52,
+          shininess: 110,
+          specularColor: [46, 42, 38],
+        },
+      }),
+    ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tileManager, fineLod, fineOpacity, tilesVersion, heightScale, nearestCountryCell]);
 
