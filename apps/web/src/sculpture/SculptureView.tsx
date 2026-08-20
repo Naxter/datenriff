@@ -58,19 +58,24 @@ import { heightIsCount } from './targets';
 import { TileManager, tileZone } from './tiles';
 import { focusBounds, focusKey } from './focus';
 
-/** Crossfade window above a fine LOD's minZoom. */
-const CROSSFADE_ZOOM_SPAN = 0.5;
-/** Tile coverage of the zone at which the country LOD starts to yield, and
- *  at which it has fully yielded. */
-const COVERAGE_START = 0.6;
-const COVERAGE_FULL = 0.92;
+/** How long the country layer takes to hand over to the fine tiles, in ms.
+ *  The handover used to be spread over half a zoom level, which meant every
+ *  zoom in that band drew both layers at once — the same place as a coarse
+ *  cone and as a fine needle, side by side, which reads as a fault rather
+ *  than as detail. It is a moment now, not a place you can stand in. */
+const HANDOVER_MS = 260;
+/** Tile coverage of the zone at which the fine tiles take over, and the
+ *  level it has to fall back to before the country layer returns. The gap
+ *  is hysteresis: panning briefly wants tiles that have not arrived, and
+ *  without it the two layers would trade places on every pan. */
+const COVERAGE_ENTER = 0.92;
+const COVERAGE_LEAVE = 0.55;
 /** Minimum spacing between tile queries while the camera moves. */
 const TILE_QUERY_MS = 250;
 
 /** How long a replaced dataset's sculpture takes to sink into the plane. */
 const OUTGOING_MS = 950;
 
-const clamp01 = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v);
 
 interface Props {
   scene: SceneData;
@@ -155,10 +160,35 @@ export function SculptureView({ scene, engine }: Props) {
   // buffers stay put, so this re-renders without re-uploading anything.
   const [mixAmount, setMixAmount] = useState(1);
   const shownMix = useRef(1);
+  // Country layer → fine tiles: `fineWanted` is decided during render from
+  // tile coverage, `fineMix` eases there over HANDOVER_MS.
+  const [fineMix, setFineMix] = useState(0);
+  const fineWanted = useRef(false);
+  const fineUsableRef = useRef(false);
+  const fineMixRef = useRef(0);
+  const lastFrame = useRef(0);
   useEffect(() => {
     let raf = 0;
     const loop = (now: number) => {
       engine.tick(now);
+      const dt = lastFrame.current ? now - lastFrame.current : 0;
+      lastFrame.current = now;
+      const target = fineWanted.current ? 1 : 0;
+      let next = fineMixRef.current;
+      if (!fineUsableRef.current) {
+        // No fine layer to fade any more (zoomed out past its level, or a
+        // scrub): easing here would fade the country layer *in* over an
+        // empty near field — a hole, not a handover.
+        next = 0;
+      } else if (next !== target && dt > 0) {
+        const step = dt / HANDOVER_MS;
+        next =
+          target > next ? Math.min(target, next + step) : Math.max(target, next - step);
+      }
+      if (next !== fineMixRef.current) {
+        fineMixRef.current = next;
+        setFineMix(next);
+      }
       // transitions and timeline scrubs both move only this uniform
       if (engine.mixAmount !== shownMix.current) {
         shownMix.current = engine.mixAmount;
@@ -276,10 +306,14 @@ export function SculptureView({ scene, engine }: Props) {
   );
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const coverage = useMemo(() => tileManager?.coverage() ?? 0, [tileManager, tilesVersion]);
-  const zoomRamp = fineUsable
-    ? clamp01((viewState.zoom - fineLod.minZoom) / CROSSFADE_ZOOM_SPAN)
-    : 0;
-  const fineOpacity = zoomRamp * clamp01((coverage - COVERAGE_START) / (COVERAGE_FULL - COVERAGE_START));
+  // Who owns the near field: the fine tiles once they cover it, the country
+  // layer until then. Readiness decides, not zoom — the tiles are the truth
+  // about a place as soon as they are all there.
+  fineUsableRef.current = fineUsable;
+  fineWanted.current =
+    fineUsable &&
+    coverage >= (fineMix > 0.5 ? COVERAGE_LEAVE : COVERAGE_ENTER);
+  const fineOpacity = fineUsable ? fineMix : 0;
   const fadeBox: FadeBox | null =
     fineOpacity > 0
       ? {
