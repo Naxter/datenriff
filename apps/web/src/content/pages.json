@@ -183,15 +183,14 @@
     "de": {
       "title": "Impressum",
       "lead": "Angaben gemäß § 5 Digitale-Dienste-Gesetz (DDG).",
-      "placeholder": true,
       "sections": [
         {
           "id": "anbieter",
           "heading": "Diensteanbieter",
           "paragraphs": [
-            "[NAME] — bitte vollständigen bürgerlichen Namen eintragen",
-            "[STRASSE UND HAUSNUMMER]",
-            "[POSTLEITZAHL UND ORT]",
+            "Tobias Moers",
+            "Josef-Burghof-Straße 36",
+            "53919 Weilerswist",
             "Deutschland"
           ]
         },
@@ -199,7 +198,7 @@
           "id": "kontakt",
           "heading": "Kontakt",
           "paragraphs": [
-            "E-Mail: [E-MAIL-ADRESSE]",
+            "E-Mail: crase@live.de",
             "Eine elektronische Kontaktmöglichkeit ist gesetzlich vorgeschrieben; eine Telefonnummer ist es nicht, solange eine schnelle Kontaktaufnahme anders möglich ist."
           ]
         },
@@ -207,7 +206,7 @@
           "id": "verantwortlich",
           "heading": "Inhaltlich verantwortlich",
           "paragraphs": [
-            "[NAME], Anschrift wie oben."
+            "Tobias Moers, Anschrift wie oben."
           ]
         },
         {
@@ -224,13 +223,6 @@
             "Die Inhalte dieser Seiten werden mit Sorgfalt erstellt. Für die Richtigkeit, Vollständigkeit und Aktualität der dargestellten Daten wird keine Gewähr übernommen; maßgeblich sind die jeweils genannten amtlichen Quellen.",
             "Diese Seite verlinkt auf externe Websites der Datenanbieter. Für deren Inhalte sind ausschließlich die jeweiligen Anbieter verantwortlich."
           ]
-        },
-        {
-          "id": "hinweis",
-          "heading": "Hinweis",
-          "paragraphs": [
-            "PLATZHALTER — dieses Impressum ist noch nicht ausgefüllt und ersetzt keine rechtliche Prüfung. Vor der Veröffentlichung müssen die Angaben in eckigen Klammern durch die tatsächlichen Daten ersetzt werden."
-          ]
         }
       ]
     }
@@ -244,7 +236,7 @@
           "id": "verantwortlich",
           "heading": "Verantwortlicher",
           "paragraphs": [
-            "[NAME], [ANSCHRIFT], [E-MAIL] — die Angaben entsprechen dem Impressum und sind dort einzutragen."
+            "Tobias Moers, Josef-Burghof-Straße 36, 53919 Weilerswist, crase@live.de"
           ]
         },
         {
@@ -284,7 +276,7 @@
           "id": "stand",
           "heading": "Stand",
           "paragraphs": [
-            "PLATZHALTER — dieser Text beschreibt den tatsächlichen technischen Stand der Anwendung, ersetzt aber keine rechtliche Prüfung. Vor der Veröffentlichung sind die Angaben in eckigen Klammern zu ergänzen."
+            "Stand: August 2026."
           ]
         }
       ]
