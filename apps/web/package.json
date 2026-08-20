@@ -18,12 +18,12 @@
     "@deck.gl/react": "9.1.14",
     "@deck.gl/widgets": "9.1.14",
     "gifenc": "^1.0.3",
-    "react": "^18.3.1",
+    "react": "^19.2.8",
     "react-dom": "^18.3.1",
     "zustand": "^5.0.2"
   },
   "devDependencies": {
-    "@types/react": "^18.3.12",
+    "@types/react": "^19.2.18",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.5.0",
     "typescript": "^5.9.2",
