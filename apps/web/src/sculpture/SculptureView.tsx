@@ -388,11 +388,32 @@ export function SculptureView({ scene, engine }: Props) {
     [scene],
   );
 
+  // The poster is its own frame: the whole country, fitted to the format,
+  // not wherever the camera happens to stand. Everything downstream has to
+  // follow *that* view — the heights above all. Reading the live camera
+  // while rendering the poster frame put the country on paper with a city's
+  // height falloff, which is to say flat.
+  const exportFormat = exporting ? currentFormat() : null;
+  if (exportFormat && !exportView.current) {
+    // Germany is wider than it is tall, so a portrait crop would leave it
+    // small between two empty bands. Turning the camera lays the country
+    // diagonally across the frame instead.
+    const portrait = exportFormat.width / exportFormat.height < 0.9;
+    exportView.current = {
+      ...fitViewState(scene.lod.bounds, exportFormat.width, exportFormat.height),
+      pitch: viewState.pitch,
+      bearing: (viewState.bearing ?? 0) - (portrait ? 25 : 0),
+    };
+  }
+  const renderView = exportFormat && exportView.current ? exportView.current : viewState;
+  const renderWidth = exportFormat ? exportFormat.width : window.innerWidth;
+  const renderHeight = exportFormat ? exportFormat.height : window.innerHeight;
+
   // columns ease down in height as the camera closes in past the country
   // framing (a 100 km needle would otherwise fill a city frame). Where the
   // fine levels carry a count per unit area they rise steeply with detail,
   // so those modes ease down faster — see DENSITY_HEIGHT_FALLOFF.
-  const countryZoom = fitViewState(scene.lod.bounds, window.innerWidth, window.innerHeight).zoom;
+  const countryZoom = fitViewState(scene.lod.bounds, renderWidth, renderHeight).zoom;
   // The falloff follows what is drawn, not what is chosen: while a new
   // dataset streams, the chosen mode is already the new one and the sculpture
   // sinking into the plane is still the old one. Keeping the last answer that
@@ -402,7 +423,7 @@ export function SculptureView({ scene, engine }: Props) {
   const isCount = scene.tileLods.length > 0 ? heightIsCount(scene, mode) : false;
   if (isCount !== null) perAreaHeight.current = isCount;
   const heightScale = zoomHeightScale(
-    viewState.zoom,
+    renderView.zoom ?? viewState.zoom,
     countryZoom,
     perAreaHeight.current ? DENSITY_HEIGHT_FALLOFF : HEIGHT_FALLOFF,
   );
@@ -613,6 +634,10 @@ export function SculptureView({ scene, engine }: Props) {
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const fineLayers = useMemo(() => {
+    // The poster frames the whole country; the fine tiles cover the near
+    // field of wherever the camera was standing, and pasted into that frame
+    // they are a speck of unrelated detail over one city.
+    if (exporting) return [];
     if (fineOpacity <= 0 || !fineLod || !tileManager) return [];
     const merged = tileManager.merged();
     if (!merged) return [];
@@ -674,6 +699,7 @@ export function SculptureView({ scene, engine }: Props) {
     ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
+    exporting,
     tileManager,
     fineLod,
     fineOpacity,
@@ -822,23 +848,7 @@ export function SculptureView({ scene, engine }: Props) {
       <DeckGL
         ref={deckRef as never}
         views={view}
-        viewState={
-          exporting
-            ? (exportView.current ??= (() => {
-                const f = currentFormat();
-                // Germany is wider than it is tall, so a portrait crop would
-                // leave it small between two empty bands. Turning the camera
-                // lays the country diagonally across the frame instead.
-                const portrait = f.width / f.height < 0.9;
-                const bearing = (viewState.bearing ?? 0) - (portrait ? 25 : 0);
-                return {
-                  ...fitViewState(scene.lod.bounds, f.width, f.height),
-                  pitch: viewState.pitch,
-                  bearing,
-                };
-              })())
-            : viewState
-        }
+        viewState={renderView}
         onViewStateChange={({ viewState: next, interactionState }) => {
           if (exporting) return; // the 4K resize echoes the capture viewState
           setViewState(next as MapViewState);

@@ -67,6 +67,18 @@ const VIEWS = [
   { id: 'phone-small', q: 'mode=people', viewport: { width: 320, height: 568 } },
   { id: 'phone-landscape', q: 'mode=people', viewport: { width: 844, height: 390 } },
   { id: 'people-berlin', q: 'mode=people&view=13.405,52.520,9.90,58,-18', wait: 6000 },
+  // The poster is rendered in its own frame — the whole country, fitted to
+  // the format — while the camera stands somewhere else entirely. That seam
+  // once put the country on paper with a city's height falloff, which is to
+  // say flat, plus a speck of that city's fine tiles. Nothing else in this
+  // list opens a dialog, so nothing else would have seen it.
+  {
+    id: 'export-from-city',
+    q: 'mode=people&view=13.405,52.520,10.90,58,-18',
+    press: 'e',
+    wait: 14000,
+    threshold: 2,
+  },
   { id: 'people-focus-bayern', q: 'mode=people&focus=state:DE-09', wait: 11000, threshold: 2 },
 ];
 
@@ -110,7 +122,13 @@ const VIEWS = [
       continue;
     }
     // let morph, tiles and labels settle
-    await page.waitForTimeout(view.wait ?? (GPU ? 3500 : 12_000));
+    await page.waitForTimeout(view.press ? 9000 : (view.wait ?? (GPU ? 3500 : 12_000)));
+    if (view.press) {
+      // a dialog that renders its own capture needs the scene settled first,
+      // then time of its own for the poster to come back
+      await page.keyboard.press(view.press);
+      await page.waitForTimeout(view.wait ?? 12_000);
+    }
     const currentPath = path.join(OUT, 'current', `${view.id}.png`);
     await page.screenshot({ path: currentPath, timeout: 120_000 });
     const baselinePath = path.join(OUT, 'baseline', `${view.id}.png`);
