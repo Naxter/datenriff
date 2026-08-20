@@ -1,6 +1,20 @@
 """Range-zip reader, unit parser and an end-to-end run on a synthetic export."""
 
+
 from __future__ import annotations
+
+import unittest
+
+def _skip_without(*modules):
+    """Skip rather than error when the scientific stack is absent."""
+    import importlib
+    for name in modules:
+        try:
+            importlib.import_module(name)
+        except ImportError:
+            raise unittest.SkipTest(f'{name} is not installed')
+
+_skip_without('h3')
 
 import datetime as dt
 import io
