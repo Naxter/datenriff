@@ -80,7 +80,9 @@ still work when no pack template is set.
 ```
 
 Statistics are computed offline and drive colour clipping and height
-calibration without a runtime scan.
+calibration without a runtime scan. Height reads them at the country level
+only: the fine levels derive their scale from that one (see
+`fineElevationScale`), so a column means the same at every zoom.
 
 **Stats belong to a LOD, not to a dataset.** Coarser cells pool more people,
 so the same metric has a different distribution at every resolution:
@@ -90,8 +92,8 @@ so the same metric has a different distribution at every resolution:
 | population 2022, p99.5 | 21,225 | 4,807 | 1,195 |
 | population 2022, sum | 82,570,995 | 82,570,995 | 82,570,995 |
 
-Calibrating one resolution with another's stats flattens the sculpture (or
-blows it out). `SculptureLOD.metricStats` carries them per resolution; the
+Calibrating one resolution's *colour* with another's stats flattens the
+sculpture (or blows it out). `SculptureLOD.metricStats` carries them per resolution; the
 tiled LODs carry theirs in `index.json`. The identical sum across resolutions
 is the check that the aggregation is sound.
 

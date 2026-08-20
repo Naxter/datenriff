@@ -10,14 +10,15 @@ import type {
   SculptureMode,
   TileIndex,
 } from '@datenriff/data-contracts';
-import { locateInMerged, mergeOffsets } from '@datenriff/sculpture-core';
+import { fineElevationScale, locateInMerged, mergeOffsets } from '@datenriff/sculpture-core';
 import type { SceneData } from '../data/loader';
 import { CHANGE_PCT_METRIC } from '../modes/modes';
 import {
   OCCLUSION_STRENGTH,
-  PEAKEDNESS,
   TARGET_MAX_HEIGHT_METERS,
   effectiveColorScale,
+  heightIsCount,
+  modeElevationScale,
 } from './targets';
 import { focusKey, type FocusGeometry } from './focus';
 import type {
@@ -157,6 +158,8 @@ export class TileManager {
   private previousGen = '';
   /** Keys wanted by the latest query, and the zone they should cover. */
   private needed = new Set<string>();
+  /** Height scale per level and mode; see `heightScaleOf`. */
+  private readonly heightScales = new Map<string, number>();
   private mergedCache: MergedTiles | null = null;
   private mergedKey = '';
   private zone: LonLatBounds | null = null;
@@ -189,6 +192,7 @@ export class TileManager {
     this.mergedCache = null;
     this.pendingBounds.clear();
     this.needed.clear();
+    this.heightScales.clear();
     for (const entry of this.lods) entry.index = null;
   }
 
@@ -361,6 +365,38 @@ export class TileManager {
     return this.lods.find((e) => e.lod === lod)?.index ?? null;
   }
 
+  /** Metres per unit of the height metric at a fine level.
+   *
+   *  Derived from the country calibration, not from this level's own
+   *  quantiles: a count is redrawn per unit area, a mean, share or rate keeps
+   *  the country scale. Calibrating each level against itself made the same
+   *  place change height as the level changed under it — the ordinary cell
+   *  rose six-fold on the way into r10 while the peaks came down.
+   *
+   *  One viewport asks for up to 300 tiles and the answer is the same for all
+   *  of them, so it is worked out once per level and mode. */
+  private heightScaleOf(
+    lod: SculptureLOD,
+    mode: SculptureMode,
+    fallbackStats: MetricStats,
+  ): number {
+    const key = `${lod.resolution}|${mode.id}`;
+    const cached = this.heightScales.get(key);
+    if (cached !== undefined) return cached;
+    const countryStats = this.scene.lod.metricStats?.[mode.heightMetric];
+    const scale = countryStats
+      ? fineElevationScale(
+          modeElevationScale(mode, countryStats),
+          this.scene.lod.cellRadiusMeters,
+          lod.cellRadiusMeters,
+          heightIsCount(this.scene, mode),
+        )
+      : // no country stats for this metric: fall back to this level's own
+        modeElevationScale(mode, fallbackStats);
+    this.heightScales.set(key, scale);
+    return scale;
+  }
+
   private async fetchIndex(entry: TileLodRuntime): Promise<void> {
     if (!entry.lod.tileIndex) return;
     try {
@@ -393,13 +429,8 @@ export class TileManager {
 
     const heightStats = index.metrics[mode.heightMetric];
     if (!heightStats) return;
-    // same anchor blend as the country LOD, but against this LOD's own stats
     const zeroAt = mode.heightScale.zeroAt ?? 0;
-    const anchor = heightStats.p995 - zeroAt || 1;
-    const top = heightStats.max - zeroAt > 0 ? heightStats.max - zeroAt : anchor;
-    const elevationScale =
-      (mode.heightScale.maxMeters ?? TARGET_MAX_HEIGHT_METERS) /
-      (anchor * Math.pow(top / anchor, PEAKEDNESS));
+    const elevationScale = this.heightScaleOf(lod, mode, heightStats);
 
     const scale = effectiveColorScale(mode, palette);
     const isChange = mode.colorMetric === CHANGE_PCT_METRIC;

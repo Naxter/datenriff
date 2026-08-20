@@ -2,6 +2,7 @@ export { H3_AVG_EDGE_METERS, hexColumnRadius } from './geometry.js';
 export {
   quantileFromStats,
   elevationScaleFor,
+  fineElevationScale,
   computeElevations,
   buildChangePct,
   buildChangeAbs,

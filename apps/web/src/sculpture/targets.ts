@@ -53,6 +53,25 @@ export function effectiveColorScale(
   return { ...scale, palette };
 }
 
+/** The country calibration for a mode: the scale every level is derived
+ *  from (see `fineElevationScale`), and what the country LOD itself uses. */
+export function modeElevationScale(mode: SculptureMode, stats: MetricStats): number {
+  return elevationScaleFor(
+    stats,
+    mode.heightScale.maxMeters ?? TARGET_MAX_HEIGHT_METERS,
+    mode.heightScale.calibrationQuantile ?? 0.995,
+    PEAKEDNESS,
+    mode.heightScale.zeroAt ?? 0,
+  );
+}
+
+/** Does height stand for a count? A count belongs to the area it was counted
+ *  in, so the fine levels redraw it per unit area; a mean, a share or a rate
+ *  is already per-area and carries over as it is. */
+export function heightIsCount(scene: SceneData, mode: SculptureMode): boolean {
+  return metricForScene(scene, mode.heightMetric).aggregation === 'sum';
+}
+
 export interface ModeTarget extends MorphTarget {
   colorStats: MetricStats;
   /** Elevation buffers per time step (same calibration), for scrubbing. */
@@ -172,13 +191,7 @@ export class TargetBuilder {
 
     const height = this.resolveMetric(mode.heightMetric);
     const zeroAt = mode.heightScale.zeroAt ?? 0;
-    const scale = elevationScaleFor(
-      height.stats,
-      mode.heightScale.maxMeters ?? TARGET_MAX_HEIGHT_METERS,
-      mode.heightScale.calibrationQuantile ?? 0.995,
-      PEAKEDNESS,
-      zeroAt,
-    );
+    const scale = modeElevationScale(mode, height.stats);
     const heights = computeElevations(toF32(height.values), scale, undefined, zeroAt);
 
     const color = this.resolveMetric(mode.colorMetric);

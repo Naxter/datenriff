@@ -33,6 +33,33 @@ export function elevationScaleFor(
   return targetMaxMeters / blended;
 }
 
+/** Height of a fine level, derived from the country calibration instead of
+ * that level's own statistics.
+ *
+ * Calibrating every level against its own quantiles makes each one composed
+ * on its own terms, but height then means something different at each zoom:
+ * the same place changes height as the level changes under it. Deriving the
+ * fine scale from the country one keeps a single meaning across the atlas.
+ *
+ * A count (`sum`) belongs to the area it was counted in, so it is redrawn per
+ * unit area: a cell a forty-ninth of the size needs forty-nine times the
+ * metres per person to stand as tall. A mean, a share or a rate already is a
+ * per-area figure and carries over unchanged — same value, same height.
+ *
+ * The scene pays for this at the camera, not in the data: see the height
+ * falloff in `camera.ts`. */
+export function fineElevationScale(
+  countryScale: number,
+  countryCellRadiusMeters: number,
+  fineCellRadiusMeters: number,
+  perArea: boolean,
+): number {
+  if (!perArea) return countryScale;
+  if (!(countryCellRadiusMeters > 0) || !(fineCellRadiusMeters > 0)) return countryScale;
+  const areaRatio = (countryCellRadiusMeters / fineCellRadiusMeters) ** 2;
+  return countryScale * areaRatio;
+}
+
 /** Per-cell elevations in metres. Working in metres (not per-layer scale)
  * keeps cross-mode morphs seamless. NaN → 0. */
 export function computeElevations(
