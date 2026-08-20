@@ -53,6 +53,7 @@ import {
   createColumnLayer,
   createSculptureLayers,
   labelCharacterSet,
+  labelFaceReady,
   sculptureRadius,
 } from './layers';
 import type { FadeBox } from './morphColumnLayer';
@@ -515,12 +516,34 @@ export function SculptureView({ scene, engine }: Props) {
     [scene, engine, engine.bufferVersion, sculptureVersion],
   );
 
+  // TextLayer bakes one glyph atlas per face and keeps it, so a label drawn
+  // before its face has loaded wears the fallback for the rest of the visit.
+  // The weight is the part that bites: the interface loads Inter 400 at once
+  // while the labels ask for 600, which is a file of its own. Labels wait for
+  // the face (`labelFaceReady`); if it is very late they go out in the
+  // fallback and the atlas is re-baked when it lands.
+  const [fontReady, setFontReady] = useState(false);
+  const [labelFontEpoch, setLabelFontEpoch] = useState(0);
+  useEffect(() => {
+    let live = true;
+    void labelFaceReady().then((arrived) => {
+      if (!live) return;
+      setFontReady(true);
+      if (arrived || !document.fonts) return;
+      void document.fonts.ready.then(() => live && setLabelFontEpoch((e) => e + 1));
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
+
   const visibleLabels = useMemo(() => {
+    if (!fontReady) return [];
     const zoom = viewState.zoom;
     const byZoom = zoom > 7 ? 3 : zoom > 6.2 ? 2 : 1;
     const maxTier = Math.min(byZoom, labelTierCap(quality, settings.labels));
     return scene.cities.filter((c) => c.tier <= maxTier);
-  }, [scene.cities, viewState.zoom, quality, settings.labels]);
+  }, [fontReady, scene.cities, viewState.zoom, quality, settings.labels]);
 
   const characterSet = useMemo(() => labelCharacterSet(scene.cities), [scene.cities]);
 
@@ -631,6 +654,7 @@ export function SculptureView({ scene, engine }: Props) {
     data,
     radius,
     labels: visibleLabels,
+    labelFontEpoch,
     characterSet,
     // poster labels: the frame is 1920 CSS px, roughly a laptop window, so
     // the on-screen size is about right already

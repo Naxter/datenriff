@@ -19,6 +19,42 @@ const NEEDLE = new NeedleExtension({ taper: COLUMN_TAPER });
  *  non-literal keeps excess-property checking out of the way. */
 const SHADOW_OFF = { shadowEnabled: false } as object;
 
+/** The face the label atlas is baked from. Inter 600 is a file of its own,
+ *  so waiting for "Inter" — the weight the interface loads at once — is not
+ *  waiting for this. See `labelFaceReady`. */
+export const LABEL_FONT_FAMILY = 'Inter, system-ui, sans-serif';
+export const LABEL_FONT_WEIGHT = 600;
+export const LABEL_FONT_CHECK = `${LABEL_FONT_WEIGHT} 16px Inter`;
+
+/** Wait until the label face is really there.
+ *
+ *  Asking early is worse than not asking: until the stylesheet is parsed
+ *  `document.fonts` holds no faces at all, and `check()` then answers *true*
+ *  — with nothing to match, a fallback counts as available. Measured here:
+ *  at 7 ms zero faces and check true, at 137 ms ten faces and check false,
+ *  at ~1 s the file has landed. A layer built inside that first window bakes
+ *  its atlas from the fallback and keeps it.
+ *
+ *  Resolves true if the face arrived, false if the wait ran out. */
+export async function labelFaceReady(timeoutMs = 2500): Promise<boolean> {
+  if (!document.fonts) return true;
+  if (document.readyState === 'loading') {
+    await new Promise<void>((resolve) =>
+      document.addEventListener('DOMContentLoaded', () => resolve(), { once: true }),
+    );
+  }
+  const deadline = performance.now() + timeoutMs;
+  try {
+    await document.fonts.load(LABEL_FONT_CHECK);
+  } catch {
+    // no network for it; fall through to the poll and then to the fallback
+  }
+  while (!document.fonts.check(LABEL_FONT_CHECK) && performance.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  return document.fonts.check(LABEL_FONT_CHECK);
+}
+
 /** TextLayer is composite: the glyphs render in a `characters` sub-layer,
  *  which does not inherit `shadowEnabled` — the label font atlas then gets
  *  drawn into the shadow map and city names appear as giant letters on the
@@ -99,6 +135,8 @@ export interface SculptureLayerOptions {
   radius: number;
   labels: CityLabel[];
   characterSet: string[];
+  /** Bumped when the label face arrives late; re-bakes the glyph atlas. */
+  labelFontEpoch?: number;
   /** Scales label size/offset, e.g. for the 4K poster frame. */
   labelScale?: number;
   /** Labels fade in last during the opening sequence. */
@@ -173,7 +211,13 @@ export function createSculptureLayers(o: SculptureLayerOptions): Layer[] {
       onHover: o.onHover,
     }),
     ...(o.fineLayers ?? []),
-    new TextLayer<CityLabel>({
+    // Nothing to label, no layer: an empty TextLayer still bakes its glyph
+    // atlas from `characterSet` and caches it, so holding the labels back by
+    // handing over an empty list would bake the fallback face anyway — the
+    // very thing `labelFaceReady` exists to avoid.
+    o.labels.length === 0
+      ? undefined
+      : new TextLayer<CityLabel>({
       id: 'labels',
       data: o.labels,
       characterSet: o.characterSet,
@@ -187,9 +231,18 @@ export function createSculptureLayers(o: SculptureLayerOptions): Layer[] {
       visible: (o.labelOpacity ?? 1) > 0.01,
       getPixelOffset: [0, -14 * (o.labelScale ?? 1)],
       updateTriggers: { getSize: o.labelScale, getPixelOffset: o.labelScale },
-      fontFamily: 'Inter, system-ui, sans-serif',
-      fontWeight: 600,
-      fontSettings: { sdf: true, fontSize: 128, buffer: 8, radius: 12 },
+      fontFamily: LABEL_FONT_FAMILY,
+      fontWeight: LABEL_FONT_WEIGHT,
+      // radius takes part in deck's atlas cache key (family, weight, size,
+      // buffer, radius, cutoff), so a hair of change re-bakes the atlas —
+      // which is how labels baked from the fallback are replaced once the
+      // real face lands. The step is far below anything visible.
+      fontSettings: {
+        sdf: true,
+        fontSize: 128,
+        buffer: 8,
+        radius: 12 + (o.labelFontEpoch ?? 0) * 0.001,
+      },
       outlineWidth: 6,
       outlineColor: PAPER_HALO,
       // the font atlas must not take part in the shadow pass (sampler
