@@ -73,8 +73,12 @@ const SNAP_EPSILON = 0.05;
  *  The handover used to be spread over half a zoom level, which meant every
  *  zoom in that band drew both layers at once — the same place as a coarse
  *  cone and as a fine needle, side by side, which reads as a fault rather
- *  than as detail. It is a moment now, not a place you can stand in. */
-const HANDOVER_MS = 260;
+ *  than as detail. It is a moment now, not a place you can stand in.
+ *
+ *  Long enough to be watched rather than blinked past: the fine cells rise
+ *  out of the coarse height over this window (see the fine layer's
+ *  elevationScale), so the change reads as detail unfolding. */
+const HANDOVER_MS = 620;
 /** Tile coverage of the zone at which the fine tiles take over, and the
  *  level it has to fall back to before the country layer returns. The gap
  *  is hysteresis: panning briefly wants tiles that have not arrived, and
@@ -613,6 +617,13 @@ export function SculptureView({ scene, engine }: Props) {
     const merged = tileManager.merged();
     if (!merged) return [];
     const fineRadius = fineLod.cellRadiusMeters * 1.15;
+    // How much taller the density rule draws this level than the country
+    // one: a 66 m cell covers a forty-ninth of a 460 m cell, so it carries
+    // forty-nine times the metres per person. For a mean, a share or a rate
+    // there is no such step and the ratio is 1.
+    const fineAreaRatio = perAreaHeight.current
+      ? Math.pow((scene.lod.cellRadiusMeters || 1) / (fineLod.cellRadiusMeters || 1), 2)
+      : 1;
     // One layer for every visible tile, not one per tile: same geometry,
     // a single draw call and a single picking pass.
     return [
@@ -628,7 +639,13 @@ export function SculptureView({ scene, engine }: Props) {
         } as never,
         diskResolution: 6,
         radius: fineRadius,
-        elevationScale: heightScale,
+        // Detail unfolds instead of replacing what was there: at mix 0 these
+        // cells stand at the scale the level below was drawing, at mix 1 at
+        // their own density. Landing exactly on 1 leaves the settled picture
+        // untouched — this only shapes the half second of the handover, and
+        // it scales the whole layer alike, so nothing is said about one cell
+        // against another that was not already true.
+        elevationScale: heightScale * Math.pow(fineAreaRatio, fineMix - 1),
         extruded: true,
         flatShading: true,
         // picked ahead of the country layer: the tooltip then reads this
@@ -656,7 +673,16 @@ export function SculptureView({ scene, engine }: Props) {
       }),
     ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tileManager, fineLod, fineOpacity, tilesVersion, heightScale, nearestCountryCell]);
+  }, [
+    tileManager,
+    fineLod,
+    fineOpacity,
+    fineMix,
+    tilesVersion,
+    heightScale,
+    nearestCountryCell,
+    scene.lod.cellRadiusMeters,
+  ]);
 
   // The sinking sculpture's endpoints are set once by fadeOut; only its mix
   // moves, so its data descriptor is built once per outgoing scene.
