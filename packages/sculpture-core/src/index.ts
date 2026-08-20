@@ -8,6 +8,7 @@ export {
   buildChangeAbs,
   computeStats,
 } from './metrics.js';
+export { nearestStop, stepStop } from './camera-stops.js';
 export { computeOcclusion, applyOcclusion } from './occlusion.js';
 export { locateInMerged, mergeOffsets, type PartOffsets } from './merge.js';
 export {

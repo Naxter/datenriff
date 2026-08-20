@@ -7,16 +7,17 @@
 // nothing into its offscreen framebuffer, so hover picking never returns a
 // cell. Verify picking after any deck.gl upgrade.
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import DeckGL from '@deck.gl/react';
 import {
   FlyToInterpolator,
   MapView,
+  WebMercatorViewport,
   type MapViewState,
   type PickingInfo,
 } from '@deck.gl/core';
 import { ColumnLayer } from '@deck.gl/layers';
-import { type MorphEngine } from '@datenriff/sculpture-core';
+import { nearestStop, stepStop, type MorphEngine } from '@datenriff/sculpture-core';
 import type { SceneData } from '../data/loader';
 import { getMode } from '../modes/modes';
 import { useAtlasStore } from '../state/store';
@@ -26,6 +27,7 @@ import {
   DENSITY_HEIGHT_FALLOFF,
   HEIGHT_FALLOFF,
   INITIAL_VIEW_STATE,
+  cameraStops,
   fitViewState,
   zoomHeightScale,
 } from './camera';
@@ -57,6 +59,14 @@ import type { FadeBox } from './morphColumnLayer';
 import { heightIsCount } from './targets';
 import { TileManager, tileZone } from './tiles';
 import { focusBounds, focusKey } from './focus';
+
+/** How long a step between camera stops takes, and how long a stop holds
+ *  before the next wheel notch is read. Without the cooldown one flick of a
+ *  trackpad would run through every stop. */
+const STEP_MS = 700;
+const STEP_COOLDOWN_MS = 380;
+/** Zoom a pinch has to end more than this far from a stop to be pulled in. */
+const SNAP_EPSILON = 0.05;
 
 /** How long the country layer takes to hand over to the fine tiles, in ms.
  *  The handover used to be spread over half a zoom level, which meant every
@@ -392,6 +402,101 @@ export function SculptureView({ scene, engine }: Props) {
     perAreaHeight.current ? DENSITY_HEIGHT_FALLOFF : HEIGHT_FALLOFF,
   );
 
+  // Snapped camera. The wheel and a double click step between composed stops
+  // instead of zooming freely: every frame the reader can come to rest in
+  // belongs to one level of detail, framed on purpose. Touch keeps its pinch
+  // — swallowing that gesture feels broken — and is pulled to the nearest
+  // stop when it ends. Shared links, focus flights and camera stories name
+  // their own zoom and are left alone.
+  const stops = useMemo(() => cameraStops(countryZoom), [countryZoom]);
+  const cameraRef = useRef<{ view: MapViewState; stops: number[] }>({ view: viewState, stops });
+  cameraRef.current = { view: viewState, stops };
+  const lastStepAt = useRef(0);
+  const stepCamera = useCallback((dir: 1 | -1, pointer?: [number, number]) => {
+    const now = performance.now();
+    if (now - lastStepAt.current < STEP_COOLDOWN_MS) return;
+    const { view, stops: list } = cameraRef.current;
+    const from = view.zoom ?? 0;
+    const zoom = stepStop(list, from, dir);
+    if (zoom === from) return;
+    lastStepAt.current = now;
+    let { longitude, latitude } = view;
+    if (dir > 0 && pointer) {
+      // step towards what the reader pointed at, the way a map does
+      const vp = new WebMercatorViewport({
+        ...view,
+        width: window.innerWidth,
+        height: window.innerHeight,
+      });
+      const [lng, lat] = vp.unproject(pointer);
+      if (Number.isFinite(lng) && Number.isFinite(lat)) {
+        longitude = lng!;
+        latitude = lat!;
+      }
+    }
+    setViewState((v) => ({
+      ...v,
+      longitude,
+      latitude,
+      zoom,
+      transitionDuration: STEP_MS,
+      transitionInterpolator: new FlyToInterpolator({ speed: 1.4 }),
+    }));
+  }, []);
+
+  const canvasRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const el = canvasRef.current;
+    if (!el) return;
+    // not passive: the page would otherwise scroll and the browser zoom
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      if (Math.abs(e.deltaY) < 2) return;
+      stepCamera(e.deltaY < 0 ? 1 : -1, [e.clientX, e.clientY]);
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, [stepCamera]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const el = document.activeElement;
+      const typing =
+        el instanceof HTMLInputElement ||
+        el instanceof HTMLTextAreaElement ||
+        el instanceof HTMLSelectElement;
+      if (typing) return;
+      if (e.key === '+' || e.key === '=') stepCamera(1);
+      else if (e.key === '-' || e.key === '_') stepCamera(-1);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [stepCamera]);
+
+  // A pinch is free while it lasts and is drawn to the nearest stop when the
+  // fingers leave the glass.
+  const snapTimer = useRef<number | null>(null);
+  const queueSnap = useCallback(() => {
+    if (snapTimer.current !== null) window.clearTimeout(snapTimer.current);
+    snapTimer.current = window.setTimeout(() => {
+      snapTimer.current = null;
+      const { view, stops: list } = cameraRef.current;
+      const from = view.zoom ?? 0;
+      const zoom = nearestStop(list, from);
+      if (Math.abs(zoom - from) < SNAP_EPSILON) return;
+      setViewState((v) => ({
+        ...v,
+        zoom,
+        transitionDuration: 420,
+        transitionInterpolator: new FlyToInterpolator({ speed: 1.6 }),
+      }));
+    }, 220);
+  }, []);
+  useEffect(() => () => {
+    if (snapTimer.current !== null) window.clearTimeout(snapTimer.current);
+  }, []);
+
   // New object identity → deck re-uploads the attributes. That now happens
   // only when an endpoint buffer actually changed (a new mode, a scrub),
   // not on every frame of a transition.
@@ -600,13 +705,23 @@ export function SculptureView({ scene, engine }: Props) {
         id: 'main',
         fovy: CAMERA_FOVY,
         farZMultiplier: 3,
-        controller: { inertia: 260, touchRotate: true, keyboard: true },
+        controller: {
+          inertia: 260,
+          touchRotate: true,
+          // arrows still pan and rotate; + and − are ours (see stepCamera),
+          // and deck's own zoom would slide the camera to rest anywhere
+          keyboard: { zoomSpeed: 0 },
+          scrollZoom: false,
+          doubleClickZoom: false,
+        },
       }),
     [],
   );
 
   return (
     <div
+      ref={canvasRef}
+      onDoubleClick={(e) => stepCamera(1, [e.clientX, e.clientY])}
       className="atlas__canvas"
       style={
         exporting
@@ -638,9 +753,12 @@ export function SculptureView({ scene, engine }: Props) {
               })())
             : viewState
         }
-        onViewStateChange={({ viewState: next }) => {
+        onViewStateChange={({ viewState: next, interactionState }) => {
           if (exporting) return; // the 4K resize echoes the capture viewState
           setViewState(next as MapViewState);
+          if (interactionState?.isZooming && !interactionState.inTransition) {
+            queueSnap();
+          }
         }}
         layers={layers}
         effects={effects}
