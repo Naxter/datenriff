@@ -67,6 +67,7 @@
       <h2>What a cell is</h2>
       <p>The country is divided into hexagons (H3), not administrative units. Hexagons have equidistant neighbours, no corners where four areas meet, and one size everywhere — a cell in Berlin is the same size as one in the Uckermark, so you compare densities rather than district areas.</p>
       <p>There are four levels of detail: roughly 1.2 km per cell in the country view, then 460 m, 175 m and finally 66 m as you zoom. The fine levels are not loaded whole but in tiles, and only the tiles in view. Anything else would mean millions of columns for one look at Bavaria.</p>
+      <p>Height means the same at every level. Counts — people, dwellings, megawatts — are drawn per unit area, so a fine cell has to hold proportionally as many to stand as tall; averages, shares and rates are per-area figures already and carry over unchanged. What changes with zoom is only how large the whole scene is drawn, never one column against another.</p>
       <p>When the level changes, the old tile stays until its replacement has arrived. That is why zooming does not flicker: the swap happens tile by tile, not frame by frame.</p>
     </section>
 
