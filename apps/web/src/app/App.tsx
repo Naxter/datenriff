@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { MorphEngine } from '@datenriff/sculpture-core';
-import { loadManifest, loadScene, resolveDataset } from '../data/loader';
+import { loadManifest, loadScene, requiredMetrics, resolveDataset } from '../data/loader';
 import { availableModes, datasetServesMode, getMode } from '../modes/modes';
 import { TargetBuilder } from '../sculpture/targets';
 import { SculptureView } from '../sculpture/SculptureView';
@@ -97,9 +97,17 @@ export default function App() {
     );
     engineRef.current?.fadeOut(performance.now(), 700);
     bumpSculpture();
-    loadScene(manifest, wantedDatasetId, quality, (fraction) => {
-      if (!cancelled) useAtlasStore.setState({ sceneProgress: fraction });
-    })
+    const target = manifest.datasets.find((d) => d.id === wantedDatasetId);
+    const opening = target ? requiredMetrics(target, getMode(modeId, target)) : undefined;
+    loadScene(
+      manifest,
+      wantedDatasetId,
+      quality,
+      (fraction) => {
+        if (!cancelled) useAtlasStore.setState({ sceneProgress: fraction });
+      },
+      opening,
+    )
       .then((s) => !cancelled && setScene(s))
       .catch((e: unknown) => {
         if (!cancelled) setError(e instanceof Error ? e.message : String(e));
@@ -108,7 +116,7 @@ export default function App() {
       cancelled = true;
       useAtlasStore.setState({ sceneLoading: false });
     };
-  }, [manifest, wantedDatasetId, scene, quality, setScene, setError, bumpSculpture]);
+  }, [manifest, wantedDatasetId, scene, quality, modeId, setScene, setError, bumpSculpture]);
 
   // no dataset can serve the requested mode → fall back to one that works
   useEffect(() => {
@@ -133,7 +141,40 @@ export default function App() {
   // stays up showing the last mode it could serve; only the target builder
   // waits for `ready`.
   const mode = getMode(modeId, scene?.dataset);
-  const ready = ctx !== null && scene !== undefined && datasetServesMode(scene.dataset, mode);
+  // Once the picture is up, quietly fetch the rest of the dataset so a mode
+  // switch has its buffers ready without another wait.
+  useEffect(() => {
+    if (!scene) return;
+    const id = window.setTimeout(() => scene.loadRest(), 400);
+    return () => window.clearTimeout(id);
+  }, [scene]);
+
+  // A mode switched to before its buffers land: fetch them, and hold the
+  // sculpture on the last mode that can be drawn until they are in.
+  const [metricsVersion, setMetricsVersion] = useState<number>(0);
+  const missing = useMemo(() => {
+    if (!scene) return [];
+    return [...requiredMetrics(scene.dataset, mode)].filter((id) => scene.pending.has(id));
+  }, [scene, mode, metricsVersion]);
+  useEffect(() => {
+    if (!scene || missing.length === 0) return;
+    let cancelled = false;
+    useAtlasStore.setState({ sceneLoading: true });
+    void scene.ensure(missing).then(() => {
+      if (cancelled) return;
+      useAtlasStore.setState({ sceneLoading: false });
+      setMetricsVersion((v) => v + 1);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [scene, missing]);
+
+  const ready =
+    ctx !== null &&
+    scene !== undefined &&
+    datasetServesMode(scene.dataset, mode) &&
+    missing.length === 0;
   const shownModeId = useRef(modeId);
   if (ready) shownModeId.current = modeId;
   const shownMode = getMode(shownModeId.current, scene?.dataset);
