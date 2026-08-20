@@ -37,6 +37,9 @@ export const COLUMN_TAPER = 0.35;
 // only greyed the low cells. Kept as a knob for datasets without shadows.
 export const OCCLUSION_STRENGTH = 0;
 
+/** Stands in for the occlusion field while the strength is zero. */
+const EMPTY_OCCLUSION = new Float32Array(0);
+
 /** Apply a user ramp override; only sequential scales are overridable. */
 export function effectiveColorScale(
   mode: SculptureMode,
@@ -99,6 +102,11 @@ export class TargetBuilder {
 
   /** Occlusion depends on the height field, so it is cached per mode. */
   private occlusion(heights: Float32Array): Float32Array {
+    // applyOcclusion returns immediately at zero strength — but its argument
+    // is evaluated first, so the whole field was computed and thrown away,
+    // once per mode build and once per timeline step. The tile worker
+    // already skips it; this is the same guard on the main thread.
+    if (OCCLUSION_STRENGTH <= 0) return EMPTY_OCCLUSION;
     const radiusDeg = ((this.scene.lod.cellRadiusMeters || 500) * 2.2) / 111_320;
     return computeOcclusion(
       this.scene.positions,
