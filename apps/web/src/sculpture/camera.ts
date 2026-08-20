@@ -46,6 +46,19 @@ export function zoomHeightScale(
   return over <= 0 ? 1 : Math.pow(2, -over * falloff);
 }
 
+/** Composed camera stops above the country framing: a Bundesland-sized
+ *  frame, a city, and a district. Each belongs to exactly one level of
+ *  detail — 8.6 sits well inside the 175 m level (7.0–10.2), 10.9 and 11.9
+ *  inside the 66 m level — so a reader can never come to rest in a handover.
+ *  The country stop is the fitted view and depends on the window. */
+const STOPS_ABOVE_COUNTRY = [8.6, 10.9, 11.9];
+
+/** The stops for this window. A stop too close to the country fit would be
+ *  a step that changes nothing, so it is dropped. */
+export function cameraStops(countryZoom: number): number[] {
+  return [countryZoom, ...STOPS_ABOVE_COUNTRY.filter((z) => z > countryZoom + 0.6)];
+}
+
 /** Zoom is absolute in Mercator, so a fixed default crops small windows and
  *  wastes paper on large ones. Fit the dataset bounds to the viewport instead:
  *  the crust only resolves into individual needles when the sculpture is big

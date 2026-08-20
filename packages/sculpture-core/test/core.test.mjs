@@ -10,6 +10,8 @@ import {
   elevationScaleFor,
   fineElevationScale,
   hexColumnRadius,
+  nearestStop,
+  stepStop,
 } from '../dist/index.js';
 
 test('hexColumnRadius applies overlap to the H3 edge length', () => {
@@ -37,6 +39,29 @@ test('fineElevationScale leaves a mean or a share alone', () => {
 test('fineElevationScale falls back when a cell radius is missing', () => {
   assert.equal(fineElevationScale(10.16, 0, 65.9, true), 10.16);
   assert.equal(fineElevationScale(10.16, 461.4, Number.NaN, true), 10.16);
+});
+
+test('nearestStop picks the closest composed stop', () => {
+  const stops = [6.1, 8.6, 10.9, 11.9];
+  assert.equal(nearestStop(stops, 6.0), 6.1);
+  assert.equal(nearestStop(stops, 9.9), 10.9);
+  assert.equal(nearestStop(stops, 9.6), 8.6); // a tie-free midpoint, lower wins
+  assert.equal(nearestStop([], 7.3), 7.3);
+});
+
+test('stepStop moves one stop at a time, from anywhere', () => {
+  const stops = [6.1, 8.6, 10.9, 11.9];
+  assert.equal(stepStop(stops, 6.1, 1), 8.6);
+  assert.equal(stepStop(stops, 8.6, -1), 6.1);
+  // a shared link or a focus flight can leave the camera between stops
+  assert.equal(stepStop(stops, 9.5, 1), 10.9);
+  assert.equal(stepStop(stops, 9.5, -1), 8.6);
+  // the ends hold
+  assert.equal(stepStop(stops, 11.9, 1), 11.9);
+  assert.equal(stepStop(stops, 6.1, -1), 6.1);
+  // sitting a hair off a stop does not count as being past it
+  assert.equal(stepStop(stops, 10.92, 1), 11.9);
+  assert.equal(stepStop(stops, 10.92, -1), 8.6);
 });
 
 test('computeElevations zeroes NaN and negatives', () => {
