@@ -47,11 +47,11 @@ export function zoomHeightScale(
 }
 
 /** Composed camera stops above the country framing: a Bundesland-sized
- *  frame, a city, and a district. Each belongs to exactly one level of
- *  detail — 8.6 sits well inside the 175 m level (7.0–10.2), 10.9 and 11.9
- *  inside the 66 m level — so a reader can never come to rest in a handover.
- *  The country stop is the fitted view and depends on the window. */
-const STOPS_ABOVE_COUNTRY = [8.6, 10.9, 11.9];
+ *  frame and a city. Each belongs to exactly one level of detail — 8.6 sits
+ *  well inside the 175 m level (7.0–10.2), 10.9 inside the 66 m level — so a
+ *  reader can never come to rest in a handover. The country stop is the
+ *  fitted view and depends on the window. */
+const STOPS_ABOVE_COUNTRY = [8.6, 10.9];
 
 /** The stops for this window. A stop too close to the country fit would be
  *  a step that changes nothing, so it is dropped. */
