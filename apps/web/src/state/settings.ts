@@ -20,7 +20,12 @@ export interface Settings {
 }
 
 export const DEFAULT_SETTINGS: Settings = {
-  shadows: 'auto',
+  // Off (owner, 20 August). A shadow map sized to the canvas cannot resolve
+  // a forest of needles at country zoom: what it draws is a smear east of
+  // the country rather than a pool at each foot, and no angle or strength
+  // fixes that — only the technique would. The switch stays, so it can come
+  // back without a code change.
+  shadows: 'off',
   border: false,
   borderColor: '#221c15',
   shadowStrength: 0.22,

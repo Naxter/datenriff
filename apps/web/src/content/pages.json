@@ -13,7 +13,7 @@
           "paragraphs": [
             "Eine Choroplethenkarte — Landkreise in fünf Farbstufen — beantwortet eine Frage schlecht, die hier die wichtigste ist: wie viel wovon, und wo genau. Farbe kann etwa sieben Stufen sicher unterscheiden, Fläche verzerrt (ein leerer Landkreis ist groß, ein voller klein), und Grenzen erfinden Kanten, die es in den Daten nicht gibt.",
             "Höhe kann mehr. Das Auge liest Silhouetten sehr genau, vergleicht Nachbarn ohne Legende und erkennt Muster, für die eine Farbskala zu grob ist. Deshalb trägt die Höhe immer die Menge — Einwohner, Wohnungen, Millimeter Regen — und die Farbe eine zweite, unabhängige Eigenschaft. Man sieht beides gleichzeitig, ohne zwischen zwei Karten zu springen.",
-            "Der Preis ist die Perspektive: Säulen verdecken einander, und was hinten steht, ist kleiner. Deshalb kippt die Kamera je nach Modus, deshalb kann man drehen und zoomen, und deshalb steht die Skulptur auf Papier statt auf einem Sockel — die Schatten fallen auf die Ebene und verankern die Nadeln, ohne eine Kiste um das Land zu ziehen."
+            "Der Preis ist die Perspektive: Säulen verdecken einander, und was hinten steht, ist kleiner. Deshalb kippt die Kamera je nach Modus, deshalb kann man drehen und zoomen, und deshalb steht die Skulptur auf Papier statt auf einem Sockel, ohne eine Kiste um das Land zu ziehen. Schatten wirft sie keine: ein Schattenwurf über ein ganzes Nadelfeld wird bei Landesansicht zu einem Schleier statt zu einer Pfütze an jedem Fuß. Wer sie sehen will, schaltet sie in den Einstellungen ein."
           ]
         },
         {
@@ -102,7 +102,7 @@
           "paragraphs": [
             "A choropleth — districts in five shades — answers the central question badly: how much of what, and exactly where. Colour separates about seven steps reliably, area misleads (an empty district is large, a crowded one small), and administrative borders invent edges that the data does not have.",
             "Height carries more. The eye reads silhouettes precisely, compares neighbours without consulting a legend, and picks up patterns too fine for a colour ramp. So height always carries the quantity — people, dwellings, millimetres of rain — and colour carries a second, independent property. You see both at once instead of moving between two maps.",
-            "The cost is perspective: columns hide each other, and what stands behind looks smaller. That is why the camera tilts differently per mode, why you can rotate and zoom, and why the sculpture stands on paper rather than a plinth — the shadows fall onto the plane and anchor the needles without drawing a box around the country."
+            "The cost is perspective: columns hide each other, and what stands behind looks smaller. That is why the camera tilts differently per mode, why you can rotate and zoom, and why the sculpture stands on paper rather than a plinth, without drawing a box around the country. It casts no shadows: over a whole field of needles at country scale, a cast shadow becomes a haze rather than a pool at each foot. They can be switched on in the settings."
           ]
         },
         {
