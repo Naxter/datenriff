@@ -10,7 +10,7 @@ import { useAtlasStore } from '../state/store';
 import { useI18n } from '../i18n';
 
 /** Rung labels, coarsest first — the ladder is drawn the other way up. */
-const RUNGS = ['country', 'region', 'city', 'district'] as const;
+const RUNGS = ['country', 'region', 'city'] as const;
 
 export function ZoomLadder() {
   const i18n = useI18n();
