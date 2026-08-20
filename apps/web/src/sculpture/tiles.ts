@@ -10,6 +10,7 @@ import type {
   SculptureMode,
   TileIndex,
 } from '@datenriff/data-contracts';
+import { locateInMerged, mergeOffsets } from '@datenriff/sculpture-core';
 import type { SceneData } from '../data/loader';
 import { CHANGE_PCT_METRIC } from '../modes/modes';
 import {
@@ -35,6 +36,19 @@ export interface ReadyTile {
   colors: Uint8Array;
   /** Raw metric values by id (height, colour / derived change). */
   values: Record<string, Float32Array | Uint8Array>;
+}
+
+/** Every visible tile concatenated into one set of buffers, so the view can
+ *  draw them with a single layer. `offsets` maps a merged index back to the
+ *  tile it came from, which is what the tooltip needs. */
+export interface MergedTiles {
+  count: number;
+  positions: Float32Array;
+  heights: Float32Array;
+  colors: Uint8Array;
+  /** Start index of each tile in the merged arrays, ascending. */
+  offsets: Int32Array;
+  tiles: ReadyTile[];
 }
 
 interface TileLodRuntime {
@@ -143,6 +157,8 @@ export class TileManager {
   private previousGen = '';
   /** Keys wanted by the latest query, and the zone they should cover. */
   private needed = new Set<string>();
+  private mergedCache: MergedTiles | null = null;
+  private mergedKey = '';
   private zone: LonLatBounds | null = null;
 
   /** Bumped state for the view; called whenever ready tiles change. */
@@ -170,6 +186,7 @@ export class TileManager {
     this.worker.onerror = null;
     this.onChange = null;
     this.ready.clear();
+    this.mergedCache = null;
     this.pendingBounds.clear();
     this.needed.clear();
     for (const entry of this.lods) entry.index = null;
@@ -227,6 +244,45 @@ export class TileManager {
       }
     }
     return result;
+  }
+
+  /** The visible tiles as one buffer set, rebuilt only when the set itself
+   *  changes. One layer per tile cost 71 draw calls a frame at city zoom,
+   *  and 73 picking draws per mouse move, for tiles of a few hundred cells;
+   *  concatenating is a memcpy of a megabyte or two per tile arrival. */
+  merged(): MergedTiles | null {
+    const tiles = this.tiles();
+    if (tiles.length === 0) {
+      this.mergedCache = null;
+      this.mergedKey = '';
+      return null;
+    }
+    const key = tiles.map((t) => t.key).join('|');
+    if (this.mergedCache && this.mergedKey === key) return this.mergedCache;
+
+    const { offsets, total: count } = mergeOffsets(tiles.map((t) => t.count));
+    const positions = new Float32Array(count * 2);
+    const heights = new Float32Array(count);
+    const colors = new Uint8Array(count * 4);
+    tiles.forEach((t, i) => {
+      const at = offsets[i]!;
+      positions.set(t.positions.subarray(0, t.count * 2), at * 2);
+      heights.set(t.heights.subarray(0, t.count), at);
+      colors.set(t.colors.subarray(0, t.count * 4), at * 4);
+    });
+    this.mergedKey = key;
+    this.mergedCache = { count, positions, heights, colors, offsets, tiles };
+    return this.mergedCache;
+  }
+
+  /** Which tile a merged index belongs to, and where inside it. The
+   *  arithmetic lives in sculpture-core, where it is under test: an
+   *  off-by-one here reports a real value from the wrong cell, which looks
+   *  entirely plausible on screen. */
+  static locate(merged: MergedTiles, index: number): { tile: ReadyTile; local: number } | null {
+    const at = locateInMerged(merged.offsets, merged.count, index);
+    const tile = at ? merged.tiles[at.part] : undefined;
+    return tile && at ? { tile, local: at.local } : null;
   }
 
   /** Share of the tiles wanted for the current zone that have arrived — in

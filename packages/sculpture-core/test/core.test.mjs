@@ -188,3 +188,47 @@ test('applyOcclusion darkens proportionally and leaves alpha alone', () => {
   applyOcclusion(colors, new Float32Array([1]), 0.5);
   assert.deepEqual([...colors], [100, 50, 25, 255]);
 });
+
+test('locateInMerged maps a concatenated index back to its part', async (t) => {
+  const { locateInMerged, mergeOffsets } = await import('../dist/index.js');
+
+  await t.test('offsets follow the part lengths', () => {
+    const { offsets, total } = mergeOffsets([3, 1, 4]);
+    assert.deepEqual([...offsets], [0, 3, 4]);
+    assert.equal(total, 8);
+  });
+
+  await t.test('every index lands in the part that contains it', () => {
+    const lengths = [3, 1, 4, 2];
+    const { offsets, total } = mergeOffsets(lengths);
+    // walk the whole buffer and rebuild the parts from the answers
+    const rebuilt = lengths.map(() => []);
+    for (let i = 0; i < total; i++) {
+      const at = locateInMerged(offsets, total, i);
+      rebuilt[at.part].push(at.local);
+    }
+    assert.deepEqual(rebuilt, [[0, 1, 2], [0], [0, 1, 2, 3], [0, 1]]);
+  });
+
+  await t.test('the boundaries are the easy place to be off by one', () => {
+    const { offsets, total } = mergeOffsets([3, 1, 4]);
+    assert.deepEqual(locateInMerged(offsets, total, 2), { part: 0, local: 2 });
+    assert.deepEqual(locateInMerged(offsets, total, 3), { part: 1, local: 0 });
+    assert.deepEqual(locateInMerged(offsets, total, 4), { part: 2, local: 0 });
+    assert.deepEqual(locateInMerged(offsets, total, 7), { part: 2, local: 3 });
+  });
+
+  await t.test('an index outside the buffer has no part', () => {
+    const { offsets, total } = mergeOffsets([2, 2]);
+    assert.equal(locateInMerged(offsets, total, -1), null);
+    assert.equal(locateInMerged(offsets, total, 4), null);
+    assert.equal(locateInMerged(offsets, total, 1.5), null);
+    assert.equal(locateInMerged(new Int32Array(0), 0, 0), null);
+  });
+
+  await t.test('a single part is the whole buffer', () => {
+    const { offsets, total } = mergeOffsets([5]);
+    assert.deepEqual(locateInMerged(offsets, total, 0), { part: 0, local: 0 });
+    assert.deepEqual(locateInMerged(offsets, total, 4), { part: 0, local: 4 });
+  });
+});
