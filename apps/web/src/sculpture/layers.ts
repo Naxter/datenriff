@@ -19,11 +19,17 @@ const NEEDLE = new NeedleExtension({ taper: COLUMN_TAPER });
  *  non-literal keeps excess-property checking out of the way. */
 const SHADOW_OFF = { shadowEnabled: false } as object;
 
-/** The face the label atlas is baked from. Inter 600 is a file of its own,
- *  so waiting for "Inter" — the weight the interface loads at once — is not
- *  waiting for this. See `labelFaceReady`. */
+/** The face the label atlas is baked from.
+ *
+ *  Weight 500, not 600: uppercase in a heavy sans with a thick halo read as
+ *  stickers laid over the sculpture, where the reference asks for few names,
+ *  quietly printed. The titles' serif was tried here and lost — it is a
+ *  display face, and at label size its hairlines dissolve into the columns.
+ *
+ *  Every weight is its own file, so the check has to name this one exactly.
+ *  See `labelFaceReady`. */
 export const LABEL_FONT_FAMILY = 'Inter, system-ui, sans-serif';
-export const LABEL_FONT_WEIGHT = 600;
+export const LABEL_FONT_WEIGHT = 500;
 export const LABEL_FONT_CHECK = `${LABEL_FONT_WEIGHT} 16px Inter`;
 
 /** Wait until the label face is really there.
@@ -69,6 +75,9 @@ const TEXT_SHADOW_OFF = {
 
 export const INK: [number, number, number, number] = [34, 28, 21, 235];
 export const PAPER_HALO: [number, number, number, number] = [247, 240, 234, 235];
+/** City names carry less ink than the outline and the labels of the
+ *  interface: they name the place without competing with the sculpture. */
+export const LABEL_INK: [number, number, number, number] = [34, 28, 21, 225];
 /** The page background, so the ground plane disappears into the paper. */
 export const PAPER: [number, number, number, number] = [247, 240, 234, 255];
 
@@ -224,12 +233,14 @@ export function createSculptureLayers(o: SculptureLayerOptions): Layer[] {
       billboard: true,
       sizeUnits: 'pixels',
       getPosition: (d) => [d.lon, d.lat],
-      getText: (d) => d.name.toUpperCase(),
+      // mixed case, not capitals: a name set like a caption sits on the
+      // paper instead of standing on the sculpture
+      getText: (d) => d.name,
       getSize: (d) => (d.tier === 1 ? 12.5 : 11) * (o.labelScale ?? 1),
-      getColor: INK,
+      getColor: LABEL_INK,
       opacity: o.labelOpacity ?? 1,
       visible: (o.labelOpacity ?? 1) > 0.01,
-      getPixelOffset: [0, -14 * (o.labelScale ?? 1)],
+      getPixelOffset: [0, -20 * (o.labelScale ?? 1)],
       updateTriggers: { getSize: o.labelScale, getPixelOffset: o.labelScale },
       fontFamily: LABEL_FONT_FAMILY,
       fontWeight: LABEL_FONT_WEIGHT,
@@ -258,6 +269,9 @@ export function createSculptureLayers(o: SculptureLayerOptions): Layer[] {
 
 export function labelCharacterSet(cities: CityLabel[]): string[] {
   const chars = new Set<string>();
-  for (const c of cities) for (const ch of c.name.toUpperCase()) chars.add(ch);
+  // exactly the characters that will be drawn: the names are set as they are
+  // written, so an atlas built from capitals would be missing every
+  // lowercase letter and every umlaut in its lowercase form
+  for (const c of cities) for (const ch of c.name) chars.add(ch);
   return [...chars];
 }
