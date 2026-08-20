@@ -74,9 +74,9 @@ const TEXT_SHADOW_OFF = {
 } as object;
 
 export const INK: [number, number, number, number] = [34, 28, 21, 235];
-export const PAPER_HALO: [number, number, number, number] = [247, 240, 234, 235];
-/** City names carry less ink than the outline and the labels of the
- *  interface: they name the place without competing with the sculpture. */
+/** A shade lighter than INK: the names say where you are without competing
+ *  with the sculpture. What makes them readable is the knockout behind
+ *  them, not this. */
 export const LABEL_INK: [number, number, number, number] = [34, 28, 21, 225];
 /** The page background, so the ground plane disappears into the paper. */
 export const PAPER: [number, number, number, number] = [247, 240, 234, 255];
@@ -236,7 +236,7 @@ export function createSculptureLayers(o: SculptureLayerOptions): Layer[] {
       // mixed case, not capitals: a name set like a caption sits on the
       // paper instead of standing on the sculpture
       getText: (d) => d.name,
-      getSize: (d) => (d.tier === 1 ? 12.5 : 11) * (o.labelScale ?? 1),
+      getSize: (d) => (d.tier === 1 ? 14 : 12) * (o.labelScale ?? 1),
       getColor: LABEL_INK,
       opacity: o.labelOpacity ?? 1,
       visible: (o.labelOpacity ?? 1) > 0.01,
@@ -254,8 +254,13 @@ export function createSculptureLayers(o: SculptureLayerOptions): Layer[] {
         buffer: 8,
         radius: 12 + (o.labelFontEpoch ?? 0) * 0.001,
       },
-      outlineWidth: 6,
-      outlineColor: PAPER_HALO,
+      // A name over the country's dense middle competes with a thousand
+      // needles of its own tone. What rescues it is the knockout, not the
+      // size or the ink: a wide, fully opaque halo cuts a clean piece of
+      // paper out of the thicket for the word to sit on. Tested against
+      // bigger type with a narrower halo, which stayed unreadable.
+      outlineWidth: 10,
+      outlineColor: PAPER,
       // the font atlas must not take part in the shadow pass (sampler
       // corruption in 9.1, and letter-shaped shadows on the ground plane)
       ...TEXT_SHADOW_OFF,
