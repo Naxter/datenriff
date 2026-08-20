@@ -7,7 +7,8 @@ with the feel of a printed poster.
 
 ![Vertical Atlas — People](docs/media/hero-people.png)
 
-*Rendered from the prototype; Census 2022 population, 272,503 H3 cells.*
+*The app's own poster export (`EXPORT`, 16:9): Census 2022 population,
+272,503 H3 cells of 460 m.*
 
 ## Quickstart
 
