@@ -56,6 +56,16 @@ interface AtlasState {
   view: MapViewState | null;
   /** Current stop of a running camera story, or null. */
   storyStop: CameraStop | null;
+  /** Where the camera sits on the ladder of composed stops, and how much of
+   *  the finer detail for it has arrived. `detail` is null where the stop
+   *  has no finer level under it (the country view) or tiles are switched
+   *  off (mobile), so the reader is only told about loading that is real. */
+  zoomStops: number[];
+  zoomStopIndex: number;
+  detailCoverage: number | null;
+  /** A stop the reader asked for by clicking the ladder; the view flies
+   *  there and clears it. */
+  zoomStopRequest: number | null;
   /** Bumped when the engine buffers were mutated outside the render loop. */
   sculptureVersion: number;
   setManifest(manifest: AtlasManifest): void;
@@ -73,6 +83,8 @@ interface AtlasState {
   setPalette(palette: string | null): void;
   setHover(hover: HoverInfo | null): void;
   setView(view: MapViewState): void;
+  setZoomLadder(stops: number[], index: number, coverage: number | null): void;
+  requestZoomStop(index: number | null): void;
   playStory(stop: CameraStop | null): void;
   bumpSculpture(): void;
 }
@@ -97,6 +109,10 @@ export const useAtlasStore = create<AtlasState>((set) => ({
   hover: null,
   view: null,
   storyStop: null,
+  zoomStops: [],
+  zoomStopIndex: 0,
+  detailCoverage: null,
+  zoomStopRequest: null,
   sculptureVersion: 0,
   setManifest: (manifest) => set({ manifest }),
   setScene: (scene) => set({ scene, status: 'ready', sceneLoading: false, sceneProgress: 1 }),
@@ -122,6 +138,9 @@ export const useAtlasStore = create<AtlasState>((set) => ({
   setPalette: (palette) => set({ palette }),
   setHover: (hover) => set({ hover }),
   setView: (view) => set({ view }),
+  setZoomLadder: (zoomStops, zoomStopIndex, detailCoverage) =>
+    set({ zoomStops, zoomStopIndex, detailCoverage }),
+  requestZoomStop: (zoomStopRequest) => set({ zoomStopRequest }),
   playStory: (storyStop) => set({ storyStop }),
   bumpSculpture: () => set((s) => ({ sculptureVersion: s.sculptureVersion + 1 })),
 }));

@@ -498,6 +498,42 @@ export function SculptureView({ scene, engine }: Props) {
     if (snapTimer.current !== null) window.clearTimeout(snapTimer.current);
   }, []);
 
+  // Tell the interface where the camera sits and whether the detail for this
+  // stop is still on its way: a guided camera that gives no sign of either
+  // leaves the reader guessing, and stepping in again while tiles are still
+  // decoding means missing the picture that was about to arrive.
+  const setZoomLadder = useAtlasStore((s) => s.setZoomLadder);
+  const stopIndex = useMemo(() => {
+    const at = nearestStop(stops, viewState.zoom ?? 0);
+    return Math.max(0, stops.indexOf(at));
+  }, [stops, viewState.zoom]);
+  const detailCoverage = fineUsable ? Math.min(1, Math.max(0, coverage)) : null;
+  const publishedLadder = useRef('');
+  useEffect(() => {
+    // coarse enough not to publish on every tile, fine enough to animate
+    const rounded = detailCoverage === null ? null : Math.round(detailCoverage * 20) / 20;
+    const key = `${stops.join(',')}|${stopIndex}|${rounded}`;
+    if (publishedLadder.current === key) return;
+    publishedLadder.current = key;
+    setZoomLadder(stops, stopIndex, rounded);
+  }, [stops, stopIndex, detailCoverage, setZoomLadder]);
+
+  // the reader clicked a rung
+  const zoomStopRequest = useAtlasStore((s) => s.zoomStopRequest);
+  const requestZoomStop = useAtlasStore((s) => s.requestZoomStop);
+  useEffect(() => {
+    if (zoomStopRequest === null) return;
+    const zoom = stops[zoomStopRequest];
+    requestZoomStop(null);
+    if (zoom === undefined) return;
+    setViewState((v) => ({
+      ...v,
+      zoom,
+      transitionDuration: STEP_MS,
+      transitionInterpolator: new FlyToInterpolator({ speed: 1.4 }),
+    }));
+  }, [zoomStopRequest, stops, requestZoomStop]);
+
   // New object identity → deck re-uploads the attributes. That now happens
   // only when an endpoint buffer actually changed (a new mode, a scrub),
   // not on every frame of a transition.

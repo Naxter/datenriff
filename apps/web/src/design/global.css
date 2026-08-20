@@ -1478,3 +1478,163 @@ body {
   text-transform: uppercase;
   color: var(--ink-faint);
 }
+
+/* ---------------- detail ladder ---------------- */
+
+/* Where the camera is on the ladder of composed stops, and whether the
+   detail for the rung it stands on has arrived. Left edge, vertically
+   centred: the only quiet strip left, and a ladder reads upright. */
+.ladder {
+  position: absolute;
+  left: 40px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.ladder__rungs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  /* closest at the top: the ladder is climbed upwards */
+  flex-direction: column-reverse;
+  gap: 2px;
+}
+
+.ladder__rung {
+  appearance: none;
+  border: 0;
+  background: none;
+  padding: 5px 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  pointer-events: auto;
+  color: var(--ink-quiet);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.ladder__tick {
+  width: 22px;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.5;
+  transition: width 160ms ease, opacity 160ms ease;
+}
+
+.ladder__name {
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+
+.ladder:hover .ladder__name,
+.ladder__rung:focus-visible .ladder__name,
+.ladder__rung--active .ladder__name {
+  opacity: 1;
+}
+
+.ladder__rung--active {
+  color: var(--ink);
+}
+
+.ladder__rung--active .ladder__tick {
+  width: 34px;
+  opacity: 1;
+}
+
+.ladder__rung:hover .ladder__tick {
+  opacity: 1;
+}
+
+/* The detail bar belongs to the active rung: that stop's finer cells are
+   still arriving, and the coarse ones are what is on screen meanwhile. */
+.ladder__detail {
+  min-height: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ladder__detailBar {
+  display: block;
+  width: 34px;
+  height: 2px;
+  background: var(--hairline);
+  overflow: hidden;
+}
+
+.ladder__detailBar > span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transform-origin: left center;
+  transition: transform 240ms ease;
+}
+
+.ladder__detailText {
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-quiet);
+}
+
+/* phones: only the rung the reader is on says its name — the others would
+   not fit, but a rail of bare ticks answers nothing. */
+@media (max-width: 560px) {
+  /* A phone frame has no quiet middle — the sculpture fills it and the city
+     names lie across it — and no quiet left edge either. The rail lies down
+     instead: one row under the toolbar, coarsest on the left, and only the
+     rung the reader stands on says its name. */
+  .ladder {
+    left: 16px;
+    top: 78px;
+    transform: none;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .ladder__rungs {
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .ladder__rung {
+    padding: 6px 0;
+  }
+
+  .ladder__tick {
+    width: 12px;
+  }
+
+  .ladder__rung--active .ladder__tick {
+    width: 20px;
+  }
+
+  /* only the rung the reader stands on: four of them in a row would run
+     into the wordmark, and on a phone the rail is a read-out, not a
+     control — the pinch does the moving */
+  .ladder__item:not(.ladder__item--active) {
+    display: none;
+  }
+
+  .ladder__name {
+    font-size: 9.5px;
+    letter-spacing: 0.12em;
+    opacity: 1;
+  }
+
+  .ladder__detail {
+    min-height: 0;
+  }
+}
