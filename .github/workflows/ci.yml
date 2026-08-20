@@ -20,9 +20,24 @@ jobs:
         with:
           python-version: '3.12'
 
+      # The pipeline suites need these to run at all: without them mastr,
+      # clc5 and forest fail at import rather than skipping, so CI was
+      # reporting on four of six pipelines and nobody noticed.
+      - run: pip install numpy h3 pyproj rasterio
+
       - run: npm ci
       - run: npm run typecheck
       - run: npm run test
       # The data lives outside the repo (multi-GB census downloads); the
-      # build only needs the app to compile.
-      - run: npm run build -w @datenriff/web
+      # build only needs the app to compile. `npm run build` also renders
+      # the standing pages, so it catches content that drifted from
+      # pages.json.
+      - run: npm run build
+
+      # Generated pages must match their source, or /impressum/ can say one
+      # thing in the repo and another on the site.
+      - run: git diff --exit-code apps/web/public
+
+      # check-picking and the visual check are deliberately not here: both
+      # drive the real atlas, which needs the multi-GB data that lives
+      # outside the repo. They are local gates, and the README says so.

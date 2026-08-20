@@ -1,3 +1,19 @@
+import unittest
+
+def _skip_without(*modules):
+    """Skip rather than error when the scientific stack is absent.
+
+    CI installs it; a contributor reading the parsers may not have it,
+    and an import error there looks like a broken repo."""
+    import importlib
+    for name in modules:
+        try:
+            importlib.import_module(name)
+        except ImportError:
+            raise unittest.SkipTest(f'{name} is not installed')
+
+_skip_without('h3', 'numpy', 'rasterio')
+
 import json
 import tempfile
 import unittest
