@@ -71,6 +71,11 @@ export function shadowsEnabled(profile: QualityProfile, setting: Tri = 'auto'): 
  *  on/off is only the shadow ink, which needs no reload. */
 export function shadowPassPossible(profile: QualityProfile, setting: Tri = 'auto'): boolean {
   if (launchParam('shadows') === '0') return false;
+  // 'off' skips the pass entirely rather than rendering it and hiding the
+  // result behind zero alpha — it roughly doubles the geometry cost. Asking
+  // for shadows afterwards reloads the page once (SculptureView), which is
+  // the path a phone already took.
+  if (setting === 'off') return false;
   return profile.shadows || setting === 'on';
 }
 

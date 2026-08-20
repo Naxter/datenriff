@@ -76,7 +76,7 @@ flowchart TB
 | Height | always linear; the country level is calibrated as `targetMax / p99.5`, the fine levels are derived from it per unit area |
 | Colour | sqrt/log1p for quantities, diverging for change, categorical plus dominance; ramps switchable as an option |
 | Basemap | none — off-white canvas with a subtle country outline |
-| Lighting | ambient + warm key + cool fill; one stable effect, shadows cast onto a paper-coloured ground plane |
+| Lighting | ambient + warm key + cool fill; one stable effect. Cast shadows are off by default — a shadow map sized to the canvas cannot resolve a needle field at country zoom — and the pass is skipped with them |
 | Camera | pitch ≈ 58, bearing ≈ −18, fovy ≈ 24 |
 | Hosting | static-first: Vite build + binary assets + CDN; a backend only for live data |
 | Preprocessing | Python; standard library core plus pyproj and h3 |
