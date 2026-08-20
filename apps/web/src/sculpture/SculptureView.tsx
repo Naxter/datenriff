@@ -344,11 +344,18 @@ export function SculptureView({ scene, engine }: Props) {
   // fine levels carry a count per unit area they rise steeply with detail,
   // so those modes ease down faster — see DENSITY_HEIGHT_FALLOFF.
   const countryZoom = fitViewState(scene.lod.bounds, window.innerWidth, window.innerHeight).zoom;
-  const perAreaHeight = scene.tileLods.length > 0 && heightIsCount(scene, mode);
+  // The falloff follows what is drawn, not what is chosen: while a new
+  // dataset streams, the chosen mode is already the new one and the sculpture
+  // sinking into the plane is still the old one. Keeping the last answer that
+  // belonged to this scene stops those columns from jumping to eight times
+  // their height on the way out.
+  const perAreaHeight = useRef(false);
+  const isCount = scene.tileLods.length > 0 ? heightIsCount(scene, mode) : false;
+  if (isCount !== null) perAreaHeight.current = isCount;
   const heightScale = zoomHeightScale(
     viewState.zoom,
     countryZoom,
-    perAreaHeight ? DENSITY_HEIGHT_FALLOFF : HEIGHT_FALLOFF,
+    perAreaHeight.current ? DENSITY_HEIGHT_FALLOFF : HEIGHT_FALLOFF,
   );
 
   // New object identity → deck re-uploads the attributes. That now happens

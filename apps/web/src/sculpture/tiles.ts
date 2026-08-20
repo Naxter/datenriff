@@ -389,7 +389,7 @@ export class TileManager {
           modeElevationScale(mode, countryStats),
           this.scene.lod.cellRadiusMeters,
           lod.cellRadiusMeters,
-          heightIsCount(this.scene, mode),
+          heightIsCount(this.scene, mode) ?? false,
         )
       : // no country stats for this metric: fall back to this level's own
         modeElevationScale(mode, fallbackStats);

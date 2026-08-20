@@ -67,9 +67,16 @@ export function modeElevationScale(mode: SculptureMode, stats: MetricStats): num
 
 /** Does height stand for a count? A count belongs to the area it was counted
  *  in, so the fine levels redraw it per unit area; a mean, a share or a rate
- *  is already per-area and carries over as it is. */
-export function heightIsCount(scene: SceneData, mode: SculptureMode): boolean {
-  return metricForScene(scene, mode.heightMetric).aggregation === 'sum';
+ *  is already per-area and carries over as it is.
+ *
+ *  `null` when this scene's dataset does not carry the metric at all: while a
+ *  new dataset streams, the chosen mode is already the new one and the
+ *  sculpture on screen is still the old one, so the pair does not have to
+ *  match. Asking the definition directly rather than through
+ *  `metricForScene`, which throws on an unknown metric. */
+export function heightIsCount(scene: SceneData, mode: SculptureMode): boolean | null {
+  const def = scene.dataset.metrics.find((m) => m.id === mode.heightMetric);
+  return def ? def.aggregation === 'sum' : null;
 }
 
 export interface ModeTarget extends MorphTarget {
