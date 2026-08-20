@@ -65,7 +65,8 @@
       with H3 cells and writes the artificial share and the dominant cover
       per cell. 2021 is in; the older vintages are shapefiles, and with two
       of them loaded the mode gains a timeline of sealing
-- [ ] FOREST (Thünen / Copernicus): forest extent, species and disturbance
+- [x] FOREST (European Forest Disturbance Atlas): forest cover per cell and
+      the share come down since 1985, with the agent behind it
 
 ## Cinematic polish — in progress
 
