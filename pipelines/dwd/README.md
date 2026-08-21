@@ -26,8 +26,11 @@ one raster row at a time.
   cells — Germany is 357,588 km², so one cell per source pixel) is written
   as a tiled LOD and streamed on zoom.
 
-Licence: "Datenlizenz Deutschland – Namensnennung – Version 2.0" — the
-source must be named, which the manifest carries into the app.
+Licence: Creative Commons Attribution 4.0 (CC BY 4.0), not the Datenlizenz
+Deutschland — see `opendata.dwd.de/climate_environment/CDC/Terms_of_use.txt`
+beside the data, and `dwd.de/DE/service/rechtliche_hinweise`. The source must
+be named and modifications indicated; the manifest carries the credit into
+the app.
 
 ## Run
 

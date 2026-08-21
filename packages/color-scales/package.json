@@ -1,6 +1,8 @@
 {
   "name": "@datenriff/color-scales",
   "version": "0.1.0",
+  "private": true,
+  "license": "Apache-2.0",
   "description": "Editorial colour palettes and typed-array colour mapping for Vertical Atlas Germany.",
   "type": "module",
   "main": "./dist/index.js",
@@ -11,5 +13,8 @@
       "default": "./dist/index.js"
     }
   },
-  "files": ["dist", "src"]
+  "files": [
+    "dist",
+    "src"
+  ]
 }

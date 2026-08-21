@@ -1,6 +1,8 @@
 {
   "name": "@datenriff/sculpture-core",
   "version": "0.1.0",
+  "private": true,
+  "license": "Apache-2.0",
   "description": "Renderer-agnostic core of the Vertical Atlas: morph engine, derived metrics, elevation calibration and hex geometry.",
   "type": "module",
   "main": "./dist/index.js",
@@ -11,5 +13,8 @@
       "default": "./dist/index.js"
     }
   },
-  "files": ["dist", "src"]
+  "files": [
+    "dist",
+    "src"
+  ]
 }
