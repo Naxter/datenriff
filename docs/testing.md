@@ -13,6 +13,13 @@ Hover picking (deck.gl 9.1 is pinned because 9.3 broke it):
 ```bash
 PICK_GPU=1 PICK_WAIT_MS=12000 node scripts/check-picking.cjs   # headless Chromium on the GPU
 PICK_WAIT_MS=25000 node scripts/check-picking.cjs              # SwiftShader (CI)
+
+# The URL is the first argument and defaults to the dev server on :5173.
+# Point it at the production build instead when that is what you are testing —
+# a missing dev server fails with ERR_CONNECTION_REFUSED, and piping the
+# command through `tail` hides that, because a pipeline reports the exit code
+# of its last stage.
+node scripts/check-picking.cjs "http://localhost:4173/?mode=people"
 ```
 
 ## Visual regression (local)

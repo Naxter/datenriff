@@ -13,7 +13,10 @@
 
 - [x] paper canvas, hex overlap, linear heights with p99.5 calibration,
       isometric camera (58/−18/24), lighting, switchable colour ramps
-- [ ] fine-tune shadows and label density against real data
+- [x] shadows and label density tuned against real data — cast shadows are
+      off by default (a canvas-sized shadow map cannot resolve a needle field
+      at country zoom), labels are the serif-free quiet treatment with a wide
+      knockout, and only tier-1 cities show at country zoom
 
 ## Product shell — done
 
@@ -45,8 +48,9 @@
 - [x] per-LOD metric stats: p99.5 at r7 is 21k people, at r8 4.8k, at r9
       1.2k — one shared stat block flattened whichever LOD it did not
       belong to
-- [ ] r10 tiles in the app (writer supports it via `--write-r10`)
-- [ ] picking/tooltip on fine tiles; per-tile fade-in polish
+- [x] r10 tiles in the app, from zoom 10.2
+- [x] picking/tooltip on fine tiles; the handover is driven by tile coverage
+      and detail grows out of the coarse height
 
 ## Further sources — open
 
@@ -94,4 +98,5 @@
       streaming. `?quality=mobile|desktop` forces either. Attribution now
       stays visible on small screens — the Destatis and NASA terms make the
       credit a licence condition.
-- [ ] browser/GPU matrix, visual regression
+- [x] visual regression (28 views); browser/GPU matrix still needs real
+      devices for Safari and Android, and Firefox will not launch headless here

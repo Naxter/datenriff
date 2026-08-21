@@ -77,8 +77,8 @@ flowchart TB
 | Colour | sqrt/log1p for quantities, diverging for change, categorical plus dominance; ramps switchable as an option |
 | Basemap | none — off-white canvas with a subtle country outline |
 | Lighting | ambient + warm key + cool fill; one stable effect. Cast shadows are off by default — a shadow map sized to the canvas cannot resolve a needle field at country zoom — and the pass is skipped with them |
-| Camera | pitch ≈ 58, bearing ≈ −18, fovy ≈ 24 |
-| Hosting | static-first: Vite build + binary assets + CDN; a backend only for live data |
+| Camera | pitch ≈ 58, bearing ≈ −18, fovy ≈ 24; rests on three composed stops (country, region, city) and flies between them, so no view sits mid-handover |
+| Hosting | static-first: Vite build + binary assets + CDN; a backend only for live data. Deployed by direct upload, never a Git integration — the data is not in the repository (`docs/deploy.md`) |
 | Preprocessing | Python; standard library core plus pyproj and h3 |
 
 Deliberately no Cesium and no basemap: no globe, no terrain, no roads — the
