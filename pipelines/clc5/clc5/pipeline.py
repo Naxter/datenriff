@@ -47,7 +47,7 @@ from . import classes, coverage, gpkg
 
 H3_EDGE_METERS = {5: 8544.4, 6: 3229.5, 7: 1220.6, 8: 461.4}
 TILE_PARENT_RES = 5
-LICENSE = "Datenlizenz Deutschland - Namensnennung - Version 2.0"
+LICENSE = "Datenlizenz Deutschland – Namensnennung – Version 2.0"
 SOURCE_URL = "https://gdz.bkg.bund.de/index.php/default/corine-land-cover-5-ha-clc5.html"
 #: CLC5's minimum mapping unit is 5 ha; as a length that is ~224 m
 SPATIAL_RESOLUTION_METERS = 224

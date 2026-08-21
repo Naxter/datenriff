@@ -177,6 +177,12 @@ body {
   pointer-events: auto;
 }
 
+/* "dl-de/by-2-0" is one of the two forms the licence itself permits, so it
+   is printed as written rather than put through the header's uppercase. */
+.header__licence {
+  text-transform: none;
+}
+
 .header__source--extra {
   margin-top: 4px;
 }

@@ -377,7 +377,7 @@ MODES.push({
   id: 'forest',
   family: 'nature',
   label: 'Forest',
-  subtitle: 'Where the forest stands, and how much of it has come down since 1985',
+  subtitle: 'Where the forest stands, and how much of it was disturbed since 1985',
   dataset: 'forest',
   heightMetric: 'forest_share',
   colorMetric: 'disturbed_share',

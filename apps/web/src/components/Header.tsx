@@ -3,6 +3,10 @@ import type { SceneData } from '../data/loader';
 import { useAtlasStore } from '../state/store';
 import { useI18n } from '../i18n';
 import { longDate } from '../i18n/format';
+import { licenceRef } from '../data/licences';
+
+/** BKG asks for the source note itself to carry this link. */
+const BKG_URL = 'https://www.bkg.bund.de';
 
 /** Mode title, and under it what the sculpture is made of. The data credit
  *  lives here since the wordmark took the centre: it is a licence condition
@@ -22,6 +26,16 @@ export function Header({ mode, scene }: { mode: SculptureMode; scene: SceneData 
   const source = (loading && incoming ? incoming : scene.dataset).source;
   // the credit names the publisher in its own words; only the prefix is ours
   const sourceLabel = source.label.replace(/^Data:/, i18n.t('source.prefix'));
+  // DL-DE-BY-2.0 §2 and CC BY 4.0 §3(a) both want the licence named with a
+  // link to its text, and both want derived data marked as changed. Every
+  // pipeline here re-grids and aggregates, so the note is always true.
+  const licence = licenceRef(source.license);
+  const bkg = useAtlasStore((s) => s.bkgCredit);
+  const border = useAtlasStore((s) => s.settings.border);
+  // The boundaries are in use while a state is focused or the outline is
+  // drawn; the credit is owed in both cases, not only the first.
+  const boundariesInUse = focus?.kind === 'state' || border;
+  const bkgLicence = licenceRef(bkg?.license);
   const date = mode.attribution.referenceDate
     ? longDate(i18n.locale, mode.attribution.referenceDate)
     : undefined;
@@ -38,10 +52,38 @@ export function Header({ mode, scene }: { mode: SculptureMode; scene: SceneData 
         ) : (
           sourceLabel
         )}
+        {licence && (
+          <>
+            {' · '}
+            <a className="header__licence" href={licence.url} target="_blank" rel="noreferrer">
+              {licence.short}
+            </a>
+          </>
+        )}
+        {' · '}
+        {i18n.t('source.modified')}
       </p>
-      {focus?.kind === 'state' && (
+      {boundariesInUse && bkg && (
         <p className="header__source header__source--extra">
-          Boundaries: © GeoBasis-DE / BKG · DL-DE-BY-2.0
+          {i18n.t('source.boundaries')}:{' '}
+          <a href={BKG_URL} target="_blank" rel="noreferrer">
+            {bkg.attribution}
+          </a>
+          {bkgLicence && (
+            <>
+              {' · '}
+              <a
+                className="header__licence"
+                href={bkgLicence.url}
+                target="_blank"
+                rel="noreferrer"
+              >
+                {bkgLicence.short}
+              </a>
+            </>
+          )}
+          {' · '}
+          {i18n.t('source.modified')}
         </p>
       )}
     </header>
