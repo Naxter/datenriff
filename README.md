@@ -147,7 +147,9 @@ comparison and mirrored into `apps/web`.
 
 ## Deploy
 
-Cloudflare Pages, by **direct upload only**:
+Cloudflare Pages, by **direct upload only** — the full walkthrough, including
+the domains, compression and what to do after a pipeline re-run, is in
+[docs/deploy.md](docs/deploy.md).
 
 ```bash
 npm run deploy        # build → prune → wrangler pages deploy
@@ -167,13 +169,11 @@ with the largest file at 2.1 MiB.
 Two things that are easy to get wrong:
 
 - **The hostname is a commit, not a flag.** `scripts/build-pages.mjs` reads
-  `SITE_URL` (default `https://datenriff.pages.dev`) and bakes it into the
-  canonical links, `hreflang`, `sitemap.xml` and `robots.txt`, all of which
-  are committed. `apps/web/index.html` carries the same host in its canonical
-  and Open Graph tags. Moving to a custom domain means
-  `SITE_URL=https://… npm run build:pages`, editing `index.html`, and
-  committing both — otherwise CI's `git diff --exit-code apps/web/public`
-  fails and the published canonicals point at the wrong place.
+  `SITE_URL` and bakes it into the canonical links, `hreflang`,
+  `sitemap.xml`, `robots.txt` and the atlas page's Open Graph tags. Changing
+  it is `SITE_URL=https://… npm run build:pages` **and a commit** — otherwise
+  CI's `git diff --exit-code apps/web/public` fails and the published
+  canonicals point at the wrong place.
 - **Pages does not purge on deploy.** After re-running a pipeline, purge the
   cache (Caching → Configuration → Purge Everything). Data files are cached
   for a day with a week of `stale-while-revalidate`, and buffers within one
