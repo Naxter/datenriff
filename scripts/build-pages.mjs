@@ -160,6 +160,22 @@ async function main() {
     console.log(`  /${page.path}/  ${(Buffer.byteLength(html) / 1024).toFixed(1)} kB  [${page.lang}]`);
   }
 
+  // The atlas page carries the same host in its canonical link and its Open
+  // Graph tags. It is a Vite entry rather than a generated file, so it is
+  // patched here instead of written: one SITE_URL, one place to change, and
+  // no way to publish standing pages that disagree with the app about where
+  // the site lives.
+  const appHtmlPath = join(ROOT, 'apps', 'web', 'index.html');
+  const appHtml = await readFile(appHtmlPath, 'utf8');
+  const patched = appHtml.replace(
+    /(<link rel="canonical" href="|<meta property="og:url" content="|<meta property="og:image" content=")https?:\/\/[^"/]+/g,
+    (_, tag) => `${tag}${SITE}`,
+  );
+  if (patched !== appHtml) {
+    await writeFile(appHtmlPath, patched, 'utf8');
+    console.log(`  apps/web/index.html  canonical and og tags → ${SITE}`);
+  }
+
   const urls = PAGES.map((p) => `${SITE}/${p.path}/`);
   const sitemap =
     `<?xml version="1.0" encoding="UTF-8"?>\n` +
