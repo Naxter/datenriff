@@ -68,6 +68,9 @@ export function ExportDialog({ builder, onClose }: Props) {
       timeT: s.timeT,
       lang: s.lang,
       colorStats: builder.build(mode, s.palette).colorStats,
+      // the boundary credit is owed on paper too, whenever VG2500 shaped
+      // what the frame shows
+      boundaryCredit: s.focus?.kind === 'state' || s.settings.border ? s.bkgCredit : null,
     };
   }, [builder]);
 

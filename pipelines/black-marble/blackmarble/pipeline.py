@@ -332,7 +332,7 @@ def run(args: argparse.Namespace) -> None:
         "lods": lod_fragments,
         "source": {
             "label": args.attribution,
-            "url": "https://www.earthdata.nasa.gov/data/projects/black-marble",
+            "url": "https://doi.org/10.5067/VIIRS/VNP46A4.002",
             "license": licence,
             "referenceDate": args.reference_date or f"{years[-1]}-01-01",
             "provenance": {

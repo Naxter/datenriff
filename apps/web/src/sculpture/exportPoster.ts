@@ -15,6 +15,7 @@ import { nearestStep } from '../modes/time';
 import { CHANGE_PCT_METRIC } from '../modes/modes';
 import { EXPORT_DPR, currentFormat, type ExportFormat } from './exportBridge';
 import { effectiveColorScale } from './targets';
+import { licenceRef } from '../data/licences';
 
 const PAPER = '#f7f0ea';
 const INK = '#221c15';
@@ -29,6 +30,8 @@ export interface PosterContext {
   /** The language on screen. The poster was always English. */
   lang: Lang;
   colorStats: MetricStats;
+  /** BKG boundary credit, when the outline or a state focus used VG2500. */
+  boundaryCredit?: { attribution: string; license: string } | null;
 }
 
 /** Compose the captured frame into the poster: paper, sculpture, then title,
@@ -122,13 +125,54 @@ function drawOverlay(
 
   drawLegend(c, ctx, right, H - MARGIN, u);
 
-  // the data credit stays on the poster: it is a licence condition, and a
-  // poster travels further than the page it came from
+  // The credit stays on the poster: it is a licence condition, and a poster
+  // travels further than the page it came from — which is exactly why it
+  // needs the whole source note and not just the publisher's name. Paper
+  // cannot hyperlink, so the licence and the dataset URI are printed.
   c.textAlign = 'left';
   c.globalAlpha = 0.45;
   c.font = `500 ${26 * u}px Inter, sans-serif`;
-  drawTracked(c, scene.dataset.source.label.toUpperCase(), MARGIN, H - MARGIN, 2.2 * u);
+  const lines = sourceNoteLines(ctx);
+  const step = 34 * u;
+  lines.forEach((line, i) => {
+    drawTracked(c, line, MARGIN, H - MARGIN - (lines.length - 1 - i) * step, 2.2 * u);
+  });
   c.globalAlpha = 1;
+}
+
+/** The source note, printed rather than linked.
+ *
+ *  DL-DE-BY-2.0 §2 wants the provider, the licence annotation with a
+ *  reference to its text, and the dataset URI; §3 wants the note that the
+ *  data was changed. CC BY 4.0 §3(a) asks for the same shape. The boundary
+ *  credit joins whenever VG2500 shaped what is in the frame. */
+function sourceNoteLines(ctx: PosterContext): string[] {
+  const { scene, lang } = ctx;
+  const source = scene.dataset.source;
+  const licence = licenceRef(source.license);
+  const modified = translate(lang, 'source.modified');
+  // "dl-de/by-2-0" is one of the two forms the licence permits; it keeps its
+  // case while the rest of the note takes the poster's uppercase.
+  const parts = [source.label.toUpperCase(), licence?.short, modified.toUpperCase()];
+  const lines = [parts.filter(Boolean).join(' · ')];
+  // the dataset's page, not the download it came from: a poster cannot be
+  // clicked, and the landing page outlives any one file name
+  const uri = source.url ?? source.provenance?.sourceUrl;
+  if (uri) lines.push(uri.replace(/^https?:\/\//, ''));
+  const bkg = ctx.boundaryCredit;
+  if (bkg) {
+    const bkgLicence = licenceRef(bkg.license);
+    lines.push(
+      [
+        (translate(lang, 'source.boundaries') + ': ' + bkg.attribution).toUpperCase(),
+        bkgLicence?.short,
+        modified.toUpperCase(),
+      ]
+        .filter(Boolean)
+        .join(' · '),
+    );
+  }
+  return lines;
 }
 
 /** The colour metric of the step on screen, matching what the legend does. */

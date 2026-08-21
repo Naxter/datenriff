@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-// Drops the whole-LOD buffers of tiled LODs from the build output. The app
+// Drops what the deployed site never fetches: the whole-LOD buffers of tiled
+// LODs, plus the pipelines' own bookkeeping (cells.txt, dataset.json). The app
 // only ever fetches a tiled LOD's index and its tiles; the whole-LOD files
 // (cells.txt, positions.bin, one buffer per metric) exist for the pipeline's
 // own alignment across runs. At r10 they are 150 MB, and cells.txt alone is
@@ -36,4 +37,21 @@ for (const dataset of manifest.datasets) {
     }
   }
 }
-console.log(`pruned ${removed} whole-LOD files of tiled LODs (${(bytes / 1e6).toFixed(0)} MB) from ${DATA}`);
+// Bookkeeping the app never fetches: cells.txt is the pipeline's cell order,
+// kept so a later run can align to it, and dataset.json is merged into the
+// manifest at build time. Neither is referenced from the manifest, and
+// together they are ~11.6 MB uploaded on every deploy.
+for (const dataset of manifest.datasets) {
+  const dsDir = join(DATA, dataset.id);
+  if (!existsSync(dsDir)) continue;
+  const strays = [join(dsDir, 'dataset.json')];
+  for (const lod of dataset.lods) strays.push(join(dsDir, `r${lod.resolution}`, 'cells.txt'));
+  for (const p of strays) {
+    if (!existsSync(p) || statSync(p).isDirectory()) continue;
+    bytes += statSync(p).size;
+    rmSync(p);
+    removed += 1;
+  }
+}
+
+console.log(`pruned ${removed} files the site never fetches (${(bytes / 1e6).toFixed(0)} MB) from ${DATA}`);

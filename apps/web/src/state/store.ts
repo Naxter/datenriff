@@ -56,6 +56,10 @@ interface AtlasState {
   view: MapViewState | null;
   /** Current stop of a running camera story, or null. */
   storyStop: CameraStop | null;
+  /** The BKG boundary credit, once a file carrying it has loaded. Their
+   *  terms want the year of the last download and a link to bkg.bund.de,
+   *  and both travel in states.json / outline.json. */
+  bkgCredit: { attribution: string; license: string } | null;
   /** Where the camera sits on the ladder of composed stops, and how much of
    *  the finer detail for it has arrived. `detail` is null where the stop
    *  has no finer level under it (the country view) or tiles are switched
@@ -84,6 +88,7 @@ interface AtlasState {
   setHover(hover: HoverInfo | null): void;
   setView(view: MapViewState): void;
   setZoomLadder(stops: number[], index: number, coverage: number | null): void;
+  setBkgCredit(credit: { attribution: string; license: string }): void;
   requestZoomStop(index: number | null): void;
   playStory(stop: CameraStop | null): void;
   bumpSculpture(): void;
@@ -109,6 +114,7 @@ export const useAtlasStore = create<AtlasState>((set) => ({
   hover: null,
   view: null,
   storyStop: null,
+  bkgCredit: null,
   zoomStops: [],
   zoomStopIndex: 0,
   detailCoverage: null,
@@ -140,6 +146,7 @@ export const useAtlasStore = create<AtlasState>((set) => ({
   setView: (view) => set({ view }),
   setZoomLadder: (zoomStops, zoomStopIndex, detailCoverage) =>
     set({ zoomStops, zoomStopIndex, detailCoverage }),
+  setBkgCredit: (bkgCredit) => set((s) => (s.bkgCredit ? s : { bkgCredit })),
   requestZoomStop: (zoomStopRequest) => set({ zoomStopRequest }),
   playStory: (storyStop) => set({ storyStop }),
   bumpSculpture: () => set((s) => ({ sculptureVersion: s.sculptureVersion + 1 })),
