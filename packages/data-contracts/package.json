@@ -1,6 +1,8 @@
 {
   "name": "@datenriff/data-contracts",
   "version": "0.1.0",
+  "private": true,
+  "license": "Apache-2.0",
   "description": "Canonical data contracts for Vertical Atlas Germany: sculpture datasets, LOD manifests, metric definitions and mode definitions.",
   "type": "module",
   "main": "./dist/index.js",
@@ -11,5 +13,8 @@
       "default": "./dist/index.js"
     }
   },
-  "files": ["dist", "src"]
+  "files": [
+    "dist",
+    "src"
+  ]
 }

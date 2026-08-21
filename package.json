@@ -1,7 +1,8 @@
 {
   "name": "datenriff",
-  "private": true,
   "version": "0.1.0",
+  "private": true,
+  "license": "Apache-2.0",
   "description": "Vertical Atlas Germany — interactive data sculptures of Germany (Datenriff)",
   "type": "module",
   "workspaces": [
@@ -22,7 +23,8 @@
     "visual": "node scripts/visual-check.cjs --gpu",
     "visual:update": "node scripts/visual-check.cjs --gpu --update",
     "build:pages": "node scripts/build-pages.mjs",
-    "build:fonts": "node scripts/vendor-fonts.mjs"
+    "build:fonts": "node scripts/vendor-fonts.mjs",
+    "build:notices": "node scripts/third-party-notices.mjs"
   },
   "devDependencies": {
     "pixelmatch": "^7.2.0",
