@@ -19,7 +19,13 @@ import { fileURLToPath } from 'node:url';
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const PUBLIC = join(ROOT, 'apps', 'web', 'public');
 const CONTENT = join(ROOT, 'apps', 'web', 'src', 'content', 'pages.json');
-const SITE = process.env.SITE_URL ?? 'https://datenriff.pages.dev';
+// The canonical host, baked into the standing pages, the sitemap, robots.txt
+// and the atlas page's head. It has to be the *default* rather than something
+// passed at deploy time: `npm run build` runs this script, so a default that
+// disagreed with what is committed would quietly rewrite every canonical back
+// on the next build — and CI, which builds and then checks `git diff`, would
+// fail. SITE_URL overrides it for trying another host.
+const SITE = process.env.SITE_URL ?? 'https://datenriff.de';
 
 /** Which document goes where, and how the languages pair up for hreflang. */
 const PAGES = [
