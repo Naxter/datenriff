@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://datenriff.pages.dev/sitemap.xml
+Sitemap: https://datenriff.de/sitemap.xml

@@ -26,16 +26,22 @@ The site is built for **https://datenriff.de**. That host is baked into the
 canonical links, the `hreflang` pairs, `sitemap.xml`, `robots.txt` and the
 atlas page's Open Graph tags — all committed to git.
 
-To change it, one command and a commit:
+It is the **default** in `scripts/build-pages.mjs`, not something passed at
+deploy time. That matters: `npm run build` runs that script, so a host given
+only on the command line would be rewritten back to the default by the next
+ordinary build — and CI, which builds and then runs
+`git diff --exit-code apps/web/public`, would fail.
+
+To change it, edit the default in `scripts/build-pages.mjs`, then:
 
 ```bash
-SITE_URL=https://datenriff.com npm run build:pages
+npm run build
 git add -A && git commit -m "site: canonical host"
 ```
 
-`datenriff.com` then redirects to it (step 4). Do not skip the commit: CI runs
-`git diff --exit-code apps/web/public` and will fail, and the published pages
-would point at the wrong host.
+`SITE_URL=https://… npm run build:pages` still works for trying a host without
+committing to it — just remember the next `npm run build` puts the default
+back. `datenriff.com` redirects to the canonical host (step 4).
 
 ---
 
