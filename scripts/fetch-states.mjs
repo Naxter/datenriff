@@ -140,6 +140,10 @@ const outline = nationalOutline(geo.features.filter((f) => f.properties.gf === 9
 const year = new Date().getUTCFullYear();
 const out = {
   source: 'BKG VG2500 (Verwaltungsgebiete 1:2 500 000)',
+  // BKG's terms: the credit carries the year of the last download, the
+  // licence, a note that the data was changed, and — on a web page — a link
+  // to bkg.bund.de. The app renders all four; these fields are where it
+  // gets the first two.
   attribution: `© GeoBasis-DE / BKG ${year}`,
   license: 'DL-DE-BY-2.0',
   url: 'https://gdz.bkg.bund.de/index.php/default/verwaltungsgebiete-1-2-500-000-stand-01-01-vg2500.html',
@@ -158,6 +162,7 @@ writeFileSync(
     source: out.source,
     attribution: out.attribution,
     license: out.license,
+    url: out.url,
     rings: outline,
   }),
 );

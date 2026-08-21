@@ -72,6 +72,8 @@ const EN: Dict = {
   'family.nature': 'Nature',
   'family.energy': 'Energy',
 
+  'source.modified': 'data aggregated',
+  'source.boundaries': 'Boundaries',
   'ladder.label': 'Detail level',
   'ladder.country': 'Country',
   'ladder.region': 'Region',
@@ -144,6 +146,8 @@ const DE: Dict = {
   'family.nature': 'Natur',
   'family.energy': 'Energie',
 
+  'source.modified': 'Daten verändert',
+  'source.boundaries': 'Grenzen',
   'ladder.label': 'Detailstufe',
   'ladder.country': 'Land',
   'ladder.region': 'Region',
@@ -181,7 +185,7 @@ const MODE_TEXT: Record<Lang, Record<string, { label: string; subtitle: string }
     land: { label: 'Boden', subtitle: 'Woraus der Boden besteht, und wie viel davon bebaut ist' },
     forest: {
       label: 'Wald',
-      subtitle: 'Wo der Wald steht, und wie viel davon seit 1985 gefällt wurde oder abstarb',
+      subtitle: 'Wo der Wald steht, und wie viel davon seit 1985 gestört wurde',
     },
   },
 };

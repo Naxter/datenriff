@@ -1,16 +1,40 @@
-# Binary data assets are content-addressed by dataset run; cache them hard.
-# Cloudflare Pages compresses these with Brotli/gzip on the edge, which is
-# where the plan's "static + CDN + Brotli" lands without a build step.
-/data/*
+# Cloudflare Pages merges every rule whose pattern matches — a more specific
+# path does not override a broader one, it adds to it. So `/data/*` plus a
+# rule for `/data/manifest.json` gave the manifest two Cache-Control values
+# and a day-long cache where five minutes was meant. The dataset directories
+# are listed one by one instead, and nothing else matches the manifest.
+#
+# A new pipeline output needs its own line here.
+/data/zensus/*
   Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+/data/afterdark/*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+/data/energy/*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+/data/rain/*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+/data/land/*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+/data/forest/*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+
+# The manifest is the mutable entry point, and now the only rule matching it.
+# Everything else under /data/ — cities, boundary, states, outline — falls to
+# the platform default (max-age=0, must-revalidate), which is what mutable,
+# non-content-addressed files should get.
+/data/manifest.json
+  Cache-Control: public, max-age=300, must-revalidate
 
 # Hashed Vite bundles never change under the same name.
 /assets/*
   Cache-Control: public, max-age=31536000, immutable
 
-# The manifest is the mutable entry point.
-/data/manifest.json
-  Cache-Control: public, max-age=300, must-revalidate
+# The font files are stable but their names are not content-hashed, so this
+# is a week rather than a promise of immutability. Without a rule they were
+# revalidated on every repeat visit — eleven conditional requests for files
+# that have not changed since they were vendored.
+/fonts/*
+  Cache-Control: public, max-age=604800
 
 /*
   X-Content-Type-Options: nosniff

@@ -46,7 +46,7 @@
           "paragraphs": [
             "Sechs Pipelines, alle aus amtlichen oder wissenschaftlichen Quellen, alle mit Datum: der Zensus 2022 des Statistischen Bundesamtes (Stichtag 15. Mai 2022), die Jahresniederschläge des Deutschen Wetterdienstes, das Marktstammdatenregister der Bundesnetzagentur für Windleistung, die Nachtlicht-Jahreskomposite VNP46A4 der NASA, CORINE Land Cover 5 ha des Bundesamtes für Kartographie und Geodäsie und der European Forest Disturbance Atlas.",
             "Nichts davon ist live. Jeder Modus nennt oben rechts seinen Stichtag, und der Tooltip zeigt den Wert des Jahres, das die Zeitleiste gerade anzeigt — nicht den des letzten Jahres. Wer die Quelle prüfen will, findet neben jedem Modus den Link dorthin.",
-            "Die Nennung der Quellen ist keine Höflichkeit, sondern Lizenzbedingung (Datenlizenz Deutschland — Namensnennung 2.0 und CC BY 4.0). Deshalb lässt sie sich nirgends ausblenden, auch nicht im Export."
+            "Die Nennung der Quellen ist keine Höflichkeit, sondern Lizenzbedingung (Datenlizenz Deutschland — Namensnennung 2.0 und CC BY 4.0). Deshalb lässt sie sich nirgends ausblenden — samt Lizenz, Änderungshinweis und, wo Grenzen des BKG im Bild sind, deren eigenem Quellenvermerk, auch im Export."
           ]
         },
         {
@@ -57,7 +57,7 @@
           },
           "paragraphs": [
             "Eine Farbskala braucht zwei Enden. Setzt man sie auf das Minimum und Maximum der Daten, entscheidet ein einziger Ausreißer über das Bild: eine Zelle mit 39 €/m² zieht die Skala so weit auseinander, dass zwischen Görlitz und München kein Unterschied mehr sichtbar ist. Deshalb enden die Skalen vor dem Extrem, und die Zellen darüber laufen in die dunkelste Farbe.",
-            "Das ist ehrlich, solange man sagt, wie viel dabei anliegt. Bei der Miete liegen 7,7 % der Zellen unter dem hellen und 0,8 % über dem dunklen Ende; beim Regen sind es in einem trockenen Jahr 1,2 % unten. Beim Durchschnittsalter ist das Klemmen Absicht: die Zellen jenseits der Enden sind Studentenwohnheime und Pflegeheime, und würde man sie einbeziehen, verschwände genau der Kontrast, wegen dem der Modus existiert.",
+            "Das ist ehrlich, solange man sagt, wie viel dabei anliegt. Bei der Miete liegen 7,7 % der Zellen unter dem hellen und 0,8 % über dem dunklen Ende; beim Regen sind es in einem trockenen Jahr 1,2 % unten. Beim Durchschnittsalter ist das Klemmen Absicht und mit Abstand am stärksten: 19,0 % der Zellen liegen unter 40 Jahren, 16,8 % über 52 — gut ein Drittel der Karte sitzt an einem Ende der Skala. Die Zellen jenseits der Enden sind Studentenwohnheime und Pflegeheime, und würde man sie einbeziehen, verschwände genau der Kontrast, wegen dem der Modus existiert.",
             "Die Höhe wird nicht gekappt und bleibt linear. Eine doppelt so hohe Säule bedeutet den doppelten Wert — sonst wäre das Bild dekorativ statt lesbar. Nur bei Anteilen, die bei 1 enden, gibt es eine eigene Höhengrenze, sonst stünde jede Stadt als geschlossene Wand da.",
             "Zwei Dinge werden dagegen in der Pipeline unterdrückt, nicht in der Farbe: Änderungsraten mit winzigem Nenner (zwei Einwohner werden vier — plus 100 %) und Zellen ohne Wert. Fehlend ist nicht null. Eine Zelle ohne Angabe bleibt leer, statt als Nullwert eine Aussage zu behaupten, die niemand gemacht hat."
           ]
@@ -70,7 +70,7 @@
             "step": 0
           },
           "paragraphs": [
-            "Der Zensus 2022 ist anonymisiert: jeder Wert im 100-Meter-Gitter wird leicht zufällig verändert, damit sich keine Person zurückrechnen lässt. In großen Zellen fällt das nicht auf, in kleinen schon — deshalb sind einzelne Zellen kein Faktencheck über eine Straße, sondern ein Beitrag zum Muster über eine Region.",
+            "Der Zensus 2022 ist anonymisiert: nach der Cell-Key-Methode bekommen einzelne Tabellenfelder einen kleinen, fest zugewiesenen Überlagerungswert, damit sich keine Person zurückrechnen lässt — nicht jeder Wert, und nicht bei jedem Abruf neu. In großen Zellen fällt das nicht auf, in kleinen schon — deshalb sind einzelne Zellen kein Faktencheck über eine Straße, sondern ein Beitrag zum Muster über eine Region.",
             "Beim Wald ist ein Wort erklärungsbedürftig: „gestört“ heißt in der Quelle, dass das Kronendach verschwunden ist — durch Sturm und Borkenkäfer, durch Feuer, oder durch die planmäßige Holzernte. Von den 21,6 % der Waldfläche, die seit 1985 mindestens einmal betroffen waren, gehen 47 % auf Wind und Borkenkäfer zurück, 44 % auf Holzernte, 9 % auf gemischte Ursachen und 0,3 % auf Feuer. „Gestört“ ist also nicht gleichbedeutend mit „geschädigt“, und schon gar nicht mit „für immer weg“: Wald wächst nach. Deshalb nennt der Tooltip die Ursache, statt alles zu einer Schadenszahl zu verrühren.",
             "Fernerkundung hat andere Grenzen. Die Waldmaske ist aus Satellitendaten abgeleitet und fällt etwas großzügiger aus als die forstliche Definition; Nachtlicht misst, was nach oben strahlt, nicht wie hell es auf der Straße ist. Wo solche Abweichungen bekannt sind, stehen sie in der Dokumentation der jeweiligen Pipeline.",
             "Und Vergleiche über die Zeit sind nur so gut wie die Definitionen: zwischen 2011 und 2022 hat sich am Zensus einiges geändert. Der Modus CHANGE zeigt deshalb Veränderung als Anteil und unterdrückt kleine Nenner, statt eine Genauigkeit zu behaupten, die die Quellen nicht hergeben."
@@ -135,7 +135,7 @@
           "paragraphs": [
             "Six pipelines, all from official or scientific sources, all dated: the 2022 German census (reference date 15 May 2022), annual precipitation from the German weather service, the market master data register of the federal network agency for wind capacity, NASA's VNP46A4 annual night-light composites, CORINE Land Cover at 5 ha from the federal cartography agency, and the European Forest Disturbance Atlas.",
             "None of it is live. Each mode names its reference date, and the tooltip shows the value for the year the timeline is on — not the most recent one. A link to the source sits beside every mode.",
-            "Naming the sources is a licence condition rather than a courtesy (Datenlizenz Deutschland — Namensnennung 2.0 and CC BY 4.0). That is why it cannot be hidden in any view, including the export."
+            "Naming the sources is a licence condition rather than a courtesy (Datenlizenz Deutschland — Namensnennung 2.0 and CC BY 4.0). That is why it cannot be hidden in any view — licence, modification note, and where BKG boundaries shaped the picture their own credit too, the export included."
           ]
         },
         {
@@ -146,7 +146,7 @@
           },
           "paragraphs": [
             "A colour ramp needs two ends. Pin them to the data's minimum and maximum and a single outlier decides the picture: one cell at €39/m² stretches the scale until Görlitz and Munich look alike. So the ramps stop short of the extremes, and cells beyond them sit at the darkest colour.",
-            "That is honest as long as the amount is stated. For rent, 7.7 % of cells fall below the pale end and 0.8 % above the dark one; for rainfall in a dry year, 1.2 % below. For average age the clipping is deliberate: the cells beyond the ends are halls of residence and care homes, and pulling them in would erase exactly the contrast the mode exists to show.",
+            "That is honest as long as the amount is stated. For rent, 7.7 % of cells fall below the pale end and 0.8 % above the dark one; for rainfall in a dry year, 1.2 % below. For average age the clipping is deliberate, and by far the heaviest: 19.0 % of cells sit below 40 years and 16.8 % above 52 — a good third of the map rests at one end of the scale. The cells beyond the ends are halls of residence and care homes, and pulling them in would erase exactly the contrast the mode exists to show.",
             "Height is never capped and stays linear. A column twice as tall means twice the value — otherwise the picture would be decorative rather than readable. Only shares, which end at 1, get their own height ceiling, or every city would stand as a solid wall.",
             "Two things are suppressed in the pipeline instead of hidden in the colour: rates of change with a tiny denominator (two residents become four — up 100 %), and cells with no value at all. Missing is not zero. A cell without a figure stays empty rather than asserting a nought nobody reported."
           ]
@@ -159,7 +159,7 @@
             "step": 0
           },
           "paragraphs": [
-            "The 2022 census is anonymised: every value in the 100-metre grid is perturbed slightly so that no individual can be recovered. In large cells this is invisible; in small ones it is not — so a single cell is not a fact-check about one street, it is a contribution to the pattern across a region.",
+            "The 2022 census is anonymised by the cell-key method: some table cells carry a small overlay value, fixed rather than drawn afresh each time, so that no individual can be recovered — not every value, and not differently on every read. In large cells this is invisible; in small ones it is not — so a single cell is not a fact-check about one street, it is a contribution to the pattern across a region.",
             "One word in the forest mode needs unpacking: \"disturbed\" is the source's term for the canopy having gone — through storm and bark beetle, through fire, or through a planned harvest. Of the 21.6 % of forest area affected at least once since 1985, 47 % is wind and bark beetle, 44 % is harvest, 9 % mixed causes and 0.3 % fire. So disturbed does not mean damaged, and it certainly does not mean gone for good: forest grows back. That is why the tooltip names the cause instead of stirring everything into one number for loss.",
             "Remote sensing has its own limits. The forest mask is derived from satellite data and runs a little wider than the forestry definition; night light measures what shines upward, not how bright the street is. Where such deviations are known, they are written down in the relevant pipeline's documentation.",
             "And comparisons over time are only as good as the definitions: plenty changed in the census between 2011 and 2022. That is why CHANGE shows change as a share and suppresses small denominators, rather than claiming a precision the sources do not support."

@@ -523,7 +523,7 @@ def run(args: argparse.Namespace) -> None:
         "source": {
             "label": args.attribution,
             "url": "https://www.destatis.de/DE/Themen/Gesellschaft-Umwelt/Bevoelkerung/Zensus2022/_inhalt.html",
-            "license": "Datenlizenz Deutschland – Namensnennung – 2.0",
+            "license": "Datenlizenz Deutschland – Namensnennung – Version 2.0",
             "provenance": {
                 "sourceUrl": args.source_url,
                 "sourceHash": f"sha256:{sha256_of(input_path)}",
