@@ -1,0 +1,52 @@
+Datenriff — Vertical Atlas Germany
+Copyright 2026 The Datenriff Authors
+
+This product includes software developed by The Datenriff Authors
+(https://github.com/Naxter/datenriff).
+
+--------------------------------------------------------------------------
+Not covered by the Apache License, Version 2.0
+--------------------------------------------------------------------------
+
+FONTS
+
+  apps/web/public/fonts/ contains Inter and Instrument Serif, both under the
+  SIL Open Font License 1.1, not under this repository's licence. Their
+  licence texts are distributed beside them and are served with them:
+
+    apps/web/public/fonts/OFL-Inter.txt            Inter
+    apps/web/public/fonts/OFL-InstrumentSerif.txt  Instrument Serif
+
+  The files here are subsets (latin, latin-ext) of the upstream releases,
+  produced by scripts/vendor-fonts.mjs. Neither family declares a Reserved
+  Font Name, so the subsets keep the original names.
+
+DATA
+
+  This repository contains no data. The pipelines under pipelines/ download
+  data from public sources and convert it; the licence above covers the
+  pipeline code, and cannot and does not extend to what the pipelines
+  produce. Those outputs carry the licence of the source they came from,
+  including its attribution conditions:
+
+    Destatis, Zensus 2022 / 2011      Datenlizenz Deutschland – Namensnennung
+                                      – Version 2.0
+    Bundesnetzagentur, MaStR          Datenlizenz Deutschland – Namensnennung
+                                      – Version 2.0
+    BKG (CLC5, VG2500)                Datenlizenz Deutschland – Namensnennung
+                                      – Version 2.0, © GeoBasis-DE / BKG
+    Deutscher Wetterdienst            Creative Commons Attribution 4.0
+    European Forest Disturbance       Creative Commons Attribution 4.0
+      Atlas (Viana-Soto & Senf)
+    NASA Black Marble (VNP46A4)       NASA open data (CC0 unless marked);
+                                      acknowledgement expected
+
+  Anyone republishing data produced by these pipelines is responsible for
+  carrying the source's attribution, including the note that the data was
+  modified — every pipeline here aggregates and re-grids what it reads.
+
+THIRD-PARTY SOFTWARE
+
+  Dependencies are not vendored into this repository. The libraries bundled
+  into a built site are listed, with their licences, in
+  THIRD-PARTY-NOTICES.md.

@@ -3,6 +3,7 @@ name = "zensus-pipeline"
 version = "0.1.0"
 description = "Destatis Zensus 100m grid → H3 → binary sculpture buffers (Vertical Atlas Germany)"
 requires-python = ">=3.10"
+license = "Apache-2.0"
 dependencies = [
     "h3>=4.0",
     "pyproj>=3.6",

@@ -48,7 +48,10 @@ from .grids import CDC, download, local_path, sample_grid
 
 H3_EDGE_METERS = {5: 8544.4, 6: 3229.5, 7: 1220.6, 8: 461.4}
 TILE_PARENT_RES = 5
-LICENSE = "Datenlizenz Deutschland - Namensnennung - Version 2.0"
+# DWD publishes its open geodata under CC BY 4.0, not the Datenlizenz
+# Deutschland: opendata.dwd.de/climate_environment/CDC/Terms_of_use.txt and
+# dwd.de/DE/service/rechtliche_hinweise. Checked 21 August 2026.
+LICENSE = "CC BY 4.0"
 
 
 def git_commit() -> str | None:
