@@ -1982,6 +1982,18 @@ body {
     display: none;
   }
 
+  /* --- the bottom column: tighter, and on its own paper ---
+     Now that the flatter angle lets the country fill the frame, the columns
+     run behind the words instead of stopping short of them. The paper veil
+     is what this design already uses for that: a wash that keeps the text
+     readable without hiding the sculpture under it. */
+  .bottombar,
+  .topblock {
+    background: var(--paper-veil);
+    box-shadow: 0 0 16px 16px var(--paper-veil);
+    border-radius: 2px;
+  }
+
   /* --- the bottom column: tighter --- */
   .bottombar {
     gap: 9px;
