@@ -35,14 +35,14 @@
     "build:notices": "node scripts/third-party-notices.mjs"
   },
   "devDependencies": {
-    "eslint": "^9.39.5",
-    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint": "^10.9.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
     "globals": "^17.11.0",
     "pixelmatch": "^7.2.0",
     "playwright": "^1.62.1",
     "pngjs": "^7.0.0",
-    "typescript": "^5.9.2",
+    "typescript": "^7.0.2",
     "typescript-eslint": "^8.67.0",
-    "wrangler": "^4.124.0"
+    "wrangler": "^4.125.0"
   }
 }
