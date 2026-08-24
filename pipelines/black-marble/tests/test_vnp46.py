@@ -300,3 +300,35 @@ class TestPipelineYears(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestTokenNeverLeaves(unittest.TestCase):
+    """The download URL comes out of the CMR catalogue and urllib re-sends
+    headers across redirects, so the bearer token is only ever offered to a
+    host on the allowlist — before the request and again at every hop."""
+
+    def test_nasa_hosts_are_allowed(self):
+        for url in (
+            "https://data.laadsdaac.earthdatacloud.nasa.gov/x.h5",
+            "https://ladsweb.modaps.eosdis.nasa.gov/x.h5",
+            "https://cmr.earthdata.nasa.gov/x.h5",
+        ):
+            self.assertEqual(vnp46._token_target(url), url)
+
+    def test_another_host_is_refused(self):
+        with self.assertRaises(SystemExit):
+            vnp46._token_target("https://example.invalid/x.h5")
+
+    def test_a_suffix_lookalike_is_refused(self):
+        # "nasa.gov.evil.com" ends with neither ".nasa.gov" nor "nasa.gov"
+        with self.assertRaises(SystemExit):
+            vnp46._token_target("https://nasa.gov.evil.com/x.h5")
+
+    def test_plain_http_is_refused(self):
+        with self.assertRaises(SystemExit):
+            vnp46._token_target("http://data.laadsdaac.earthdatacloud.nasa.gov/x.h5")
+
+    def test_a_redirect_off_the_allowlist_is_refused(self):
+        handler = vnp46._SameHostRedirect()
+        with self.assertRaises(SystemExit):
+            handler.redirect_request(None, None, 302, "Found", {}, "https://example.invalid/x.h5")

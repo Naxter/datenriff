@@ -348,6 +348,49 @@ const SCENARIOS = [
         return `${rows} rows`;
       });
 
+      // A modal that lets Tab wander out is a modal only to a mouse.
+      // Wrapped so a failure never hands the next check an open dialog.
+      await check('controls', 'dialog-focus', async () => {
+        try {
+          return await dialogFocusCheck(page);
+        } finally {
+          if ((await count(page, '.dialog__panel.settings')) > 0) {
+            await page.keyboard.press('Escape');
+            await page.waitForTimeout(300);
+          }
+        }
+      });
+
+      async function dialogFocusCheck(page) {
+        await press(page, '.export button >> text="Settings"');
+        await page.waitForSelector('.dialog__panel.settings', { timeout: 5000 });
+        await page.waitForTimeout(400);
+        const inside = await page.evaluate(() => {
+          const panel = document.querySelector('.dialog__panel.settings');
+          return panel?.contains(document.activeElement) || document.activeElement === panel;
+        });
+        expect(inside, 'focus did not move into the dialog');
+        const behindInert = await page.evaluate(
+          () => document.querySelector('.modenav')?.hasAttribute('inert') ?? false,
+        );
+        expect(behindInert, 'the page behind the dialog is not inert');
+        // twenty tabs is more controls than the dialog has: if any of them
+        // escaped, focus would be outside by now
+        for (let i = 0; i < 20; i += 1) await page.keyboard.press('Tab');
+        const stillInside = await page.evaluate(() => {
+          const panel = document.querySelector('.dialog__panel.settings');
+          return panel?.contains(document.activeElement) ?? false;
+        });
+        expect(stillInside, 'Tab escaped the dialog');
+        await page.keyboard.press('Escape');
+        await page.waitForSelector('.dialog__panel.settings', { state: 'detached', timeout: 5000 });
+        const restored = await page.evaluate(
+          () => (document.activeElement?.textContent ?? '').trim(),
+        );
+        expect(restored === 'Settings', `focus returned to "${restored}", not the opener`);
+        return 'trapped, inert, restored';
+      }
+
       await check('controls', 'focus-panel', async () => {
         await page.keyboard.press('f');
         await page.waitForSelector('.focus__panel', { timeout: 5000 });

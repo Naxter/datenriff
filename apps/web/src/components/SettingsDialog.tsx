@@ -2,7 +2,7 @@
 // applies live and is remembered in localStorage; the URL switches
 // `?quality=` and `?shadows=0` still win, for testing.
 
-import { useEffect, useRef } from 'react';
+import { useRef } from 'react';
 import {
   DEFAULT_SETTINGS,
   LIGHT_ELEVATION_RANGE,
@@ -11,6 +11,7 @@ import {
 } from '../state/settings';
 import { useAtlasStore } from '../state/store';
 import { useI18n } from '../i18n';
+import { useDialogFocus } from './useDialogFocus';
 import { launchParam } from '../state/url';
 
 interface Props {
@@ -95,12 +96,7 @@ export function SettingsDialog({ onClose }: Props) {
   const quality = useAtlasStore((s) => s.quality);
   const panel = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    panel.current?.focus();
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  useDialogFocus(panel, onClose);
 
   const { t } = useI18n();
   const forcedQuality = launchParam('quality');

@@ -192,10 +192,21 @@ def download(year: int, tile: str, tiles_dir: Path, urls: dict[str, str] | None 
     target = tiles_dir / name
     tmp = target.with_suffix(".part")
     print(f"  downloading {name} …", file=sys.stderr)
-    req = urllib.request.Request(
-        urls[name],
-        headers={"Authorization": f"Bearer {_token()}", "User-Agent": "datenriff-blackmarble"},
-    )
+    # The credential is attached only for a remote fetch, and only to a host
+    # it is allowed to reach. A local file needs no token, so it gets none —
+    # which is also what lets the tests exercise this with a file:// URL
+    # without weakening the rule for the real path.
+    url = urls[name]
+    if urllib.parse.urlparse(url).scheme == "file":
+        req = urllib.request.Request(url, headers={"User-Agent": "datenriff-blackmarble"})
+        opener = urllib.request.build_opener()
+    else:
+        req = urllib.request.Request(
+            _token_target(url),
+            headers={"Authorization": f"Bearer {_token()}", "User-Agent": "datenriff-blackmarble"},
+        )
+        # the token travels with redirects, so every hop is checked as well
+        opener = urllib.request.build_opener(_SameHostRedirect())
     try:
         with opener.open(req, timeout=600) as res, tmp.open("wb") as fh:
             while True:

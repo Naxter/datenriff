@@ -673,6 +673,33 @@ body {
   gap: 14px;
 }
 
+/* On a phone the three-column row does not fit: 130 px of label plus four
+   segment buttons ran to 386 px inside a 357 px panel, so "Mobile" and
+   "None" sat off the edge of the screen with no way to reach them. Below
+   the breakpoint the label takes its own line and the segments wrap. */
+@media (max-width: 560px) {
+  .settings__row {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .settings__segment {
+    grid-column: 1;
+    flex-wrap: wrap;
+    gap: 10px 18px;
+  }
+  .settings__slider {
+    grid-column: 1;
+    width: 100%;
+  }
+  .settings__value {
+    grid-column: 1;
+  }
+  .settings__swatches {
+    grid-column: 1;
+    flex-wrap: wrap;
+  }
+}
+
 .settings__row {
   display: grid;
   grid-template-columns: 130px 1fr auto;
@@ -878,25 +905,32 @@ body {
 
 .legend__palettes {
   display: flex;
-  gap: 7px;
+  gap: 2px;
   margin-top: 12px;
   justify-content: flex-end;
 }
 
+/* The swatch stays 16 px; the target does not. A 24 x 24 hit area is the
+   WCAG 2.2 minimum (2.5.8), reached with a transparent border so the dot
+   itself is unchanged and the row does not grow. */
 .legend__dot {
   appearance: none;
-  border: 1px solid var(--hairline);
+  background-clip: content-box;
+  border: 4px solid transparent;
   border-radius: 999px;
-  width: 16px;
-  height: 16px;
+  width: 24px;
+  height: 24px;
   padding: 0;
   cursor: pointer;
+  box-shadow: inset 0 0 0 1px var(--hairline);
+}
+.legend__dot--active {
+  box-shadow:
+    inset 0 0 0 1px var(--hairline),
+    0 0 0 1.5px var(--ink);
 }
 
-.legend__dot--active {
-  outline: 1.5px solid var(--ink);
-  outline-offset: 1.5px;
-}
+
 
 /* ---------------- tooltip ---------------- */
 
@@ -1688,5 +1722,18 @@ body {
 
   .ladder__detail {
     min-height: 0;
+  }
+}
+
+/* Last, on purpose: the 760 px block above also positions the rail, and at
+   equal specificity the later rule is the one that applies.
+
+   At this width the wordmark is centred across the whole frame and the
+   rail — a row on a phone — ran straight through it, so "COUNTRY" sat on
+   top of "DATENRIFF". The rail drops below the mark rather than the mark
+   giving way: the mark is fixed, the rail is one short line. */
+@media (max-width: 380px) {
+  .ladder {
+    top: 118px;
   }
 }
