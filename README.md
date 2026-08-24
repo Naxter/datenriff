@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/media/hero-people.png" alt="Datenriff — Vertical Atlas Germany" width="100%">
+</p>
+
 # Datenriff — Vertical Atlas Germany
 
 Germany, rebuilt out of data. Every spatial cell becomes a vertical column:
@@ -5,35 +9,79 @@ height carries a quantity, colour carries a property, time lets the landscape
 grow and shrink. Not a dashboard and not a GIS — an interactive data atlas
 with the feel of a printed poster.
 
-![Vertical Atlas — People](docs/media/hero-people.png)
+Thirteen modes over six sources — census, night lights, wind power, rainfall,
+land cover, forest loss — on one renderer, served as static files with no
+backend at all.
 
-*The app's own poster export (`EXPORT`, 16:9): Census 2022 population,
+[![CI](https://github.com/Naxter/datenriff/actions/workflows/ci.yml/badge.svg)](https://github.com/Naxter/datenriff/actions/workflows/ci.yml)
+![Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-green)
+![Node 22+](https://img.shields.io/badge/node-22%2B-brightgreen)
+![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue)
+
+*Above: the app's own poster export (`EXPORT`, 16:9) — Census 2022 population,
 272,503 H3 cells of 460 m.*
 
-## Quickstart
+## Features
+
+- **Height means one thing everywhere.** A column is a density per unit area,
+  so a cell says the same at country zoom and at street zoom. Counts are drawn
+  per area and the fine levels derive their scale from the country level
+  instead of being re-fitted to their own quantiles — without that, zooming in
+  silently rewrites what tall means.
+- **Thirteen modes, defined as data.** A mode is a height metric, a colour
+  metric and a scale — not code. Switching blends both on the GPU; adding one
+  is a definition, not a component.
+- **Time as a landscape.** Night lights 2012–2025, wind power from 1990,
+  rainfall year by year: the timeline scrubs between steps on the GPU, one
+  uniform per frame, and the legend and tooltip follow the year on screen.
+- **Detail that grows instead of swapping.** Fine tiles stream into the near
+  field only, and the handover waits for coverage rather than a zoom
+  threshold — so the same place is never a coarse cone and a fine needle in
+  one frame.
+- **Aggregation that respects the metric.** Counts sum, averages weight,
+  shares divide numerator by denominator, categories take an argmax and
+  desaturate mixed cells. Official suppression markers stay missing and never
+  become zero.
+- **Poster export.** Any view to PNG in 16:9, 4:5, 1:1 or 9:16 at up to 3×,
+  or a GIF of a timeline sweep — composed in its own frame, with the full
+  source credit on it.
+- **Static all the way down.** Binary typed-array buffers plus one manifest.
+  No server, no database, no API: a folder of files on a CDN.
+
+## Quickstart (with demo data)
 
 ```bash
 npm install
+npm run demo             # a synthetic dataset, ~5 MB, one second
+npm run build:manifest
 npm run dev
 ```
 
-The app comes up on <http://localhost:5173> — but it needs data first. The
-atlas renders only what a pipeline produced; there is no bundled sample. Run
-the [census pipeline](pipelines/zensus/README.md) (the downloads are a few
-hundred MB, the 2011 grid alone unpacks to 1.3 GB), then:
+The atlas comes up on <http://localhost:5173> with eight census modes.
+
+![The demo dataset](docs/media/demo-people.png)
+
+The demo's numbers are **invented** — shaped to look like Germany, scaled so
+the national total is right, but from nobody's statistics, and the credit
+under the mode title says so. It exists so the renderer, the modes, the
+timeline and the export can be tried before committing an afternoon to a
+download.
+
+## Real data
+
+Each pipeline owns one source and writes the same binary format. The census is
+the place to start ([pipelines/zensus](pipelines/zensus/README.md)) — a few
+hundred MB of downloads, and the 2011 grid alone unpacks to 1.3 GB:
 
 ```bash
-npm run build:manifest
+cd pipelines/zensus && .venv/Scripts/python run_all_metrics.py
+cd ../.. && npm run build:manifest
 ```
 
-Without the Node toolchain, the dependency-free prototype renders the same
-binaries:
-
-```bash
-npx http-server .
-```
-
-Then open <http://localhost:8080/prototype/>.
+`npm run demo` refuses to overwrite a real run; pass `--force` if replacing it
+is what you want. Without the Node toolchain, the dependency-free prototype
+renders the same binaries — `npx http-server .`, then
+<http://localhost:8080/prototype/>.
 
 ## Modes
 
@@ -119,8 +167,8 @@ pipelines/
   zensus/               Python ETL: Destatis 100 m grid → H3 → binary
   black-marble/         NASA night lights raster → H3 → binary
 prototype/              dependency-free WebGL2 viewer over the same binaries
-scripts/                manifest builder, screenshot, picking and interface checks
-docs/                   architecture, data format, roadmap
+scripts/                manifest builder, demo seeder, screenshot, picking and interface checks
+docs/                   architecture, data format, testing, deploy
 ```
 
 ## Development
@@ -196,10 +244,37 @@ compressing `application/octet-stream`. Fixing that needs a Compression Rule,
 which requires a domain proxied through Cloudflare — a custom domain, not
 `*.pages.dev`.
 
+## Scope and honesty
+
+What this is not, stated plainly, because a picture this confident invites
+more trust than it has earned:
+
+- **The colours clip.** Sequential scales cut at a percentile so a handful of
+  extreme cells do not flatten the rest, which means the top of a ramp is "at
+  least this much", not "exactly this". Where a domain clips hard the About
+  page names the share — AGE, for instance, clips 19.0 % at the bottom and
+  16.8 % at the top.
+- **Height is calibrated, not absolute.** Columns are scaled to read as a
+  landscape and fall off with zoom. Read quantities from the tooltip, which
+  carries the real value; do not measure them off the screen.
+- **Cells are hexagons, sources are not.** Every pipeline re-grids something
+  else — a 100 m square grid, a satellite raster, point coordinates — onto
+  H3. That re-gridding is lossy at the edges by construction.
+- **Census figures are already protected.** Destatis applies a cell-key
+  method, so some values carry a fixed overlay. The atlas shows aggregated
+  cells and makes no attempt to reconstruct households or buildings.
+- **No accounts, no tracking, no cookies.** The site is static files. There is
+  no analytics, no third-party embed and no consent banner, because there is
+  nothing to consent to. The host sees ordinary request logs.
+- **Only Germany**, and only what a pipeline has produced. There is no
+  fallback dataset: an empty `public/data/` means an error page, deliberately,
+  rather than an invented one.
+
 ## Data and licence
 
 The repository ships code, not data: `apps/web/public/data/` is generated by
-the pipelines and git-ignored.
+the pipelines and git-ignored. `npm run demo` writes a synthetic stand-in that
+is nobody's statistics and says so in its own source credit.
 
 ### Licences
 
