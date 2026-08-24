@@ -855,6 +855,39 @@ const SCENARIOS = [
           return after;
         });
 
+        // A portrait phone gets one composed view and keeps it. A rotated,
+        // half-panned country in a narrow frame is a worse picture than the
+        // fit, and there is no good way back to it by hand.
+        await check('touch', 'the-camera-is-fixed', async () => {
+          const at = () =>
+            phone.evaluate(() => location.hash.replace(/^#/, '').split(',').map(Number));
+          const before = await at();
+          // A portrait frame is capped at 40°: Germany is taller than it is
+          // wide, and 58° foreshortens it into a landscape shape that cannot
+          // fill this screen. Asserted by number because a silent reset on a
+          // dataset switch put it back to 58 and nothing noticed.
+          expect(before[3] === 40, `the portrait pitch is ${before[3]}, want 40`);
+          await phone.mouse.move(195, 320);
+          await phone.mouse.down();
+          await phone.mouse.move(60, 180, { steps: 12 });
+          await phone.mouse.up();
+          await phone.waitForTimeout(1200);
+          const dragged = await at();
+          expect(
+            dragged.join() === before.join(),
+            `a drag moved the camera to ${dragged.join(', ')}`,
+          );
+          // …and a mode's own framing does not re-aim it either
+          await phone.tap('.modenav__family >> text="Population"');
+          await phone.waitForTimeout(4000);
+          const switched = await at();
+          expect(
+            switched.slice(0, 3).join() === before.slice(0, 3).join(),
+            `switching mode moved the camera to ${switched.join(', ')}`,
+          );
+          return before.map((n) => n.toFixed(2)).join(', ');
+        });
+
         await check('touch', 'the-intro-stays-away', async () => {
           const intro = await count(phone, '.atlas--intro');
           expect(intro === 0, 'the opening sequence plays on a phone');

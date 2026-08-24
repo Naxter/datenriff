@@ -125,7 +125,39 @@ const framePitch = (pitch: number) => ({
   pitch: pitchForFrame(pitch, window.innerWidth, window.innerHeight),
 });
 
+/** A portrait frame is where the camera is fixed: the same condition that
+ *  flattens the pitch, so the two never disagree about what kind of frame
+ *  this is. */
+function isPortrait(): boolean {
+  return window.innerWidth > 0 && window.innerWidth / window.innerHeight < 0.8;
+}
+
 export function SculptureView({ scene, engine }: Props) {
+  const [fixedCamera, setFixedCamera] = useState(isPortrait);
+  useEffect(() => {
+    const onResize = () => setFixedCamera(isPortrait());
+    window.addEventListener('resize', onResize);
+    window.addEventListener('orientationchange', onResize);
+    return () => {
+      window.removeEventListener('resize', onResize);
+      window.removeEventListener('orientationchange', onResize);
+    };
+  }, []);
+  // A fixed camera has to be re-composed when the frame changes shape —
+  // turning the phone would otherwise leave the previous fit in place.
+  const refit = useCallback(() => {
+    setViewState((v) => ({
+      ...v,
+      ...fitViewState(scene.lod.bounds, window.innerWidth, window.innerHeight),
+    }));
+  }, [scene.lod.bounds]);
+  useEffect(() => {
+    if (!fixedCamera) return;
+    refit();
+    window.addEventListener('resize', refit);
+    return () => window.removeEventListener('resize', refit);
+  }, [fixedCamera, refit]);
+
   const setHover = useAtlasStore((s) => s.setHover);
   const setView = useAtlasStore((s) => s.setView);
   const modeId = useAtlasStore((s) => s.modeId);
@@ -269,7 +301,7 @@ export function SculptureView({ scene, engine }: Props) {
   useEffect(() => {
     if (lastCameraMode.current === null) {
       lastCameraMode.current = modeId;
-      if (!pinnedView.current && mode.camera) {
+      if (!pinnedView.current && mode.camera && !fixedCamera) {
         const cam = mode.camera;
         setViewState((v) => ({ ...v, ...cam, ...framePitch(cam.pitch ?? v.pitch ?? 0) }));
       }
@@ -277,6 +309,8 @@ export function SculptureView({ scene, engine }: Props) {
     }
     if (lastCameraMode.current === modeId) return;
     lastCameraMode.current = modeId;
+    // the composed view is the view: a mode does not get to re-aim it
+    if (fixedCamera) return;
     pinnedView.current = false;
     const target = mode.camera ?? { pitch: INITIAL_VIEW_STATE.pitch, bearing: INITIAL_VIEW_STATE.bearing };
     setViewState((v) => ({
@@ -285,7 +319,7 @@ export function SculptureView({ scene, engine }: Props) {
       ...framePitch(target.pitch ?? v.pitch ?? 0),
       ...flight(reducedMotion, 900, 1.4),
     }));
-  }, [modeId, mode.camera, reducedMotion]);
+  }, [modeId, mode.camera, reducedMotion, fixedCamera]);
 
   // a new focus flies the camera to its region (mode angles kept)
   const focus = useAtlasStore((s) => s.focus);
@@ -501,7 +535,7 @@ export function SculptureView({ scene, engine }: Props) {
     };
     el.addEventListener('wheel', onWheel, { passive: false });
     return () => el.removeEventListener('wheel', onWheel);
-  }, [stepCamera]);
+  }, [stepCamera, fixedCamera]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -512,12 +546,13 @@ export function SculptureView({ scene, engine }: Props) {
         el instanceof HTMLTextAreaElement ||
         el instanceof HTMLSelectElement;
       if (typing) return;
+      if (fixedCamera) return;
       if (e.key === '+' || e.key === '=') stepCamera(1);
       else if (e.key === '-' || e.key === '_') stepCamera(-1);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [stepCamera]);
+  }, [stepCamera, fixedCamera]);
 
   // A pinch is free while it lasts and is drawn to the nearest stop when the
   // fingers leave the glass.
@@ -581,20 +616,27 @@ export function SculptureView({ scene, engine }: Props) {
   // staying over that city — which is not what "reset the view" means.
   const viewResetRequest = useAtlasStore((s) => s.viewResetRequest);
   const firstReset = useRef(true);
+  // Everything the reset reads goes through a ref, so only the request can
+  // trigger it. Listing `scene.lod.bounds` as a dependency made every dataset
+  // switch perform a silent reset — the camera flew home and the pitch went
+  // back to the desktop angle, which on a phone undid the flatter framing and
+  // on a wide screen merely looked like it was meant.
+  const resetInputs = useRef({ bounds: scene.lod.bounds, reducedMotion });
+  resetInputs.current = { bounds: scene.lod.bounds, reducedMotion };
   useEffect(() => {
     if (firstReset.current) {
       firstReset.current = false;
       return;
     }
-    const fit = fitViewState(scene.lod.bounds, window.innerWidth, window.innerHeight);
+    const { bounds, reducedMotion: reduced } = resetInputs.current;
+    const fit = fitViewState(bounds, window.innerWidth, window.innerHeight);
     setViewState((v) => ({
       ...v,
       ...fit,
-      pitch: INITIAL_VIEW_STATE.pitch,
       bearing: INITIAL_VIEW_STATE.bearing,
-      ...flight(reducedMotion, STEP_MS, 1.4),
+      ...flight(reduced, STEP_MS, 1.4),
     }));
-  }, [viewResetRequest, scene.lod.bounds, reducedMotion]);
+  }, [viewResetRequest]);
 
   // New object identity → deck re-uploads the attributes. That now happens
   // only when an endpoint buffer actually changed (a new mode, a scrub),
@@ -847,29 +889,37 @@ export function SculptureView({ scene, engine }: Props) {
     if (captureIsPending()) deliverCapture(copy);
   };
 
+  // A portrait phone gets one composed view and keeps it: no pinch, no drag,
+  // no two-finger rotate. The gestures were never good here — a rotated,
+  // half-panned country in a narrow frame is a worse picture than the one
+  // the fit produces, and there was no way back to it except the reset. The
+  // camera still moves when the app asks it to (a focus, a mode's own
+  // framing); what goes is the reader's ability to knock it askew by hand.
   const view = useMemo(
     () =>
       new MapView({
         id: 'main',
         fovy: CAMERA_FOVY,
         farZMultiplier: 3,
-        controller: {
-          inertia: 260,
-          touchRotate: true,
-          // arrows still pan and rotate; + and − are ours (see stepCamera),
-          // and deck's own zoom would slide the camera to rest anywhere
-          keyboard: { zoomSpeed: 0 },
-          scrollZoom: false,
-          doubleClickZoom: false,
-        },
+        controller: fixedCamera
+          ? false
+          : {
+              inertia: 260,
+              touchRotate: true,
+              // arrows still pan and rotate; + and − are ours (see stepCamera),
+              // and deck's own zoom would slide the camera to rest anywhere
+              keyboard: { zoomSpeed: 0 },
+              scrollZoom: false,
+              doubleClickZoom: false,
+            },
       }),
-    [],
+    [fixedCamera],
   );
 
   return (
     <div
       ref={canvasRef}
-      onDoubleClick={(e) => stepCamera(1, [e.clientX, e.clientY])}
+      onDoubleClick={(e) => !fixedCamera && stepCamera(1, [e.clientX, e.clientY])}
       className="atlas__canvas"
       style={
         exporting

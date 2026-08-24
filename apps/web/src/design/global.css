@@ -1493,9 +1493,11 @@ body {
   .ladder {
     top: 128px;
   }
+  /* centred over the frame, with the menu button at the right of the same
+     line — the mark is the one thing that should sit square */
   .wordmark {
-    align-self: flex-start;
-    text-align: left;
+    align-self: center;
+    text-align: center;
   }
   .wordmark__name {
     font-size: 11px;
@@ -1906,11 +1908,18 @@ body {
     font-size: 23px;
     letter-spacing: 0.05em;
   }
+  /* The credits are the longest text on the page and the least urgent. Ranged
+     left and set small they stop being a centred block of capitals competing
+     with the title, and give the sculpture two more lines of room. */
+  .header {
+    align-self: stretch;
+  }
   .header__source {
-    font-size: 9px;
-    letter-spacing: 0.05em;
-    margin-top: 7px;
-    line-height: 1.45;
+    font-size: 8px;
+    letter-spacing: 0.03em;
+    margin-top: 6px;
+    line-height: 1.5;
+    text-align: left;
   }
 
   /* --- the legend: one line of words and a thin bar --- */
