@@ -67,8 +67,15 @@ Choose `main` as the production branch when it asks.
 npm run deploy
 ```
 
-That is three steps in one: `npm run build`, then `scripts/prune-dist.mjs`,
-then `wrangler pages deploy apps/web/dist --project-name datenriff`.
+Five steps in one, and it stops at the first that fails:
+
+1. `npm run check` — lint, typecheck, every test suite.
+2. `npm run build` — pages, bundle, and the licence documents into `dist/legal/`.
+3. `scripts/prune-dist.mjs` — see below.
+4. `scripts/validate-dist.mjs` — refuses to upload an artifact that is missing
+   a required file, is over the platform limits, still has `cells.txt` (the
+   prune did not run), or has data URLs without their version stamp.
+5. `wrangler pages deploy apps/web/dist --project-name datenriff`.
 
 **The prune step is load-bearing, not an optimisation.** Unpruned,
 `data/zensus/r10/cells.txt` is 41 MiB and Cloudflare rejects any file over
