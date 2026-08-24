@@ -30,6 +30,17 @@ export function launchParams(): URLSearchParams {
   return new URLSearchParams(LAUNCH);
 }
 
+/** The camera as five numbers, or nothing. */
+function parseView(raw: string | null): Partial<MapViewState> | undefined {
+  if (!raw) return undefined;
+  const parts = raw.split(',').map(Number);
+  if (parts.length !== 5 || !parts.every((v) => Number.isFinite(v))) return undefined;
+  const [longitude, latitude, zoom, pitch, bearing] = parts as [
+    number, number, number, number, number,
+  ];
+  return { longitude, latitude, zoom, pitch, bearing };
+}
+
 export function readUrlState(): UrlState {
   const params = new URLSearchParams(window.location.search);
   const state: UrlState = {};
@@ -43,17 +54,43 @@ export function readUrlState(): UrlState {
   if (palette) state.palette = palette;
   const focus = params.get('focus');
   if (focus && /^(state|city):.+/.test(focus)) state.focus = focus;
-  const view = params.get('view');
-  if (view) {
-    const parts = view.split(',').map(Number);
-    if (parts.length === 5 && parts.every((v) => Number.isFinite(v))) {
-      const [longitude, latitude, zoom, pitch, bearing] = parts as [
-        number, number, number, number, number,
-      ];
-      state.view = { longitude, latitude, zoom, pitch, bearing };
-    }
-  }
+  // The camera lives in the fragment (`#10.46,51.34,5.86,58,-18`): it changes
+  // on every pan, and a fragment is never sent to the server, never lands in
+  // a log and never makes a second indexable URL out of one page. Links
+  // shared before that move carry `?view=`, so both are read.
+  state.view =
+    parseView(window.location.hash.replace(/^#/, '') || null) ?? parseView(params.get('view'));
   return state;
+}
+
+/** The camera as it is written into the fragment. */
+function viewFragment(view: MapViewState): string {
+  return [
+    view.longitude.toFixed(3),
+    view.latitude.toFixed(3),
+    view.zoom.toFixed(2),
+    (view.pitch ?? 0).toFixed(0),
+    (view.bearing ?? 0).toFixed(0),
+  ].join(',');
+}
+
+/** The full link to what is on screen, for the copy button. Everything the
+ *  reader chose is spelled out, so the recipient lands on the same picture
+ *  rather than on the atlas's default. */
+export function shareUrl(
+  modeId: string,
+  timeT: number,
+  palette: string | null,
+  view: MapViewState,
+  focus: string | null = null,
+): string {
+  const params = new URLSearchParams();
+  params.set('mode', modeId);
+  if (timeT < 1) params.set('t', timeT.toFixed(2));
+  if (palette) params.set('palette', palette);
+  if (focus) params.set('focus', focus);
+  const { origin, pathname } = window.location;
+  return `${origin}${pathname}?${params.toString()}#${viewFragment(view)}`;
 }
 
 let writeTimer: ReturnType<typeof setTimeout> | undefined;
@@ -75,20 +112,12 @@ export function writeUrlState(
     params.delete('t');
     params.delete('palette');
     params.delete('focus');
+    // an old shared link put the camera here; it belongs in the fragment now
+    params.delete('view');
     params.set('mode', modeId);
     if (timeT < 1) params.set('t', timeT.toFixed(2));
     if (palette) params.set('palette', palette);
     if (focus) params.set('focus', focus);
-    params.set(
-      'view',
-      [
-        view.longitude.toFixed(3),
-        view.latitude.toFixed(3),
-        view.zoom.toFixed(2),
-        (view.pitch ?? 0).toFixed(0),
-        (view.bearing ?? 0).toFixed(0),
-      ].join(','),
-    );
-    window.history.replaceState(null, '', `?${params.toString()}`);
+    window.history.replaceState(null, '', `?${params.toString()}#${viewFragment(view)}`);
   }, 350);
 }

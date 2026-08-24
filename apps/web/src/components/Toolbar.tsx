@@ -8,6 +8,7 @@ import { useAtlasStore } from '../state/store';
 import { ExportButton } from './ExportButton';
 import { LanguageSwitch } from './LanguageSwitch';
 import { SettingsDialog } from './SettingsDialog';
+import { ViewActions } from './ViewActions';
 import { useI18n } from '../i18n';
 
 interface Props {
@@ -46,6 +47,7 @@ export function Toolbar({ builder }: Props) {
       >
         {t('ui.settings')}
       </button>
+      <ViewActions />
       <LanguageSwitch />
       {open && <SettingsDialog onClose={close} />}
     </div>
