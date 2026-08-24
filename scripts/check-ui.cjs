@@ -813,6 +813,46 @@ const SCENARIOS = [
     },
   },
 
+  // ---------------------------------------------------------------- resting
+  {
+    id: 'resting',
+    async run(page) {
+      // The opening view should cost no tiles. A level's `minZoom` is absolute
+      // and was tuned on a laptop, where the country rests near zoom 5.9; a 4K
+      // screen fits it at 7.12, past r9's 7.0, so the resting view sat inside
+      // the fine level and fired 300 tile requests — the cap — before the
+      // reader had touched anything. The floor is relative to the country fit
+      // now, and this is the check that says so.
+      const browser = page.context().browser();
+      for (const [label, width, height] of [
+        ['laptop', 1400, 900],
+        ['4K', 3840, 2160],
+      ]) {
+        const big = await browser.newPage({ viewport: { width, height } });
+        let tiles = 0;
+        big.on('response', (r) => {
+          if (/\.pack(\?|$)|\/tiles\//.test(r.url())) tiles += 1;
+        });
+        try {
+          const url = `${BASE}/?mode=people&lang=en&intro=0${GPU ? '' : '&shadows=0'}`;
+          await big.goto(url, { waitUntil: 'domcontentloaded' });
+          await big.waitForSelector('.veil--hidden, .unsupported', { timeout: 180_000 });
+          await big.waitForTimeout(GPU ? 9000 : 14000);
+           
+          await check('resting', `${label}-streams-no-tiles`, async () => {
+            expect(tiles === 0, `${tiles} tile request(s) for the opening view`);
+            const zoom = await big.evaluate(
+              () => Number(location.hash.replace(/^#/, '').split(',')[2]),
+            );
+            return `zoom ${zoom.toFixed(2)}, 0 tiles`;
+          });
+        } finally {
+          await big.close();
+        }
+      }
+    },
+  },
+
   // ------------------------------------------------------------------ touch
   {
     id: 'touch',

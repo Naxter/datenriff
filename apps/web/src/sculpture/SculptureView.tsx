@@ -393,7 +393,22 @@ export function SculptureView({ scene, engine }: Props) {
     }));
   }, [storyStop, reducedMotion]);
 
-  const fineLod = tileManager?.activeLod(viewState.zoom) ?? null;
+  // Where the country comes to rest in *this window* — the live one, not the
+  // poster frame, since this decides what gets streamed while someone looks.
+  const [frameKey, setFrameKey] = useState(0);
+  useEffect(() => {
+    const onResize = () => setFrameKey((k) => k + 1);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+  const liveCountryZoom = useMemo(
+    () =>
+      fitViewState(scene.lod.bounds, window.innerWidth, window.innerHeight, chromeInsets()).zoom,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [scene.lod.bounds, frameKey],
+  );
+
+  const fineLod = tileManager?.activeLod(viewState.zoom, liveCountryZoom) ?? null;
   const fineUsable =
     tileManager !== null &&
     fineLod !== null &&
@@ -441,12 +456,20 @@ export function SculptureView({ scene, engine }: Props) {
     if (!fineUsable || !tileManager || !quality.streamTiles) return;
     const run = () => {
       lastTileQuery.current = performance.now();
-      tileManager.update({ ...zoneInfo, zoom: viewState.zoom, mode, palette, region: focus, enabled: true });
+      tileManager.update({
+        ...zoneInfo,
+        zoom: viewState.zoom,
+        countryZoom: liveCountryZoom,
+        mode,
+        palette,
+        region: focus,
+        enabled: true,
+      });
     };
     const wait = Math.max(0, TILE_QUERY_MS - (performance.now() - lastTileQuery.current));
     const timer = setTimeout(run, wait);
     return () => clearTimeout(timer);
-  }, [tileManager, fineUsable, zoneInfo, viewState.zoom, mode, palette, focus, quality.streamTiles]);
+  }, [tileManager, fineUsable, zoneInfo, viewState.zoom, mode, palette, focus, quality.streamTiles, liveCountryZoom]);
 
   useEffect(() => {
     writeUrlState(modeId, timeT, palette, viewState, focusKey(focus) || null);
