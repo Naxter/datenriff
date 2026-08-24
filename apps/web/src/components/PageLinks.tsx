@@ -1,8 +1,10 @@
 // The standing links, centred under the sculpture: what this is, and the two
 // pages German law requires to be reachable from every view. About opens the
 // panel over the atlas; the legal pages are real documents and are navigated
-// to, because they have to work when the app does not.
+// to, because they have to work when the app does not. On a phone About is
+// a page too — see below.
 
+import { useEffect, useState } from 'react';
 import { useAtlasStore } from '../state/store';
 import { useI18n } from '../i18n';
 
@@ -12,18 +14,41 @@ export function PageLinks() {
   const { t, lang } = useI18n();
   const aboutHref = lang === 'de' ? '/ueber/' : '/about/';
 
+  // On a phone About is the page, not the panel.
+  //
+  // The panel is a reading surface laid over a living atlas: each section
+  // flies the camera somewhere and switches the mode behind it, so the prose
+  // about rainfall is read against the rainfall. None of that survives a
+  // narrow screen — the sheet covers the sculpture it is talking about, and
+  // the camera is fixed here anyway. The static page is the better version of
+  // the same words: it is already built, it is plain text, and it scrolls.
+  const [onPhone, setOnPhone] = useState(() => window.matchMedia?.('(max-width: 760px)').matches);
+  useEffect(() => {
+    const query = window.matchMedia?.('(max-width: 760px)');
+    if (!query) return;
+    const onChange = () => setOnPhone(query.matches);
+    query.addEventListener('change', onChange);
+    return () => query.removeEventListener('change', onChange);
+  }, []);
+
   return (
     <nav className="pagelinks" aria-label={t('pages.aria')}>
-      <button
-        type="button"
-        className="pagelinks__link"
-        onClick={() => setAboutOpen(!aboutOpen)}
-        aria-haspopup="dialog"
-        aria-expanded={aboutOpen}
-        title={`${t('pages.about')} (A)`}
-      >
-        {t('pages.about')}
-      </button>
+      {onPhone ? (
+        <a className="pagelinks__link" href={aboutHref}>
+          {t('pages.about')}
+        </a>
+      ) : (
+        <button
+          type="button"
+          className="pagelinks__link"
+          onClick={() => setAboutOpen(!aboutOpen)}
+          aria-haspopup="dialog"
+          aria-expanded={aboutOpen}
+          title={`${t('pages.about')} (A)`}
+        >
+          {t('pages.about')}
+        </button>
+      )}
       <span className="pagelinks__dot" aria-hidden="true">·</span>
       {/* a middle-click or a crawler still gets the real page */}
       <a className="pagelinks__link" href="/impressum/">
