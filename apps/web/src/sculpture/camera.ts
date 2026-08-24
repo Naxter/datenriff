@@ -77,8 +77,22 @@ export function cameraStops(countryZoom: number): number[] {
  *  cap rather than a value, so a landscape phone and every desktop keep the
  *  angle the sculpture was composed for. */
 export function pitchForFrame(pitch: number, width: number, height: number): number {
-  if (!(width > 0 && height > 0) || width / height >= 0.8) return pitch;
+  if (!isPortraitFrame(width, height)) return pitch;
   return Math.min(pitch, 40);
+}
+
+/** Portrait frames are squared up as well as flattened.
+ *
+ *  The -18 degree turn gives a wide screen its diagonal composition. In a
+ *  narrow one it only costs width: the country is presented corner-first, so
+ *  the fit has to pull back to keep the corners in, and the sculpture ends up
+ *  smaller than the frame could carry. Square-on, it is simply bigger. */
+export function bearingForFrame(bearing: number, width: number, height: number): number {
+  return isPortraitFrame(width, height) ? 0 : bearing;
+}
+
+function isPortraitFrame(width: number, height: number): boolean {
+  return width > 0 && height > 0 && width / height < 0.8;
 }
 
 export function fitViewState(
@@ -98,15 +112,81 @@ export function fitViewState(
   // fitBounds assumes a top-down camera. Pitching compresses the footprint
   // vertically, so a wide frame has room to zoom in past the flat fit; a
   // portrait frame does not — there the pitched near edge spills sideways.
-  const landscape = width / height;
-  // A portrait frame no longer loses height to the pitch (see pitchForFrame),
-  // so it no longer needs to give zoom back for it either.
-  const bump = landscape >= 1.2 ? 0.3 : landscape >= 0.8 ? 0 : 0.1;
-  return {
+  const pitch = pitchForFrame(INITIAL_VIEW_STATE.pitch ?? 0, width, height);
+  const bearing = bearingForFrame(INITIAL_VIEW_STATE.bearing ?? 0, width, height);
+  const base = {
     ...INITIAL_VIEW_STATE,
     longitude: fitted.longitude,
     latitude: fitted.latitude,
-    zoom: fitted.zoom + bump,
-    pitch: pitchForFrame(INITIAL_VIEW_STATE.pitch ?? 0, width, height),
+    pitch,
+    bearing,
   };
+  const landscape = width / height;
+  // A wide frame has room to come in past the flat fit; a narrow one does not.
+  const bump = landscape >= 1.2 ? 0.3 : landscape >= 0.8 ? 0 : -0.15;
+  const zoom = fitted.zoom + bump;
+  // Only a portrait frame is solved properly. A wide one has been composed by
+  // eye against these numbers for months, and its corners are allowed to sit
+  // slightly outside — the country's own corners are empty anyway.
+  return {
+    ...base,
+    zoom: isPortraitFrame(width, height)
+      ? zoomThatFits(base, fitted.zoom, bounds, width, height)
+      : zoom,
+  };
+}
+
+/** The largest zoom at or below `start` that still keeps the whole country in
+ *  frame, given this pitch and bearing.
+ *
+ *  `fitBounds` solves for a camera looking straight down. Tilt it and the near
+ *  edge spreads sideways; turn it and the diagonal becomes the widest part.
+ *  Both make the real footprint wider than the flat solution, which is why the
+ *  country was running off the sides of a phone. Rather than guess a constant
+ *  to subtract — one that would be wrong on the next screen shape — the
+ *  corners are projected and the zoom stepped back until they land inside. */
+function zoomThatFits(
+  view: MapViewState,
+  start: number,
+  bounds: LonLatBounds,
+  width: number,
+  height: number,
+): number {
+  // Fit an inset box, not the full one. Germany does not reach the corners of
+  // its own bounding box — the north-west is the North Sea, the south-east is
+  // Austria — so solving for those corners leaves the country visibly small in
+  // the frame to protect empty water. A tenth in from each side is still
+  // outside anything the sculpture draws.
+  const inset = 0.1;
+  const [w0, s0, e0, n0] = bounds;
+  const west = w0 + (e0 - w0) * inset;
+  const east = e0 - (e0 - w0) * inset;
+  const south = s0 + (n0 - s0) * inset;
+  const north = n0 - (n0 - s0) * inset;
+  const corners: [number, number][] = [
+    [west, south],
+    [east, south],
+    [west, north],
+    [east, north],
+    // the extremes themselves, which are land and must stay in
+    [(w0 + e0) / 2, n0],
+    [(w0 + e0) / 2, s0],
+    [w0, (s0 + n0) / 2],
+    [e0, (s0 + n0) / 2],
+  ];
+  const margin = Math.round(Math.min(width, height) * 0.02);
+  let zoom = start;
+  for (let step = 0; step < 24; step += 1) {
+    const viewport = new WebMercatorViewport({ ...view, width, height, zoom });
+    const inside = corners.every((corner) => {
+      const projected = viewport.project(corner);
+      const x = projected[0] ?? Number.NaN;
+      const y = projected[1] ?? Number.NaN;
+      if (!Number.isFinite(x) || !Number.isFinite(y)) return false;
+      return x >= margin && y >= margin && x <= width - margin && y <= height - margin;
+    });
+    if (inside) return zoom;
+    zoom -= 0.06;
+  }
+  return zoom;
 }
