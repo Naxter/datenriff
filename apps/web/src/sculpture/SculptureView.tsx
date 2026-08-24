@@ -29,6 +29,7 @@ import {
   INITIAL_VIEW_STATE,
   cameraStops,
   fitViewState,
+  pitchForFrame,
   zoomHeightScale,
 } from './camera';
 import {
@@ -117,6 +118,12 @@ function flight(reduced: boolean, ms: number, speed: number, curve?: number) {
     transitionInterpolator: new FlyToInterpolator(curve ? { speed, curve } : { speed }),
   };
 }
+
+/** A mode or a story may ask for a steeper angle than the frame can carry;
+ *  on a portrait phone the cap keeps the country filling the screen. */
+const framePitch = (pitch: number) => ({
+  pitch: pitchForFrame(pitch, window.innerWidth, window.innerHeight),
+});
 
 export function SculptureView({ scene, engine }: Props) {
   const setHover = useAtlasStore((s) => s.setHover);
@@ -263,7 +270,8 @@ export function SculptureView({ scene, engine }: Props) {
     if (lastCameraMode.current === null) {
       lastCameraMode.current = modeId;
       if (!pinnedView.current && mode.camera) {
-        setViewState((v) => ({ ...v, ...mode.camera }));
+        const cam = mode.camera;
+        setViewState((v) => ({ ...v, ...cam, ...framePitch(cam.pitch ?? v.pitch ?? 0) }));
       }
       return;
     }
@@ -274,6 +282,7 @@ export function SculptureView({ scene, engine }: Props) {
     setViewState((v) => ({
       ...v,
       ...target,
+      ...framePitch(target.pitch ?? v.pitch ?? 0),
       ...flight(reducedMotion, 900, 1.4),
     }));
   }, [modeId, mode.camera, reducedMotion]);
@@ -309,7 +318,7 @@ export function SculptureView({ scene, engine }: Props) {
       longitude: storyStop.longitude,
       latitude: storyStop.latitude,
       zoom: storyStop.zoom,
-      pitch: storyStop.pitch ?? v.pitch,
+      ...framePitch(storyStop.pitch ?? v.pitch ?? 0),
       bearing: storyStop.bearing ?? v.bearing,
       ...flight(reducedMotion, 2200, 1.2, 1.3),
     }));

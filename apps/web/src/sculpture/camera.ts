@@ -63,6 +63,24 @@ export function cameraStops(countryZoom: number): number[] {
  *  wastes paper on large ones. Fit the dataset bounds to the viewport instead:
  *  the crust only resolves into individual needles when the sculpture is big
  *  in frame, which is most of what separates a render from a poster. */
+/** The steepest pitch a frame of this shape can afford.
+ *
+ *  Germany is taller than it is wide — about 865 km north to south against
+ *  640 km east to west. Pitching the camera foreshortens the north–south
+ *  axis by `cos(pitch)`, so at 58° the country is drawn as 640 × 458 and
+ *  reads as landscape. In a wide frame that is exactly right. In a portrait
+ *  one it is the wrong way round: the shape fills the width and leaves a
+ *  third of the screen empty above and below it.
+ *
+ *  Flattening the angle gives that back — at 40° the same country covers
+ *  865 × cos(40°) ≈ 663 km of apparent height, half as much again. It is a
+ *  cap rather than a value, so a landscape phone and every desktop keep the
+ *  angle the sculpture was composed for. */
+export function pitchForFrame(pitch: number, width: number, height: number): number {
+  if (!(width > 0 && height > 0) || width / height >= 0.8) return pitch;
+  return Math.min(pitch, 40);
+}
+
 export function fitViewState(
   bounds: LonLatBounds,
   width: number,
@@ -81,11 +99,14 @@ export function fitViewState(
   // vertically, so a wide frame has room to zoom in past the flat fit; a
   // portrait frame does not — there the pitched near edge spills sideways.
   const landscape = width / height;
-  const bump = landscape >= 1.2 ? 0.3 : landscape >= 0.8 ? 0 : -0.15;
+  // A portrait frame no longer loses height to the pitch (see pitchForFrame),
+  // so it no longer needs to give zoom back for it either.
+  const bump = landscape >= 1.2 ? 0.3 : landscape >= 0.8 ? 0 : 0.1;
   return {
     ...INITIAL_VIEW_STATE,
     longitude: fitted.longitude,
     latitude: fitted.latitude,
     zoom: fitted.zoom + bump,
+    pitch: pitchForFrame(INITIAL_VIEW_STATE.pitch ?? 0, width, height),
   };
 }
