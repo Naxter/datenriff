@@ -57,6 +57,16 @@ const EXPECTED_MODES = {
 // no other trace in the interface.
 const EXPECTED_TIME_MODES = ['Change', 'After Dark', 'Wind', 'Rain', 'Land'];
 
+// The demo seeder writes one synthetic census dataset, so eight modes exist
+// and only CHANGE has time. Without a second expectation the suite reports
+// two failures against `npm run demo` that are not faults — and a check that
+// cries wolf on the documented quickstart is a check people learn to ignore.
+const EXPECTED_DEMO_MODES = {
+  Population: EXPECTED_MODES.Population,
+  Housing: EXPECTED_MODES.Housing,
+};
+const EXPECTED_DEMO_TIME_MODES = ['Change'];
+
 const results = [];
 const consoleErrors = [];
 let pageErrors = [];
@@ -106,6 +116,20 @@ async function open(page, query, viewport = DESKTOP) {
   await page.waitForSelector('.veil--hidden, .unsupported', { timeout: 180_000 });
   // let the first morph, the tiles and the labels settle
   await page.waitForTimeout(GPU ? 2500 : 8000);
+}
+
+/** Is this the synthetic demo rather than a pipeline run? The demo has one
+ *  census dataset and no BKG boundaries, so several checks are about things
+ *  that legitimately do not exist — and a suite that reports those as faults
+ *  teaches people to ignore red. Asks the manifest, not a flag, so nobody has
+ *  to remember which data is on the machine. */
+async function usingDemoData(page) {
+  return page.evaluate(async () => {
+    const res = await fetch('/data/manifest.json');
+    if (!res.ok) return false;
+    const manifest = await res.json();
+    return manifest.datasets.every((d) => /synthetic demo/i.test(d.source?.label ?? ''));
+  });
 }
 
 const text = (page, selector) =>
@@ -385,6 +409,11 @@ const SCENARIOS = [
     async run(page) {
       await open(page, 'mode=people');
 
+      // Which dataset is on the machine decides what the nav should offer.
+      const onDemoData = await usingDemoData(page);
+      const wantModes = onDemoData ? EXPECTED_DEMO_MODES : EXPECTED_MODES;
+      const wantTimeModes = onDemoData ? EXPECTED_DEMO_TIME_MODES : EXPECTED_TIME_MODES;
+
       const families = await page.$$eval('.modenav__family', (els) =>
         els.map((el) => el.textContent.trim()),
       );
@@ -426,8 +455,11 @@ const SCENARIOS = [
             expect(title === label, `nav says "${label}", header says "${title}"`);
             const subtitle = await text(page, '.header__subtitle');
             expect(subtitle && subtitle.length > 0, `"${label}" has no subtitle`);
-            await assertCredit(page);
+            // Observe before asserting. With this after the credit check, one
+            // unrelated failure emptied the whole timeline inventory and the
+            // `timelines` check then reported a second, invented problem.
             if ((await count(page, '.timeline')) > 0) timeModes.push(label);
+            await assertCredit(page);
             return null;
           });
         }
@@ -451,15 +483,15 @@ const SCENARIOS = [
             .map(([k, v]) => `${k}: ${v.join(', ')}`)
             .join(' | ');
         expect(
-          asText(seen) === asText(EXPECTED_MODES),
-          `the nav offers\n    ${asText(seen)}\n  expected\n    ${asText(EXPECTED_MODES)}`,
+          asText(seen) === asText(wantModes),
+          `the nav offers\n    ${asText(seen)}\n  expected\n    ${asText(wantModes)}`,
         );
         return asText(seen);
       });
 
       await check('modes', 'timelines', async () => {
         const got = [...timeModes].sort().join(', ');
-        const want = [...EXPECTED_TIME_MODES].sort().join(', ');
+        const want = [...wantTimeModes].sort().join(', ');
         expect(got === want, `timelines on [${got}], expected [${want}]`);
         return got;
       });
@@ -470,7 +502,10 @@ const SCENARIOS = [
   {
     id: 'timeline',
     async run(page) {
-      await open(page, 'mode=rain');
+      // RAIN has 25 steps and is the better exercise, but it needs the DWD
+      // pipeline; the demo's only time mode is CHANGE's two censuses.
+      await open(page, 'mode=people');
+      await open(page, (await usingDemoData(page)) ? 'mode=change' : 'mode=rain');
 
       await check('timeline', 'shape', async () => {
         await page.waitForSelector('.timeline', { timeout: 30_000 });
@@ -528,12 +563,17 @@ const SCENARIOS = [
         await page.waitForTimeout(1500);
         const moved = await page.$eval(slider, (el) => Number(el.value));
         expect(moved > 0, 'play did not move the timeline');
-        await press(page, '.timeline__play');
-        const stopped = await page.$eval('.timeline__play', (el) =>
-          el.getAttribute('aria-label'),
-        );
-        expect(stopped === 'Play', `pausing labelled the button "${stopped}"`);
-        return `ran to ${moved.toFixed(2)}`;
+        // A two-step sweep (CHANGE) can finish inside that wait and reset
+        // itself; clicking then would start a second run, not stop the first.
+        const midway = await page.$eval('.timeline__play', (el) => el.getAttribute('aria-label'));
+        if (midway === 'Pause') {
+          await press(page, '.timeline__play');
+          const stopped = await page.$eval('.timeline__play', (el) =>
+            el.getAttribute('aria-label'),
+          );
+          expect(stopped === 'Play', `pausing labelled the button "${stopped}"`);
+        }
+        return `ran to ${moved.toFixed(2)}${midway === 'Play' ? ' (swept to the end)' : ''}`;
       });
 
       await check('timeline', 'no-failure-page', () => assertNoFailurePage(page, 'timeline'));
@@ -636,6 +676,14 @@ const SCENARIOS = [
       // BKG asks for a clearly visible note with a link to bkg.bund.de
       // whenever its boundaries are drawn. That is both uses: a focused state
       // and the country outline, and only the first one used to say so.
+      await open(page, 'mode=people');
+      if (await usingDemoData(page)) {
+        // scripts/fetch-states.mjs downloads the real BKG outlines; the demo
+        // has none, so there is no boundary in use and nothing to credit
+        skip('boundaries', 'credit-on-focus', 'demo data has no BKG boundaries');
+        skip('boundaries', 'credit-on-outline', 'demo data has no BKG boundaries');
+        return;
+      }
       await open(page, 'mode=people&focus=state:DE-09');
 
       await check('boundaries', 'credit-on-focus', async () => {
