@@ -88,7 +88,7 @@ function drawOverlay(
   H: number,
   MARGIN: number,
 ): void {
-  const { mode, scene } = ctx;
+  const { mode } = ctx;
   // type scales with the frame so 9:16 does not get poster-sized headlines
   const u = Math.min(W, H) / 2160;
   c.textBaseline = 'alphabetic';

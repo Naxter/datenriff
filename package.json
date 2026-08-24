@@ -17,6 +17,7 @@
     "build": "npm run build:pages && npm run build -w @datenriff/web",
     "preview": "npm run preview -w @datenriff/web",
     "build:packages": "tsc -p packages/data-contracts && tsc -p packages/color-scales && tsc -p packages/sculpture-core",
+    "lint": "eslint .",
     "typecheck": "npm run build:packages && npm run typecheck -w @datenriff/web",
     "test:packages": "npm run build:packages && node --test packages/color-scales/test/*.test.mjs packages/sculpture-core/test/*.test.mjs",
     "test:pipeline": "node scripts/test-pipeline.mjs",
@@ -32,10 +33,14 @@
     "build:notices": "node scripts/third-party-notices.mjs"
   },
   "devDependencies": {
+    "eslint": "^9.39.5",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "globals": "^17.11.0",
     "pixelmatch": "^7.2.0",
     "playwright": "^1.62.1",
     "pngjs": "^7.0.0",
     "typescript": "^5.9.2",
+    "typescript-eslint": "^8.67.0",
     "wrangler": "^4.124.0"
   }
 }

@@ -443,7 +443,6 @@ const SCENARIOS = [
 
         for (const label of modes) {
           if (first === null) first = label;
-          // eslint-disable-next-line no-loop-func
           await check('modes', label.toLowerCase().replace(/\s+/g, '-'), async () => {
             await press(page, `.modenav__item >> text="${label}"`);
             await settled(page, label);
@@ -653,7 +652,6 @@ const SCENARIOS = [
         await page.setViewportSize({ width: viewport.width, height: viewport.height });
         // the layout changes at a breakpoint, and the ladder re-lays itself
         await page.waitForTimeout(900);
-        // eslint-disable-next-line no-loop-func
         await check('reachable', viewport.id, async () => {
           for (const [selector, what] of MUST_REACH) {
             expect((await count(page, selector)) > 0, `${what} is not on the page`);

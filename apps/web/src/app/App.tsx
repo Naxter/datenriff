@@ -156,6 +156,11 @@ export default function App() {
   const missing = useMemo(() => {
     if (!scene) return [];
     return [...requiredMetrics(scene.dataset, mode)].filter((id) => scene.pending.has(id));
+    // `scene.pending` is a Set that is mutated in place as buffers land, so
+    // nothing in the dependency list changes identity when it empties.
+    // `metricsVersion` is the signal that it did — the rule reads it as
+    // unnecessary because it cannot see through the mutation.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scene, mode, metricsVersion]);
   useEffect(() => {
     if (!scene || missing.length === 0) return;

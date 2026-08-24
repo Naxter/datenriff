@@ -3,6 +3,7 @@
 ## Automated
 
 ```bash
+npm run lint           # eslint over app, packages and scripts
 npm run typecheck      # packages + app
 npm run test           # node:test (packages) + unittest (zensus, black-marble, mastr, dwd pipelines)
 npm run build

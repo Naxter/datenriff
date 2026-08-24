@@ -1,7 +1,7 @@
 // Layer factory shared by the interactive view and the poster export, so
 // both render the identical sculpture.
 
-import { ColumnLayer, PathLayer, SolidPolygonLayer, TextLayer } from '@deck.gl/layers';
+import { PathLayer, SolidPolygonLayer, TextLayer } from '@deck.gl/layers';
 import { MorphColumnLayer, type FadeBox } from './morphColumnLayer';
 import type { Layer, PickingInfo } from '@deck.gl/core';
 import { hexColumnRadius } from '@datenriff/sculpture-core';

@@ -175,6 +175,7 @@ docs/                   architecture, data format, testing, deploy
 
 ```bash
 npm run build:manifest   # assemble the manifest from pipeline outputs
+npm run lint             # eslint over app, packages and scripts
 npm run typecheck        # package builds + app tsc
 npm run test             # node:test (packages) + unittest (pipeline)
 npm run build            # production build of apps/web

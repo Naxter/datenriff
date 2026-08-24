@@ -418,7 +418,6 @@ export function bindMode(mode: SculptureMode, dataset: SculptureDataset): Sculpt
     mode.time.saturationMetricTemplate,
   ].filter((t): t is string => Boolean(t));
   const fill = (t: string, step: string) => t.replace('{step}', step);
-  const template = (step: string) => fill(mode.time!.metricTemplate, step);
   const has = (id: string) => dataset.metrics.some((m) => m.id === id);
   // a step counts only if every series it drives is actually present
   const steps = mode.time.steps.filter((s) => templates.every((t) => has(fill(t, s))));

@@ -6,7 +6,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { getMode } from '../modes/modes';
 import {
   DEFAULT_FORMAT,
-  EXPORT_DPR,
   EXPORT_FORMATS,
   requestSculptureCapture,
   type ExportFormat,
