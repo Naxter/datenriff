@@ -159,7 +159,7 @@ data:
 | Chromium headless, D3D11 | ✓ | `PICK_GPU=1`, `npm run visual` |
 | Chromium headless, SwiftShader | partial | renders with `?shadows=0`; on some machines the first frame takes >25 s |
 | Firefox desktop | untested here | playwright's Firefox 153 will not start in this environment (`spawn UNKNOWN`, "corrupted shared library"), so the check has to run on a real desktop: open the app, confirm shadows, hover tooltip, a timeline scrub and a story flight |
-| Safari macOS / iOS | untested | WebGL2 since Safari 15; the mobile quality profile (r7, no shadows) is what a phone gets |
+| Safari macOS / iOS | partly tested by hand | WebGL2 since Safari 15; the mobile profile (r7, no shadows) is what a phone gets. **Chromium touch emulation does not reproduce Safari's rule that the first tap on an element with hover behaviour applies the hover and swallows the click** — measured: reverting the fix for it leaves the `touch` scenario green. Anything that depends on hover has to be tried on a real iPhone |
 | Chrome Android | untested | `?quality=mobile` reproduces the profile on desktop |
 
 Things to look at on a new browser: shadows present at country zoom, hover

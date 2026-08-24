@@ -1951,6 +1951,29 @@ body {
     font-size: 9.5px;
   }
 
+  /* --- the timeline: a row, not a pill ---
+     The capsule (border, blur, 10/18 padding, a 26 px play button) reads as
+     a floating control on a wide screen. In the bottom column it is just
+     another band of chrome around a slider, so the box comes off and only
+     the slider is left. */
+  .timeline {
+    padding: 0;
+    gap: 10px;
+    background: none;
+    backdrop-filter: none;
+    border: 0;
+    border-radius: 0;
+  }
+  .timeline__year {
+    font-size: 10px;
+    letter-spacing: 0.08em;
+  }
+  .timeline__play {
+    width: 22px;
+    height: 22px;
+    font-size: 8px;
+  }
+
   /* --- the story presets: not on a phone ---
      A curated camera tour is a wide-screen pleasure. Here it sat in the top
      left and ran straight into the mode title, and it is the one control on

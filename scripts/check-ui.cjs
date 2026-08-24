@@ -807,6 +807,70 @@ const SCENARIOS = [
     },
   },
 
+  // ------------------------------------------------------------------ touch
+  {
+    id: 'touch',
+    async run(page) {
+      // Its own page: the rest of the suite drives a mouse, and this is
+      // about what a finger does.
+      //
+      // Known limit, measured: Chromium's touch emulation dispatches a clean
+      // tap, so it does NOT reproduce iOS Safari's rule that the first tap on
+      // an element with hover behaviour applies the hover and swallows the
+      // click. Reverting the fix for that leaves these checks green. What they
+      // do guard is the mechanism — one tap reaches the handler and the mode
+      // actually changes — not the Safari quirk itself. That still needs a
+      // real device (see the browser matrix in docs/testing.md).
+      const browser = page.context().browser();
+      const phone = await browser.newPage({
+        viewport: { width: 390, height: 660 },
+        hasTouch: true,
+        isMobile: true,
+      });
+      try {
+        const url = `${BASE}/?mode=rain&lang=en&intro=0${GPU ? '' : '&shadows=0'}`;
+        await phone.goto(url, { waitUntil: 'domcontentloaded' });
+        await phone.waitForSelector('.veil--hidden, .unsupported', { timeout: 180_000 });
+        await phone.waitForTimeout(GPU ? 4000 : 9000);
+        const title = () => phone.$eval('.header__title', (el) => el.textContent.trim());
+
+        // The families used to peek on pointerenter, which a touchscreen
+        // fires as the first half of a tap: the tap that was meant to change
+        // the dataset only previewed it, and nothing moved until the second.
+        await check('touch', 'one-tap-switches-family', async () => {
+          const before = await title();
+          await phone.tap('.modenav__family >> text="Housing"');
+          await phone.waitForTimeout(4000);
+          const after = await title();
+          expect(after !== before, `one tap left the header on "${after}"`);
+          expect(after === 'Rent', `Housing opened on "${after}", want its first mode`);
+          return `${before} → ${after}`;
+        });
+
+        await check('touch', 'one-tap-switches-mode', async () => {
+          await phone.tap('.modenav__item >> text="Vacancy"');
+          await phone.waitForTimeout(4000);
+          const after = await title();
+          expect(after === 'Vacancy', `one tap on a mode gave "${after}"`);
+          return after;
+        });
+
+        await check('touch', 'the-intro-stays-away', async () => {
+          const intro = await count(phone, '.atlas--intro');
+          expect(intro === 0, 'the opening sequence plays on a phone');
+          // it is the sequence that makes the nav inert, so check the effect
+          const dead = await phone.evaluate(
+            () => getComputedStyle(document.querySelector('.modenav')).pointerEvents === 'none',
+          );
+          expect(!dead, 'the mode nav is not accepting taps');
+          return null;
+        });
+      } finally {
+        await phone.close();
+      }
+    },
+  },
+
   // ------------------------------------------------------------------ reset
   {
     id: 'reset',
