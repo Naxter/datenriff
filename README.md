@@ -167,7 +167,7 @@ pipelines/
   zensus/               Python ETL: Destatis 100 m grid → H3 → binary
   black-marble/         NASA night lights raster → H3 → binary
 prototype/              dependency-free WebGL2 viewer over the same binaries
-scripts/                manifest builder, demo seeder, screenshot, picking and interface checks
+scripts/                manifest builder, demo seeder, screenshot, picking, interface and upload checks
 docs/                   architecture, data format, testing, deploy
 ```
 

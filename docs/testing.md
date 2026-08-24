@@ -81,6 +81,34 @@ shows what moved. `--threshold 0.5` (percent of pixels) is the default;
 `--only people,wind` restricts the run; without `--gpu` it uses SwiftShader
 and `?shadows=0`.
 
+## Measuring what the renderer costs
+
+```bash
+npm run build && npm run preview
+node scripts/measure-uploads.cjs --url http://localhost:4173
+```
+
+Counts bytes pushed to the GPU while the camera is still and while it pans,
+alongside frame intervals and long tasks. It wraps `bufferData` before the app
+boots, so it measures the shipping build with nothing compiled in.
+
+Read both halves. Bytes say what is being wasted; frames say whether anyone
+can feel it. Measured on a discrete GPU, August 2026:
+
+```
+idle     0.0 MB in     0 uploads   60 fps · p95 16.7 ms · 0 frames >32 ms
+pan     69.8 MB in  4722 uploads   60 fps · p95 16.8 ms · 1 frame  >32 ms
+bulk uploads (>=100 KB): 120, 65.5 MB — 94 % of everything sent
+```
+
+Idle at zero is the useful control: it says everything but the tiles is
+properly cached. The 94 % is the merged tile buffer being rebuilt and
+re-uploaded whole every time a single tile arrives — about 1.7 MB to deliver
+23 KB of new cells. Real waste, and on this hardware it cost one frame in
+seven seconds. Measure on the machine you care about before trading work for
+it; a laptop on an integrated GPU is the case that might differ, and the
+mobile profile never streams tiles at all (`streamTiles: false`).
+
 ## Browser / GPU matrix
 
 What the app needs: WebGL2, `OffscreenCanvas` not required, Web Workers,
