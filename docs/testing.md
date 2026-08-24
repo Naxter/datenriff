@@ -89,6 +89,13 @@ npm run serve:dist -- --port 4180
 node scripts/check-ui.cjs --gpu --url http://localhost:4180
 ```
 
+It prints the addresses another device on the same network can reach, so a
+phone can be pointed at the real build. Two directives are dropped when it
+serves: `upgrade-insecure-requests`, which over plain HTTP rewrites every
+same-origin asset to https:// and leaves a blank page, and `Cross-Origin-
+Opener-Policy`, which browsers ignore off a trustworthy origin. Both are
+right in production and meaningless here.
+
 `vite preview` ignores `_headers`, so a Content-Security-Policy could only
 ever be wrong in production. This applies the real rules — cumulatively, as
 Cloudflare does — and serves `404.html` for unknown paths. Run the interface

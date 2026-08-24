@@ -15,6 +15,7 @@
 
 import { createReadStream, existsSync, readFileSync, statSync } from 'node:fs';
 import { createServer } from 'node:http';
+import { networkInterfaces } from 'node:os';
 import { dirname, extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -69,7 +70,29 @@ function headersFor(urlPath) {
     const re = new RegExp(`^${pattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*')}$`);
     if (re.test(urlPath)) Object.assign(out, headers);
   }
+  // This harness speaks plain HTTP; the site it imitates speaks HTTPS.
+  // `upgrade-insecure-requests` rewrites every same-origin subresource to
+  // https://, which over http on a LAN address fails at the TLS handshake and
+  // leaves a blank page — so dropping it here is closer to production, not
+  // further from it. Same for the COOP header, which browsers ignore on an
+  // origin that is not trustworthy and warn about in the console.
+  if (out['Content-Security-Policy']) {
+    out['Content-Security-Policy'] = out['Content-Security-Policy']
+      .split(';')
+      .map((d) => d.trim())
+      .filter((d) => d && d !== 'upgrade-insecure-requests')
+      .join('; ');
+  }
+  delete out['Cross-Origin-Opener-Policy'];
   return out;
+}
+
+/** Addresses another device on the same network can reach. */
+function lanAddresses() {
+  return Object.values(networkInterfaces())
+    .flat()
+    .filter((n) => n && n.family === 'IPv4' && !n.internal)
+    .map((n) => n.address);
 }
 
 const server = createServer((req, res) => {
@@ -100,5 +123,8 @@ const server = createServer((req, res) => {
 });
 
 server.listen(PORT, () => {
-  console.log(`serving ${DIST} on http://localhost:${PORT} with ${RULES.length} header rule(s)`);
+  console.log(`serving ${DIST} with ${RULES.length} header rule(s)`);
+  console.log(`  http://localhost:${PORT}`);
+  for (const a of lanAddresses()) console.log(`  http://${a}:${PORT}   (same network)`);
+  console.log('  upgrade-insecure-requests and COOP are dropped: this harness is plain HTTP');
 });
