@@ -888,6 +888,22 @@ const SCENARIOS = [
           return before.map((n) => n.toFixed(2)).join(', ');
         });
 
+        // About is the static page on a phone, not the panel: the panel is a
+        // sheet over a living atlas whose camera it flies, and here the
+        // camera is fixed and the sheet would cover what it talks about.
+        await check('touch', 'about-is-a-page', async () => {
+          const tag = await phone.$eval('.pagelinks > *', (el) => ({
+            tag: el.tagName,
+            href: el.getAttribute('href'),
+          }));
+          expect(tag.tag === 'A', `About is a <${tag.tag.toLowerCase()}> on a phone`);
+          expect(
+            tag.href === '/ueber/' || tag.href === '/about/',
+            `About points at ${tag.href}`,
+          );
+          return tag.href;
+        });
+
         await check('touch', 'the-intro-stays-away', async () => {
           const intro = await count(phone, '.atlas--intro');
           expect(intro === 0, 'the opening sequence plays on a phone');

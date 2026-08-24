@@ -128,12 +128,56 @@ export function fitViewState(
   // Only a portrait frame is solved properly. A wide one has been composed by
   // eye against these numbers for months, and its corners are allowed to sit
   // slightly outside — the country's own corners are empty anyway.
-  return {
-    ...base,
-    zoom: isPortraitFrame(width, height)
-      ? zoomThatFits(base, fitted.zoom, bounds, width, height)
-      : zoom,
-  };
+  if (!isPortraitFrame(width, height)) return { ...base, zoom };
+  const solved = { ...base, zoom: zoomThatFits(base, fitted.zoom, bounds, width, height) };
+  return { ...solved, ...centredOn(solved, bounds, width, height) };
+}
+
+/** Where to aim so that what is *drawn* sits in the middle of the frame.
+ *
+ *  `fitBounds` centres the camera on the middle of the bounding box, which is
+ *  not the middle of the picture: a pitched camera spreads the near edge and
+ *  pushes the country's painted centre below the target. On a phone that left
+ *  a visible band of empty paper along the top and almost none at the bottom.
+ *  Project what will be drawn, measure where its middle actually lands, and
+ *  move the target by the difference. */
+function centredOn(
+  view: MapViewState,
+  bounds: LonLatBounds,
+  width: number,
+  height: number,
+): { longitude: number; latitude: number } {
+  const [west, south, east, north] = bounds;
+  const viewport = new WebMercatorViewport({ ...view, width, height });
+  const ys: number[] = [];
+  const xs: number[] = [];
+  for (const corner of [
+    [west, south],
+    [east, south],
+    [west, north],
+    [east, north],
+  ] as [number, number][]) {
+    const p = viewport.project(corner);
+    const x = p[0];
+    const y = p[1];
+    if (Number.isFinite(x) && Number.isFinite(y)) {
+      xs.push(x as number);
+      ys.push(y as number);
+    }
+  }
+  if (ys.length < 4) return { longitude: view.longitude!, latitude: view.latitude! };
+  const midX = (Math.min(...xs) + Math.max(...xs)) / 2;
+  const midY = (Math.min(...ys) + Math.max(...ys)) / 2;
+  // aim at the ground point that currently sits where the picture's middle is
+  const target = viewport.unproject([
+    width / 2 - (midX - width / 2),
+    height / 2 - (midY - height / 2),
+  ]);
+  const longitude = target[0];
+  const latitude = target[1];
+  return Number.isFinite(longitude) && Number.isFinite(latitude)
+    ? { longitude: longitude as number, latitude: latitude as number }
+    : { longitude: view.longitude!, latitude: view.latitude! };
 }
 
 /** The largest zoom at or below `start` that still keeps the whole country in
