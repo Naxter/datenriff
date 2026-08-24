@@ -30,6 +30,7 @@ import {
   cameraStops,
   fitViewState,
   pitchForFrame,
+  type ViewInsets,
   zoomHeightScale,
 } from './camera';
 import {
@@ -125,6 +126,21 @@ const framePitch = (pitch: number) => ({
   pitch: pitchForFrame(pitch, window.innerWidth, window.innerHeight),
 });
 
+/** How much of the screen the interface is covering, top and bottom.
+ *
+ *  Read from the DOM rather than assumed: the credit grows a second line
+ *  whenever the country outline is on, and a layout guessed at from constants
+ *  put the south of the country behind the legend for exactly that reason. */
+function chromeInsets(): ViewInsets {
+  if (window.innerWidth / window.innerHeight >= 0.8) return { top: 0, bottom: 0 };
+  const top = document.querySelector('.topblock')?.getBoundingClientRect().bottom ?? 0;
+  const bar = document.querySelector('.bottombar')?.getBoundingClientRect().top;
+  return {
+    top: Math.max(0, Math.round(top)),
+    bottom: bar === undefined ? 0 : Math.max(0, Math.round(window.innerHeight - bar)),
+  };
+}
+
 /** A portrait frame is where the camera is fixed: the same condition that
  *  flattens the pitch, so the two never disagree about what kind of frame
  *  this is. */
@@ -148,14 +164,26 @@ export function SculptureView({ scene, engine }: Props) {
   const refit = useCallback(() => {
     setViewState((v) => ({
       ...v,
-      ...fitViewState(scene.lod.bounds, window.innerWidth, window.innerHeight),
+      ...fitViewState(scene.lod.bounds, window.innerWidth, window.innerHeight, chromeInsets()),
     }));
   }, [scene.lod.bounds]);
   useEffect(() => {
     if (!fixedCamera) return;
     refit();
     window.addEventListener('resize', refit);
-    return () => window.removeEventListener('resize', refit);
+    // …and whenever the interface changes height. Switching the country
+    // outline on adds a second credit line, a longer mode title wraps, and
+    // either would leave the country fitted to a band that no longer exists —
+    // which is how the south of it ended up behind the legend.
+    const observer = new ResizeObserver(() => refit());
+    for (const selector of ['.topblock', '.bottombar']) {
+      const el = document.querySelector(selector);
+      if (el) observer.observe(el);
+    }
+    return () => {
+      window.removeEventListener('resize', refit);
+      observer.disconnect();
+    };
   }, [fixedCamera, refit]);
 
   const setHover = useAtlasStore((s) => s.setHover);
@@ -180,7 +208,7 @@ export function SculptureView({ scene, engine }: Props) {
     const shared = readUrlState().view;
     // a shared URL wins; otherwise fit the country to this window
     if (shared) return { ...INITIAL_VIEW_STATE, ...shared };
-    return fitViewState(scene.lod.bounds, window.innerWidth, window.innerHeight);
+    return fitViewState(scene.lod.bounds, window.innerWidth, window.innerHeight, chromeInsets());
   });
   const [exporting, setExporting] = useState(false);
   const deckRef = useRef<{ deck?: { canvas?: HTMLCanvasElement | null } } | null>(null);
@@ -333,7 +361,7 @@ export function SculptureView({ scene, engine }: Props) {
     if (lastFocusKey.current === key) return;
     lastFocusKey.current = key;
     const bounds = focus ? focusBounds(focus) : scene.lod.bounds;
-    const fit = fitViewState(bounds, window.innerWidth, window.innerHeight);
+    const fit = fitViewState(bounds, window.innerWidth, window.innerHeight, chromeInsets());
     setViewState((v) => ({
       ...v,
       longitude: fit.longitude,
@@ -629,7 +657,7 @@ export function SculptureView({ scene, engine }: Props) {
       return;
     }
     const { bounds, reducedMotion: reduced } = resetInputs.current;
-    const fit = fitViewState(bounds, window.innerWidth, window.innerHeight);
+    const fit = fitViewState(bounds, window.innerWidth, window.innerHeight, chromeInsets());
     setViewState((v) => ({
       ...v,
       ...fit,

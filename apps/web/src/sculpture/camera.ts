@@ -95,19 +95,40 @@ function isPortraitFrame(width: number, height: number): boolean {
   return width > 0 && height > 0 && width / height < 0.8;
 }
 
+/** Screen edges the sculpture must stay clear of, in CSS pixels. On a phone
+ *  the interface is a band at the top and a band at the bottom; the country
+ *  belongs in what is left, not in the whole window. */
+export interface ViewInsets {
+  top: number;
+  bottom: number;
+}
+
 export function fitViewState(
   bounds: LonLatBounds,
   width: number,
   height: number,
+  insets: ViewInsets = { top: 0, bottom: 0 },
 ): MapViewState {
   const [west, south, east, north] = bounds;
   if (!(width > 0 && height > 0)) return INITIAL_VIEW_STATE;
+  const edge = Math.round(Math.min(width, height) * 0.04);
+  // Asymmetric padding is what centres the country in the free band: pass the
+  // chrome heights and fitBounds solves position and zoom together. Doing it
+  // in two steps — fit, then move — is what put the south of the country
+  // behind the legend, because moving the camera invalidates the fit.
   const fitted = new WebMercatorViewport({ width, height }).fitBounds(
     [
       [west, south],
       [east, north],
     ],
-    { padding: Math.round(Math.min(width, height) * 0.04) },
+    {
+      padding: {
+        top: edge + Math.max(0, insets.top),
+        bottom: edge + Math.max(0, insets.bottom),
+        left: edge,
+        right: edge,
+      },
+    },
   );
   // fitBounds assumes a top-down camera. Pitching compresses the footprint
   // vertically, so a wide frame has room to zoom in past the flat fit; a
@@ -129,55 +150,14 @@ export function fitViewState(
   // eye against these numbers for months, and its corners are allowed to sit
   // slightly outside — the country's own corners are empty anyway.
   if (!isPortraitFrame(width, height)) return { ...base, zoom };
-  const solved = { ...base, zoom: zoomThatFits(base, fitted.zoom, bounds, width, height) };
-  return { ...solved, ...centredOn(solved, bounds, width, height) };
-}
-
-/** Where to aim so that what is *drawn* sits in the middle of the frame.
- *
- *  `fitBounds` centres the camera on the middle of the bounding box, which is
- *  not the middle of the picture: a pitched camera spreads the near edge and
- *  pushes the country's painted centre below the target. On a phone that left
- *  a visible band of empty paper along the top and almost none at the bottom.
- *  Project what will be drawn, measure where its middle actually lands, and
- *  move the target by the difference. */
-function centredOn(
-  view: MapViewState,
-  bounds: LonLatBounds,
-  width: number,
-  height: number,
-): { longitude: number; latitude: number } {
-  const [west, south, east, north] = bounds;
-  const viewport = new WebMercatorViewport({ ...view, width, height });
-  const ys: number[] = [];
-  const xs: number[] = [];
-  for (const corner of [
-    [west, south],
-    [east, south],
-    [west, north],
-    [east, north],
-  ] as [number, number][]) {
-    const p = viewport.project(corner);
-    const x = p[0];
-    const y = p[1];
-    if (Number.isFinite(x) && Number.isFinite(y)) {
-      xs.push(x as number);
-      ys.push(y as number);
-    }
-  }
-  if (ys.length < 4) return { longitude: view.longitude!, latitude: view.latitude! };
-  const midX = (Math.min(...xs) + Math.max(...xs)) / 2;
-  const midY = (Math.min(...ys) + Math.max(...ys)) / 2;
-  // aim at the ground point that currently sits where the picture's middle is
-  const target = viewport.unproject([
-    width / 2 - (midX - width / 2),
-    height / 2 - (midY - height / 2),
-  ]);
-  const longitude = target[0];
-  const latitude = target[1];
-  return Number.isFinite(longitude) && Number.isFinite(latitude)
-    ? { longitude: longitude as number, latitude: latitude as number }
-    : { longitude: view.longitude!, latitude: view.latitude! };
+  // Search from well above the flat fit, not from it. `fitBounds` has already
+  // padded the frame and is solving for a camera looking straight down, so its
+  // answer is a floor, not a ceiling — starting there meant the country could
+  // only ever come out smaller than the screen could carry.
+  return {
+    ...base,
+    zoom: zoomThatFits(base, fitted.zoom + 1.5, bounds, width, height, insets),
+  };
 }
 
 /** The largest zoom at or below `start` that still keeps the whole country in
@@ -195,6 +175,7 @@ function zoomThatFits(
   bounds: LonLatBounds,
   width: number,
   height: number,
+  insets: ViewInsets,
 ): number {
   // Fit an inset box, not the full one. Germany does not reach the corners of
   // its own bounding box — the north-west is the North Sea, the south-east is
@@ -219,18 +200,22 @@ function zoomThatFits(
     [e0, (s0 + n0) / 2],
   ];
   const margin = Math.round(Math.min(width, height) * 0.02);
+  // the band the interface leaves free, which is what has to contain it
+  const top = margin + Math.max(0, insets.top);
+  const bottom = height - margin - Math.max(0, insets.bottom);
+  // fine steps over a wide range: this is a search for the true maximum now
   let zoom = start;
-  for (let step = 0; step < 24; step += 1) {
+  for (let step = 0; step < 90; step += 1) {
     const viewport = new WebMercatorViewport({ ...view, width, height, zoom });
     const inside = corners.every((corner) => {
       const projected = viewport.project(corner);
       const x = projected[0] ?? Number.NaN;
       const y = projected[1] ?? Number.NaN;
       if (!Number.isFinite(x) || !Number.isFinite(y)) return false;
-      return x >= margin && y >= margin && x <= width - margin && y <= height - margin;
+      return x >= margin && x <= width - margin && y >= top && y <= bottom;
     });
     if (inside) return zoom;
-    zoom -= 0.06;
+    zoom -= 0.035;
   }
   return zoom;
 }
