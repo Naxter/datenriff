@@ -60,6 +60,22 @@ The repository's own code is licensed separately; see `LICENSE` and
 | `wgsl_reflect` | 1.5.0 | MIT | Copyright (c) 2021 Brendan Duncan |
 | `zustand` | 5.0.15 | MIT | Copyright (c) 2019 Paul Henschel |
 
+## Upstream NOTICE files (1)
+
+Apache-2.0 §4(d) requires a dependency's own NOTICE to travel with every
+distribution that includes it. These are reproduced verbatim.
+
+### apache-arrow
+
+```
+Apache Arrow JavaScript
+Copyright 2017-2025 The Apache Software Foundation
+
+This product includes software developed at
+The Apache Software Foundation (http://www.apache.org/).
+```
+
+
 ## Licence texts
 
 ### 0BSD

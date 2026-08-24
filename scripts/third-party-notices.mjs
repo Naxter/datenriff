@@ -68,6 +68,21 @@ const copyrightOf = (text) =>
     ?.trim()
     .replace(/^[#*/\s]+/, '') ?? null;
 
+/** A package's own NOTICE, if it has one.
+ *
+ *  Apache-2.0 §4(d) is the one clause a licence-name-and-copyright summary
+ *  does not satisfy: a NOTICE file shipped with a dependency has to travel
+ *  with every distribution of a work that includes it. `apache-arrow` ships
+ *  one and it was being dropped. */
+function noticeFile(dir) {
+  for (const f of readdirSync(dir)) {
+    if (!/^NOTICE(\.|$)/i.test(f)) continue;
+    const p = join(dir, f);
+    if (statSync(p).isFile()) return readFileSync(p, 'utf8').trim();
+  }
+  return null;
+}
+
 const packages = closure();
 const missing = packages.filter(([, v]) => !copyrightOf(licenceFile(v.dir)));
 
@@ -102,13 +117,35 @@ for (const [name, v] of packages) {
   const c = copyrightOf(licenceFile(v.dir)) ?? '—';
   lines.push(`| \`${name}\` | ${v.version} | ${v.license} | ${c.replace(/\|/g, '\\|')} |`);
 }
+// Upstream NOTICE files, reproduced whole. Apache-2.0 §4(d) requires it and
+// no summary substitutes for it.
+const notices = packages
+  .map(([name, v]) => [name, noticeFile(v.dir)])
+  .filter(([, text]) => text);
+if (notices.length) {
+  lines.push(
+    '',
+    `## Upstream NOTICE files (${notices.length})`,
+    '',
+    'Apache-2.0 §4(d) requires a dependency\'s own NOTICE to travel with every',
+    'distribution that includes it. These are reproduced verbatim.',
+    '',
+  );
+  for (const [name, text] of notices) {
+    lines.push(`### ${name}`, '', '```', text, '```', '');
+  }
+}
+
 lines.push('', '## Licence texts', '');
 for (const [license, text] of [...texts].sort()) {
   lines.push(`### ${license}`, '', '```', text, '```', '');
 }
 
 writeFileSync(OUT, lines.join('\n') + '\n', 'utf8');
-console.log(`wrote THIRD-PARTY-NOTICES.md — ${packages.length} packages, ${texts.size} licences`);
+console.log(
+  `wrote THIRD-PARTY-NOTICES.md — ${packages.length} packages, ${texts.size} licences,` +
+    ` ${notices.length} upstream NOTICE file(s)`,
+);
 if (missing.length) {
   console.warn(`no copyright line found for: ${missing.map(([n]) => n).join(', ')}`);
 }
