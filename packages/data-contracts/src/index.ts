@@ -76,6 +76,12 @@ export interface SculptureLOD {
    *  people, so p99.5 at r7 is several times p99.5 at r8 — calibrating a
    *  LOD with another LOD's stats flattens the sculpture. */
   metricStats?: Record<string, MetricStats>;
+  /** Content stamp for this level, set by `scripts/build-manifest.mjs` and
+   *  already appended to every URL above as `?v=`. Every buffer of one level
+   *  is index-aligned with the others, so they must invalidate together: a
+   *  cached metric read beside a freshly fetched positions buffer puts real
+   *  values on the wrong cells. Informational here — the URLs carry it. */
+  version?: string;
 }
 
 /** One tile of a tiled LOD. */

@@ -166,6 +166,17 @@ curl -sI https://datenriff.de/ | grep -i cache-control
 
 Expect `max-age=0, must-revalidate` for HTML, so a deploy is visible at once.
 
+```bash
+curl -s https://datenriff.de/data/manifest.json \
+  | grep -o '"positions": "[^"]*"' | head -3
+```
+
+Expect every path to end in `?v=` and ten hex characters. A data URL without
+one is a level whose files were missing when the manifest was built — it will
+still load, but it is no longer safe to cache hard. The compression rule in
+step 5 matches on `uri.path.extension`, which stops before the query, so the
+stamp does not affect it.
+
 Then open the site and check: the sculpture draws, the credit under the mode
 title names a licence and links it, and `datenriff.com` lands on `.de`.
 
@@ -175,14 +186,32 @@ title names a licence and links it, and `datenriff.com` lands on `.de`.
 
 **A code change:** `npm run deploy`. Incremental, quick.
 
-**A pipeline re-run:** `npm run deploy`, then **purge the cache** — Caching →
-Configuration → Purge Everything.
+**A pipeline re-run:** `npm run build:manifest`, then `npm run deploy`. **No
+purge needed** — but the manifest build is not optional.
 
-Pages does not purge the edge on deploy. Data files are cached for a day with
-a week of `stale-while-revalidate`, and the buffers within one level of detail
-are index-aligned: a visitor holding yesterday's metric buffer beside today's
-positions buffer would see values attached to the wrong cells. That is worse
-than stale, so do not skip it.
+Every data URL carries a version stamp for its level of detail
+(`positions.bin?v=43819a7e11`, and the same stamp on that level's metric and
+tile templates). `scripts/build-manifest.mjs` computes it from the files on
+disk, so a pipeline run produces new stamps, the new manifest points at new
+URLs, and the old ones are simply never asked for again. That is why the data
+may now be cached as `immutable` for a year in `_headers`.
+
+The stamp is per level, and that is the point: the buffers within one level
+are index-aligned, so they have to invalidate together. Pair yesterday's
+metric with today's positions and every value lands on the wrong hexagon — a
+map that looks right and is not. One stamp means all of a level's URLs change
+or none do.
+
+**If you forget `build:manifest`**, the deployed manifest keeps the old stamps
+and visitors keep the old data. Stale, but never mismatched.
+
+One narrow case remains: a tab left open across a deploy holds the old
+manifest, so a dataset it loads *afterwards* asks for old stamps on files the
+deploy has replaced. The edge usually still has those objects, and the app
+fetches a dataset's buffers within seconds of loading it, so the window is
+small. Closing it completely means keeping old files around under a versioned
+path segment (`/data/v3/…`) rather than a query — more machinery than it is
+worth today, but that is the direction if it ever bites.
 
 **A new dataset:** add a line to `apps/web/public/_headers` for its directory,
 or its files fall back to no caching at all.

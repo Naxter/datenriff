@@ -97,9 +97,12 @@ async function fetchPack(url: string): Promise<Map<string, Section>> {
   return out;
 }
 
-/** "…/tiles/<tile>.<metric>.<storage>" → "<metric>" (a pack section name). */
+/** "…/tiles/<tile>.<metric>.<storage>" → "<metric>" (a pack section name).
+ *  The query is cut first: data URLs carry a per-LOD version stamp, and a
+ *  stamp containing a dot would otherwise be read as part of the name. */
 const sectionOf = (url: string) => {
-  const file = url.slice(url.lastIndexOf('/') + 1);
+  const path = url.split('?')[0]!;
+  const file = path.slice(path.lastIndexOf('/') + 1);
   const parts = file.split('.');
   return parts.slice(1, -1).join('.');
 };

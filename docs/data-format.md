@@ -63,8 +63,9 @@ still work when no pack template is set.
       "bounds": [5.87, 47.27, 15.03, 55.05],
       "cellRadiusMeters": 461.4,
       "minZoom": 0,
-      "positions": "/data/zensus/r8/positions.bin",
-      "metricTemplate": "/data/zensus/r8/{metric}",  // {metric} → "<id>.<storage>"
+      "version": "bde16c333b",           // stamp for this level, see below
+      "positions": "/data/zensus/r8/positions.bin?v=bde16c333b",
+      "metricTemplate": "/data/zensus/r8/{metric}?v=bde16c333b",  // {metric} → "<id>.<storage>"
       // stats for *this* resolution — see below
       "metricStats": { "population_2022": { "p995": 4807, "…": 0 } }
     }],
@@ -78,6 +79,23 @@ still work when no pack template is set.
   "boundary": "/data/boundary.json"
 }
 ```
+
+## Versioned URLs
+
+Every URL of a level carries a `?v=` stamp that `scripts/build-manifest.mjs`
+computes from that level's files (path, size, modification time). All the URLs
+of one level get the same stamp, and levels are stamped independently.
+
+This is not cache tuning, it is a correctness measure. The buffers of one
+level are index-aligned by construction: cell 40,000 in `positions.bin` is
+cell 40,000 in every metric beside it. Serve a cached metric from before a
+pipeline run next to a freshly fetched positions buffer and every value lands
+on the wrong hexagon — a map that reads as plausible and is wrong. One stamp
+per level means they invalidate together or not at all, which is why the data
+may be cached as `immutable` (see `apps/web/public/_headers`).
+
+The stamp never contains a dot: the tile worker recovers a pack section name
+by splitting a filename on dots.
 
 Statistics are computed offline and drive colour clipping and height
 calibration without a runtime scan. Height reads them at the country level
