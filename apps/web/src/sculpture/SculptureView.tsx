@@ -632,7 +632,6 @@ export function SculptureView({ scene, engine }: Props) {
     return () => cancelAnimationFrame(raf);
   }, [labelsHeld]);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   const fineLayers = useMemo(() => {
     // The poster frames the whole country; the fine tiles cover the near
     // field of wherever the camera was standing, and pasted into that frame
