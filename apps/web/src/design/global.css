@@ -1908,11 +1908,13 @@ body {
     font-size: 23px;
     letter-spacing: 0.05em;
   }
-  /* The credits are the longest text on the page and the least urgent. Ranged
-     left and set small they stop being a centred block of capitals competing
-     with the title, and give the sculpture two more lines of room. */
+  /* The mode title and its credits range left together: a centred block of
+     capitals over a centred block of small capitals reads as a masthead and
+     competes with the mark above it. Ranged left it is a caption, which is
+     what it is. Only the mark itself stays centred. */
   .header {
     align-self: stretch;
+    text-align: left;
   }
   .header__source {
     font-size: 8px;
