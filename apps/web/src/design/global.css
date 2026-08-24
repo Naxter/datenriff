@@ -920,6 +920,13 @@ body {
   margin: 0 0 8px;
 }
 
+/* "near Kassel" is a bearing, not a claim that this cell is Kassel — so it
+   is set quieter and smaller than a name the cell actually carries. */
+.tooltip__place[data-near] {
+  font-size: 15px;
+  color: var(--ink-soft);
+}
+
 .tooltip__row {
   margin-top: 7px;
 }
