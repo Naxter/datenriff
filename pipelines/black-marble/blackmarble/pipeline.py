@@ -37,6 +37,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+from zensus_pipeline.provenance import provenance
 from zensus_pipeline.binary_writer import (
     bounds_of,
     compute_stats,
@@ -59,29 +60,6 @@ TILE_PARENT_RES = 5
 # ITU-R BT.709 luma: the composite is near-greyscale, but weighting keeps
 # the faint blue-white city cores from being over- or under-read
 LUMA = (0.2126, 0.7152, 0.0722)
-
-
-def sha256_of(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as fh:
-        for chunk in iter(lambda: fh.read(1 << 20), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
-
-
-def git_commit() -> str | None:
-    try:
-        return (
-            subprocess.run(
-                ["git", "rev-parse", "--short", "HEAD"],
-                capture_output=True,
-                text=True,
-                check=True,
-            ).stdout.strip()
-            or None
-        )
-    except (OSError, subprocess.CalledProcessError):
-        return None
 
 
 def load_clip_rings(path: Path) -> list[list[tuple[float, float]]]:
@@ -316,12 +294,14 @@ def run(args: argparse.Namespace) -> None:
 
     if args.vnp46:
         source_url = "https://doi.org/10.5067/VIIRS/VNP46A4.002"
-        source_hash = None
+        # the granules CMR handed over are on disk; hashing them is what makes
+        # a night-light map traceable to the composites it was built from
+        source_inputs = Path(args.tiles_dir)
         licence = "NASA Black Marble (VNP46A4), free to use with attribution"
         spatial = 500
     else:
         source_url = args.source_url
-        source_hash = f"sha256:{sha256_of(Path(args.input))}"
+        source_inputs = Path(args.input)
         licence = "NASA Earth Observatory, free to use with attribution"
         spatial = args.spatial_resolution
     fragment = {
@@ -335,16 +315,12 @@ def run(args: argparse.Namespace) -> None:
             "url": "https://doi.org/10.5067/VIIRS/VNP46A4.002",
             "license": licence,
             "referenceDate": args.reference_date or f"{years[-1]}-01-01",
-            "provenance": {
-                "sourceUrl": source_url,
-                "sourceHash": source_hash,
-                "downloadDate": args.download_date,
-                "pipelineVersion": "blackmarble-pipeline 0.2.0",
-                "gitCommit": git_commit(),
-                "generatedAt": _dt.datetime.now(_dt.timezone.utc)
-                .isoformat(timespec="seconds")
-                .replace("+00:00", "Z"),
-            },
+            "provenance": provenance(
+                source_url=source_url,
+                pipeline_version="blackmarble-pipeline 0.2.0",
+                inputs=source_inputs,
+                download_date=args.download_date,
+            ),
         },
     }
     manifest = merge_dataset_manifest(out / "dataset.json", fragment)

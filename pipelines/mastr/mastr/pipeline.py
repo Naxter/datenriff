@@ -31,6 +31,7 @@ import urllib.request
 from collections import defaultdict
 from pathlib import Path
 
+from zensus_pipeline.provenance import provenance
 from zensus_pipeline.binary_writer import (
     bounds_of,
     compute_stats,
@@ -47,15 +48,6 @@ H3_EDGE_METERS = {5: 8544.4, 6: 3229.5, 7: 1220.6, 8: 461.4, 9: 174.4}
 FIRST_YEAR = 1990
 
 
-def git_commit() -> str | None:
-    try:
-        return (
-            subprocess.run(["git", "rev-parse", "--short", "HEAD"],
-                           capture_output=True, text=True, check=True).stdout.strip()
-            or None
-        )
-    except (OSError, subprocess.CalledProcessError):
-        return None
 
 
 def current_export_url() -> str:
@@ -187,15 +179,12 @@ def run(args: argparse.Namespace) -> None:
             "url": DOWNLOAD_PAGE,
             "license": "Datenlizenz Deutschland – Namensnennung – Version 2.0",
             "referenceDate": args.reference_date or f"{last_year}-12-31",
-            "provenance": {
-                "sourceUrl": args.url or args.zip or DOWNLOAD_PAGE,
-                "sourceHash": None,
-                "downloadDate": args.download_date or _dt.date.today().isoformat(),
-                "pipelineVersion": "mastr-pipeline 0.1.0",
-                "gitCommit": git_commit(),
-                "generatedAt": _dt.datetime.now(_dt.timezone.utc)
-                .isoformat(timespec="seconds").replace("+00:00", "Z"),
-            },
+            "provenance": provenance(
+                source_url=args.url or args.zip or DOWNLOAD_PAGE,
+                pipeline_version="mastr-pipeline 0.1.0",
+                inputs=Path(args.zip) if args.zip else None,
+                download_date=args.download_date,
+            ),
         },
     }
     manifest = merge_dataset_manifest(out / "dataset.json", fragment)
