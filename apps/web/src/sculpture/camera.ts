@@ -112,6 +112,16 @@ export function fitViewState(
   const [west, south, east, north] = bounds;
   if (!(width > 0 && height > 0)) return INITIAL_VIEW_STATE;
   const edge = Math.round(Math.min(width, height) * 0.04);
+  // Padding that does not leave a frame behind makes fitBounds assert, and an
+  // assertion here takes the whole atlas to the crash page. It happened: above
+  // the phone breakpoint the interface is `display: contents`, its box is
+  // zero, and the measured bottom inset became the entire window. Whatever the
+  // measurement says, at least this much of the height stays free.
+  const room = Math.max(0, height - 2 * edge);
+  const wanted = Math.max(0, insets.top) + Math.max(0, insets.bottom);
+  const shrink = wanted > room * 0.75 ? (room * 0.75) / wanted : 1;
+  const insetTop = Math.round(Math.max(0, insets.top) * shrink);
+  const insetBottom = Math.round(Math.max(0, insets.bottom) * shrink);
   // Asymmetric padding is what centres the country in the free band: pass the
   // chrome heights and fitBounds solves position and zoom together. Doing it
   // in two steps — fit, then move — is what put the south of the country
@@ -123,8 +133,8 @@ export function fitViewState(
     ],
     {
       padding: {
-        top: edge + Math.max(0, insets.top),
-        bottom: edge + Math.max(0, insets.bottom),
+        top: edge + insetTop,
+        bottom: edge + insetBottom,
         left: edge,
         right: edge,
       },
@@ -201,8 +211,8 @@ function zoomThatFits(
   ];
   const margin = Math.round(Math.min(width, height) * 0.02);
   // the band the interface leaves free, which is what has to contain it
-  const top = margin + Math.max(0, insets.top);
-  const bottom = height - margin - Math.max(0, insets.bottom);
+  const top = margin + Math.max(0, Math.min(insets.top, height * 0.4));
+  const bottom = height - margin - Math.max(0, Math.min(insets.bottom, height * 0.4));
   // fine steps over a wide range: this is a search for the true maximum now
   let zoom = start;
   for (let step = 0; step < 90; step += 1) {
