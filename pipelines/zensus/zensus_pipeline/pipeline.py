@@ -72,6 +72,7 @@ from .binary_writer import (
     write_u8,
 )
 from .gridref import find_centre_columns, find_grid_id_column, parse_grid_id
+from .provenance import provenance
 from .special_values import parse_value
 from .tiling import (
     group_by_tile,
@@ -88,29 +89,6 @@ H3_EDGE_METERS = {7: 1220.6, 8: 461.4, 9: 174.4, 10: 65.9}
 TILED_RESOLUTIONS = frozenset({9, 10})
 TILE_PARENT_RES = 5
 WEIGHT_KEY = "__weight"
-
-
-def sha256_of(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as fh:
-        for chunk in iter(lambda: fh.read(1 << 20), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
-
-
-def git_commit() -> str | None:
-    try:
-        return (
-            subprocess.run(
-                ["git", "rev-parse", "--short", "HEAD"],
-                capture_output=True,
-                text=True,
-                check=True,
-            ).stdout.strip()
-            or None
-        )
-    except (OSError, subprocess.CalledProcessError):
-        return None
 
 
 def open_reader(path: Path, encoding: str, delimiter: str):
@@ -524,16 +502,12 @@ def run(args: argparse.Namespace) -> None:
             "label": args.attribution,
             "url": "https://www.destatis.de/DE/Themen/Gesellschaft-Umwelt/Bevoelkerung/Zensus2022/_inhalt.html",
             "license": "Datenlizenz Deutschland – Namensnennung – Version 2.0",
-            "provenance": {
-                "sourceUrl": args.source_url,
-                "sourceHash": f"sha256:{sha256_of(input_path)}",
-                "downloadDate": args.download_date,
-                "pipelineVersion": f"zensus-pipeline {__version__}",
-                "gitCommit": git_commit(),
-                "generatedAt": _dt.datetime.now(_dt.timezone.utc)
-                .isoformat(timespec="seconds")
-                .replace("+00:00", "Z"),
-            },
+            "provenance": provenance(
+                source_url=args.source_url,
+                pipeline_version=f"zensus-pipeline {__version__}",
+                inputs=input_path,
+                download_date=args.download_date,
+            ),
         },
     }
     manifest = merge_dataset_manifest(out / "dataset.json", fragment)

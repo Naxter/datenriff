@@ -29,6 +29,7 @@ from pathlib import Path
 
 import h3
 import numpy as np
+from zensus_pipeline.provenance import provenance
 from zensus_pipeline.binary_writer import (
     bounds_of,
     compute_stats,
@@ -59,17 +60,6 @@ SPATIAL_RESOLUTION_METERS = 30
 FOREST, DISTURBED = 0, 1
 AGENT0 = 2
 WIDTH = AGENT0 + len(raster.AGENT_CODES)
-
-
-def git_commit() -> str | None:
-    try:
-        out = subprocess.run(
-            ["git", "rev-parse", "--short", "HEAD"],
-            capture_output=True, text=True, check=True,
-        )
-        return out.stdout.strip()
-    except Exception:
-        return None
 
 
 def log(message: str) -> None:
@@ -273,16 +263,12 @@ def run(args: argparse.Namespace) -> None:
             "url": SOURCE_URL,
             "license": LICENSE,
             "referenceDate": args.reference_date,
-            "provenance": {
-                "sourceUrl": SOURCE_URL,
-                "sourceHash": None,
-                "downloadDate": args.download_date,
-                "pipelineVersion": "forest-pipeline 0.1.0",
-                "gitCommit": git_commit(),
-                "generatedAt": _dt.datetime.now(_dt.timezone.utc)
-                .isoformat(timespec="seconds")
-                .replace("+00:00", "Z"),
-            },
+            "provenance": provenance(
+                source_url=SOURCE_URL,
+                pipeline_version="forest-pipeline 0.1.0",
+                inputs=paths,
+                download_date=args.download_date,
+            ),
         },
     }
     manifest = merge_dataset_manifest(out / "dataset.json", dataset)

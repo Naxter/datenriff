@@ -30,6 +30,7 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
+from zensus_pipeline.provenance import provenance
 from zensus_pipeline.binary_writer import (
     bounds_of,
     compute_stats,
@@ -52,17 +53,6 @@ TILE_PARENT_RES = 5
 # Deutschland: opendata.dwd.de/climate_environment/CDC/Terms_of_use.txt and
 # dwd.de/DE/service/rechtliche_hinweise. Checked 21 August 2026.
 LICENSE = "CC BY 4.0"
-
-
-def git_commit() -> str | None:
-    try:
-        return (
-            subprocess.run(["git", "rev-parse", "--short", "HEAD"],
-                           capture_output=True, text=True, check=True).stdout.strip()
-            or None
-        )
-    except (OSError, subprocess.CalledProcessError):
-        return None
 
 
 def parse_years(spec: str) -> list[int]:
@@ -228,15 +218,12 @@ def run(args: argparse.Namespace) -> None:
             "url": f"{CDC}/annual/{args.variable}/",
             "license": LICENSE,
             "referenceDate": args.reference_date or f"{years[-1]}-12-31",
-            "provenance": {
-                "sourceUrl": f"{CDC}/annual/{args.variable}/",
-                "sourceHash": None,
-                "downloadDate": args.download_date or _dt.date.today().isoformat(),
-                "pipelineVersion": "dwd-pipeline 0.1.0",
-                "gitCommit": git_commit(),
-                "generatedAt": _dt.datetime.now(_dt.timezone.utc)
-                .isoformat(timespec="seconds").replace("+00:00", "Z"),
-            },
+            "provenance": provenance(
+                source_url=f"{CDC}/annual/{args.variable}/",
+                pipeline_version="dwd-pipeline 0.1.0",
+                inputs=Path(args.cache),
+                download_date=args.download_date,
+            ),
         },
     }
     manifest = merge_dataset_manifest(out / "dataset.json", dataset)

@@ -81,6 +81,22 @@ shows what moved. `--threshold 0.5` (percent of pixels) is the default;
 `--only people,wind` restricts the run; without `--gpu` it uses SwiftShader
 and `?shadows=0`.
 
+## Provenance
+
+```bash
+node scripts/check-provenance.mjs
+```
+
+Asks every dataset in the manifest where it came from. Fails when a dataset
+cannot name its source URL, pipeline version, commit or build time; reports
+thin when the source hash or download date is missing. A gap is fixed by
+re-running that pipeline — the record is only worth anything because a
+machine wrote it, so never edit a manifest to make this pass.
+
+All six pipelines build the block through `zensus_pipeline/provenance.py`,
+which hashes whatever the run actually read: one file, or a directory of
+grids and rasters hashed by name and contents in sorted order.
+
 ## Measuring what the renderer costs
 
 ```bash

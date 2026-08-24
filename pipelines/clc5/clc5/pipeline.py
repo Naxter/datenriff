@@ -28,6 +28,7 @@ from pathlib import Path
 
 import h3
 import numpy as np
+from zensus_pipeline.provenance import provenance
 from zensus_pipeline.binary_writer import (
     bounds_of,
     compute_stats,
@@ -51,17 +52,6 @@ LICENSE = "Datenlizenz Deutschland – Namensnennung – Version 2.0"
 SOURCE_URL = "https://gdz.bkg.bund.de/index.php/default/corine-land-cover-5-ha-clc5.html"
 #: CLC5's minimum mapping unit is 5 ha; as a length that is ~224 m
 SPATIAL_RESOLUTION_METERS = 224
-
-
-def git_commit() -> str | None:
-    try:
-        return (
-            subprocess.run(["git", "rev-parse", "--short", "HEAD"],
-                           capture_output=True, text=True, check=True).stdout.strip()
-            or None
-        )
-    except (OSError, subprocess.CalledProcessError):
-        return None
 
 
 def log(message: str) -> None:
@@ -218,16 +208,12 @@ def run(args: argparse.Namespace) -> None:
             "url": SOURCE_URL,
             "license": LICENSE,
             "referenceDate": args.reference_date or f"{year}-01-01",
-            "provenance": {
-                "sourceUrl": SOURCE_URL,
-                "sourceHash": None,
-                "downloadDate": args.download_date,
-                "pipelineVersion": "clc5-pipeline 0.1.0",
-                "gitCommit": git_commit(),
-                "generatedAt": _dt.datetime.now(_dt.timezone.utc)
-                .isoformat(timespec="seconds")
-                .replace("+00:00", "Z"),
-            },
+            "provenance": provenance(
+                source_url=SOURCE_URL,
+                pipeline_version="clc5-pipeline 0.1.0",
+                inputs=Path(args.input),
+                download_date=args.download_date,
+            ),
         },
     }
     manifest = merge_dataset_manifest(out / "dataset.json", dataset)
