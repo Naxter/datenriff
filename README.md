@@ -119,7 +119,7 @@ pipelines/
   zensus/               Python ETL: Destatis 100 m grid → H3 → binary
   black-marble/         NASA night lights raster → H3 → binary
 prototype/              dependency-free WebGL2 viewer over the same binaries
-scripts/                manifest builder, screenshot and picking checks
+scripts/                manifest builder, screenshot, picking and interface checks
 docs/                   architecture, data format, roadmap
 ```
 
@@ -131,6 +131,10 @@ npm run typecheck        # package builds + app tsc
 npm run test             # node:test (packages) + unittest (pipeline)
 npm run build            # production build of apps/web
 ```
+
+Three more checks drive a real browser and therefore need pipeline data on
+the machine: hover picking, the interface suite (`npm run ui`) and the visual
+regression (`npm run visual`). See [docs/testing.md](docs/testing.md).
 
 The pipeline tests run against the interpreter found first: the
 `pipelines/zensus/.venv` if present, otherwise `python3`/`python`/`py -3`. For
