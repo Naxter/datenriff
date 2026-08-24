@@ -24,6 +24,12 @@ export function introEligible(reducedMotion: boolean): boolean {
   const forced = params.get('intro');
   if (forced === '1') return true;
   if (forced === '0' || reducedMotion) return false;
+  // Not on a phone. The sequence holds the title over the sculpture for five
+  // seconds with the interface faded out and `pointer-events: none` on it —
+  // which on a narrow screen means the mode nav is visible, unreadable
+  // through the title laid over it, and dead to the touch. On a wide screen
+  // there is room for the staging; here it only reads as a broken page.
+  if (window.matchMedia?.('(max-width: 760px)').matches) return false;
   const url = readUrlState();
   if (url.modeId || url.view || url.palette || url.timeT !== undefined) return false;
   try {

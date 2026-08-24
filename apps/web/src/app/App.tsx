@@ -287,19 +287,28 @@ export default function App() {
           <Header mode={mode} scene={scene} />
         </div>
       )}
-      {manifest && <ModeNav scene={scene} />}
-      {ready && mode.time && <Timeline mode={mode} />}
-      {shown && shownTarget && (
-        <Legend mode={shownMode} scene={scene} colorStats={shownTarget.colorStats} />
-      )}
+      {/* The lower edge, in the order it is read. On a wide screen this is
+          `display: contents` and each child keeps the corner it always had;
+          on a phone it becomes the one column they stack in. The stack used
+          to be three hand-tuned `bottom` offsets, which assumed the legal
+          links fit on one line — in German they wrap, and the mode nav came
+          down on top of them.
+
+          `PageLinks` sits inside it but never depends on the scene: the two
+          legally required links have to be reachable from every view,
+          including the error screen. */}
+      <div className="bottombar">
+        {ready && <ZoomLadder />}
+        {ready && mode.time && <Timeline mode={mode} />}
+        {shown && shownTarget && (
+          <Legend mode={shownMode} scene={scene} colorStats={shownTarget.colorStats} />
+        )}
+        {manifest && <ModeNav scene={scene} />}
+        <PageLinks />
+      </div>
       {shown && <Tooltip mode={shownMode} scene={scene} builder={ctx.builder} />}
-      {ready && <ZoomLadder />}
       {ready && <Toolbar builder={ctx.builder} />}
       {ready && <StoryPlayer mode={mode} />}
-      {/* neither needs the scene, and both must survive a dataset switch:
-          the panel would lose the reader's place, and the legal links have
-          to be reachable from every view, including the error screen */}
-      <PageLinks />
       <AboutPanel />
       <Veil
         visible={status !== 'ready' || !scene}
