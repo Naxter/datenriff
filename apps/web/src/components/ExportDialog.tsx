@@ -19,6 +19,7 @@ import {
 import type { TargetBuilder } from '../sculpture/targets';
 import { useAtlasStore } from '../state/store';
 import { useI18n } from '../i18n';
+import { useDialogFocus } from './useDialogFocus';
 
 /** Poster resolutions. The capture is CSS pixels; the multiplier is how
  *  many device pixels each becomes, so 2× of 1920×1080 is a 4K file. */
@@ -128,29 +129,25 @@ export function ExportDialog({ builder, onClose }: Props) {
     setBusy(null);
   }, [busy, format, animation, mode, posterContext, setTimeT]);
 
+  // focus into the dialog, Tab kept inside it, the page behind it inert,
+  // and the opener focused again on close
+  useDialogFocus(panel, onClose);
+
   useEffect(() => {
-    panel.current?.focus();
+    // Enter renders — but only Enter meant for the dialog itself. On the
+    // window it fired wherever the focus was, so a keyboard user activating
+    // a button elsewhere started a 4K render; on a control inside the dialog
+    // it both activated the control and rendered.
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-        return;
-      }
-      // Enter renders — but only Enter meant for this dialog. On the window it
-      // fired wherever the focus was, so a keyboard user activating a button
-      // elsewhere started a 4K render, and Enter on a control inside the
-      // dialog both activated it and rendered.
       if (e.key !== 'Enter' || e.repeat) return;
-      const target = e.target as Node | null;
-      if (!panel.current || (target && target !== panel.current && panel.current.contains(target))) {
-        return;
-      }
-      if (target && !panel.current.contains(target)) return;
+      if (!panel.current || e.target !== panel.current) return;
       e.preventDefault();
       void (kind === 'animation' ? renderGif() : render());
     };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose, render, renderGif, kind]);
+    const el = panel.current;
+    el?.addEventListener('keydown', onKey);
+    return () => el?.removeEventListener('keydown', onKey);
+  }, [render, renderGif, kind]);
 
   const px =
     kind === 'animation'

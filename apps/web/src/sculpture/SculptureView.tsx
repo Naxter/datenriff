@@ -104,6 +104,20 @@ interface Outgoing {
   radius: number;
 }
 
+/** Camera transition props, or none at all.
+ *
+ *  Reduced motion was honoured by the morphs, the timeline and the intro,
+ *  but not by the camera: every zoom stop, focus flight, story stop and
+ *  reset still swept across the country. A flight is the largest movement
+ *  the page makes, so it is the one that matters most here. */
+function flight(reduced: boolean, ms: number, speed: number, curve?: number) {
+  if (reduced) return { transitionDuration: 0 };
+  return {
+    transitionDuration: ms,
+    transitionInterpolator: new FlyToInterpolator(curve ? { speed, curve } : { speed }),
+  };
+}
+
 export function SculptureView({ scene, engine }: Props) {
   const setHover = useAtlasStore((s) => s.setHover);
   const setView = useAtlasStore((s) => s.setView);
@@ -260,10 +274,9 @@ export function SculptureView({ scene, engine }: Props) {
     setViewState((v) => ({
       ...v,
       ...target,
-      transitionDuration: 900,
-      transitionInterpolator: new FlyToInterpolator({ speed: 1.4 }),
+      ...flight(reducedMotion, 900, 1.4),
     }));
-  }, [modeId, mode.camera]);
+  }, [modeId, mode.camera, reducedMotion]);
 
   // a new focus flies the camera to its region (mode angles kept)
   const focus = useAtlasStore((s) => s.focus);
@@ -284,10 +297,9 @@ export function SculptureView({ scene, engine }: Props) {
       latitude: fit.latitude,
       // a state fills the frame; a city radius fits loosely
       zoom: focus?.kind === 'city' ? fit.zoom - 0.4 : fit.zoom,
-      transitionDuration: 1400,
-      transitionInterpolator: new FlyToInterpolator({ speed: 1.3 }),
+      ...flight(reducedMotion, 1400, 1.3),
     }));
-  }, [focus, scene.lod.bounds]);
+  }, [focus, scene.lod.bounds, reducedMotion]);
 
   // camera stories fly the view to each stop in turn
   useEffect(() => {
@@ -299,10 +311,9 @@ export function SculptureView({ scene, engine }: Props) {
       zoom: storyStop.zoom,
       pitch: storyStop.pitch ?? v.pitch,
       bearing: storyStop.bearing ?? v.bearing,
-      transitionDuration: 2200,
-      transitionInterpolator: new FlyToInterpolator({ speed: 1.2, curve: 1.3 }),
+      ...flight(reducedMotion, 2200, 1.2, 1.3),
     }));
-  }, [storyStop]);
+  }, [storyStop, reducedMotion]);
 
   const fineLod = tileManager?.activeLod(viewState.zoom) ?? null;
   const fineUsable =
@@ -465,10 +476,9 @@ export function SculptureView({ scene, engine }: Props) {
       longitude,
       latitude,
       zoom,
-      transitionDuration: STEP_MS,
-      transitionInterpolator: new FlyToInterpolator({ speed: 1.4 }),
+      ...flight(reducedMotion, STEP_MS, 1.4),
     }));
-  }, []);
+  }, [reducedMotion]);
 
   const canvasRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
@@ -514,11 +524,10 @@ export function SculptureView({ scene, engine }: Props) {
       setViewState((v) => ({
         ...v,
         zoom,
-        transitionDuration: 420,
-        transitionInterpolator: new FlyToInterpolator({ speed: 1.6 }),
+        ...flight(reducedMotion, 420, 1.6),
       }));
     }, 220);
-  }, []);
+  }, [reducedMotion]);
   useEffect(() => () => {
     if (snapTimer.current !== null) window.clearTimeout(snapTimer.current);
   }, []);
@@ -554,10 +563,9 @@ export function SculptureView({ scene, engine }: Props) {
     setViewState((v) => ({
       ...v,
       zoom,
-      transitionDuration: STEP_MS,
-      transitionInterpolator: new FlyToInterpolator({ speed: 1.4 }),
+      ...flight(reducedMotion, STEP_MS, 1.4),
     }));
-  }, [zoomStopRequest, stops, requestZoomStop]);
+  }, [zoomStopRequest, stops, requestZoomStop, reducedMotion]);
 
   // Reset: the whole country, centred, at the opening angle. A zoom stop
   // only changes the zoom, so resetting from a city used to pull back while
@@ -575,10 +583,9 @@ export function SculptureView({ scene, engine }: Props) {
       ...fit,
       pitch: INITIAL_VIEW_STATE.pitch,
       bearing: INITIAL_VIEW_STATE.bearing,
-      transitionDuration: STEP_MS,
-      transitionInterpolator: new FlyToInterpolator({ speed: 1.4 }),
+      ...flight(reducedMotion, STEP_MS, 1.4),
     }));
-  }, [viewResetRequest, scene.lod.bounds]);
+  }, [viewResetRequest, scene.lod.bounds, reducedMotion]);
 
   // New object identity → deck re-uploads the attributes. That now happens
   // only when an endpoint buffer actually changed (a new mode, a scrub),
