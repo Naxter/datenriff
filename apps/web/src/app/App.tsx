@@ -166,15 +166,27 @@ export default function App() {
     if (!scene || missing.length === 0) return;
     let cancelled = false;
     useAtlasStore.setState({ sceneLoading: true });
-    void scene.ensure(missing).then(() => {
-      if (cancelled) return;
-      useAtlasStore.setState({ sceneLoading: false });
-      setMetricsVersion((v) => v + 1);
-    });
+    // A rejected fetch here used to leave `sceneLoading` true for ever: the
+    // header stayed dimmed, the sculpture stayed on the previous mode, and
+    // nothing said why. Clear the flag on both outcomes, and report the
+    // failure rather than presenting a half-loaded mode as the current one.
+    scene
+      .ensure(missing)
+      .then(() => {
+        if (cancelled) return;
+        setMetricsVersion((v) => v + 1);
+      })
+      .catch((e: unknown) => {
+        if (cancelled) return;
+        setError(e instanceof Error ? e.message : String(e));
+      })
+      .finally(() => {
+        if (!cancelled) useAtlasStore.setState({ sceneLoading: false });
+      });
     return () => {
       cancelled = true;
     };
-  }, [scene, missing]);
+  }, [scene, missing, setError]);
 
   const ready =
     ctx !== null &&

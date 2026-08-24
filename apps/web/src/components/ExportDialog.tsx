@@ -131,8 +131,22 @@ export function ExportDialog({ builder, onClose }: Props) {
   useEffect(() => {
     panel.current?.focus();
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-      if (e.key === 'Enter') void (kind === 'animation' ? renderGif() : render());
+      if (e.key === 'Escape') {
+        onClose();
+        return;
+      }
+      // Enter renders — but only Enter meant for this dialog. On the window it
+      // fired wherever the focus was, so a keyboard user activating a button
+      // elsewhere started a 4K render, and Enter on a control inside the
+      // dialog both activated it and rendered.
+      if (e.key !== 'Enter' || e.repeat) return;
+      const target = e.target as Node | null;
+      if (!panel.current || (target && target !== panel.current && panel.current.contains(target))) {
+        return;
+      }
+      if (target && !panel.current.contains(target)) return;
+      e.preventDefault();
+      void (kind === 'animation' ? renderGif() : render());
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
