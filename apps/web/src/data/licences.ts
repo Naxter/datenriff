@@ -32,6 +32,14 @@ const NASA: LicenceRef = {
   url: 'https://www.earthdata.nasa.gov/engage/open-data-services-software-policies/data-use-policy',
 };
 
+/** The synthetic demo dataset (`scripts/seed-demo.mjs`). Invented numbers owe
+ *  nobody a credit, but the demo should still exercise the same path as real
+ *  data — a blank licence in the demo is how a broken one goes unnoticed. */
+const CC0: LicenceRef = {
+  short: 'CC0 1.0',
+  url: 'https://creativecommons.org/publicdomain/zero/1.0/',
+};
+
 export function licenceRef(license?: string | null): LicenceRef | null {
   if (!license) return null;
   const s = license.toLowerCase();
@@ -40,5 +48,6 @@ export function licenceRef(license?: string | null): LicenceRef | null {
     return CC_BY_4;
   }
   if (s.includes('nasa')) return NASA;
+  if (s.includes('cc0') || s.includes('public domain')) return CC0;
   return null;
 }
