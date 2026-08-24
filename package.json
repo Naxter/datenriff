@@ -9,6 +9,9 @@
     "apps/*",
     "packages/*"
   ],
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev": "npm run dev -w @datenriff/web",
     "build": "npm run build:pages && npm run build -w @datenriff/web",
@@ -20,6 +23,7 @@
     "test": "npm run test:packages && npm run test:pipeline",
     "deploy": "npm run build && node scripts/prune-dist.mjs && wrangler pages deploy apps/web/dist --project-name datenriff",
     "build:manifest": "node scripts/build-manifest.mjs",
+    "demo": "node scripts/seed-demo.mjs",
     "ui": "node scripts/check-ui.cjs --gpu",
     "visual": "node scripts/visual-check.cjs --gpu",
     "visual:update": "node scripts/visual-check.cjs --gpu --update",
