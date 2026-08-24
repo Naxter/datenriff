@@ -13,21 +13,42 @@ import { useI18n, type Lang } from '../i18n';
 import { dec1Format, intFormat } from '../i18n/format';
 import { categoryText, unitText } from '../i18n/strings';
 
-// nearest labelled city within maxKm, used as the headline
-function nearestCity(scene: SceneData, index: number, maxKm = 35): string | null {
+/** How far a city may claim a cell, by label tier, in kilometres.
+ *
+ *  This used to be a flat 35 km for every city, which put the word BERLIN
+ *  over fields in Brandenburg and let a tier-3 town claim the same reach as
+ *  Hamburg. The tiers already encode size, so the radius follows them.
+ *  Beyond the radius, up to `NEAR_FACTOR` times it, the name is still useful
+ *  as a bearing but has to say so — "near Kassel", not "KASSEL". */
+const CLAIM_KM: Record<number, number> = { 1: 22, 2: 14, 3: 9 };
+const NEAR_FACTOR = 1.8;
+
+interface Place {
+  name: string;
+  /** true when the cell is outside the city proper and only near it */
+  near: boolean;
+}
+
+/** The city a cell reads as being at, or near. Nearest wins, but each city
+ *  is only a candidate inside its own reach, so a small town close by beats
+ *  a metropolis over the horizon. */
+function nearestCity(scene: SceneData, index: number): Place | null {
   const lon = scene.positions[index * 2]!;
   const lat = scene.positions[index * 2 + 1]!;
   const kmPerDegLon = 111.32 * Math.cos((lat * Math.PI) / 180);
-  let best: string | null = null;
-  let bestD = maxKm * maxKm;
+  let best: Place | null = null;
+  // compare on distance relative to each city's own reach, so "closest" means
+  // closest in claims, not in kilometres
+  let bestRatio = Infinity;
   for (const city of scene.cities) {
     const dx = (city.lon - lon) * kmPerDegLon;
     const dy = (city.lat - lat) * 111.13;
-    const d = dx * dx + dy * dy;
-    if (d < bestD) {
-      bestD = d;
-      best = city.name;
-    }
+    const km = Math.hypot(dx, dy);
+    const claim = CLAIM_KM[city.tier] ?? CLAIM_KM[3]!;
+    const ratio = km / claim;
+    if (ratio > NEAR_FACTOR || ratio >= bestRatio) continue;
+    bestRatio = ratio;
+    best = { name: city.name, near: ratio > 1 };
   }
   return best;
 }
@@ -123,7 +144,13 @@ export function Tooltip({ mode, scene, builder }: Props) {
 
   return (
     <div className="tooltip" style={{ left: hover.x, top: hover.y }} data-fine={content.fine ? '1' : undefined}>
-      {content.place && <p className="tooltip__place">{content.place.toUpperCase()}</p>}
+      {content.place && (
+        <p className="tooltip__place" data-near={content.place.near ? '1' : undefined}>
+          {content.place.near
+            ? `${i18n.t('tooltip.near')} ${content.place.name}`
+            : content.place.name.toUpperCase()}
+        </p>
+      )}
       {content.rows.map((row) => (
         <div key={row.label} className="tooltip__row">
           <div className="tooltip__label">{row.label}</div>
