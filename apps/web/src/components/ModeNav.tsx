@@ -43,9 +43,16 @@ export function ModeNav({ scene }: { scene?: SceneData }) {
               family.id === openFamily.id ? ' modenav__family--active' : ''
             }`}
             aria-pressed={family.id === openFamily.id}
-            onPointerEnter={() => setPeeked(family.id)}
-            onPointerLeave={() => setPeeked(null)}
-            onFocus={() => setPeeked(family.id)}
+            // Peeking is a mouse affordance. On a touchscreen a tap fires
+            // pointerenter first, the browser treats that as the hover half
+            // of the gesture, and the tap that was meant to switch families
+            // only previews one — so it took two taps to change anything.
+            onPointerEnter={(e) => e.pointerType === 'mouse' && setPeeked(family.id)}
+            onPointerLeave={(e) => e.pointerType === 'mouse' && setPeeked(null)}
+            onFocus={(e) => {
+              // keyboard only: a tap also focuses, and that would peek again
+              if (e.currentTarget.matches(':focus-visible')) setPeeked(family.id);
+            }}
             onBlur={() => setPeeked(null)}
             onClick={() => {
               const remembered = lastUsed.current.get(family.id);
