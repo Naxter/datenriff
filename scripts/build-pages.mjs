@@ -85,7 +85,7 @@ const STYLE = `
   a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 `;
 
-function render({ key, lang, path, alt }, content) {
+function render({ key, lang, path, alt, noindex }, content) {
   const doc = content[key][lang];
   const nav = NAV[lang];
   const links = [
@@ -122,7 +122,7 @@ function render({ key, lang, path, alt }, content) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>${escape(doc.title.includes('Datenriff') ? doc.title : `${doc.title} — Datenriff`)}</title>
     <meta name="description" content="${escape(metaDescription(doc))}" />
-    <link rel="canonical" href="${SITE}${here}" />
+${noindex ? '    <meta name="robots" content="noindex" />' : `    <link rel="canonical" href="${SITE}${here}" />`}
 ${hreflang}
     <link rel="stylesheet" href="/fonts.css" />
     <style>${STYLE}</style>
@@ -181,6 +181,32 @@ async function main() {
     await writeFile(appHtmlPath, patched, 'utf8');
     console.log(`  apps/web/index.html  canonical and og tags → ${SITE}`);
   }
+
+  // A real 404, so an unknown path says so instead of quietly serving the
+  // atlas. A soft 404 tells a crawler the page exists and tells a reader
+  // their link worked; neither is true.
+  const notFound = render(
+    { key: '__404', lang: 'de', path: '404', noindex: true },
+    {
+      __404: {
+        de: {
+          title: 'Seite nicht gefunden',
+          lead: 'Diese Adresse gibt es hier nicht — vielleicht ein alter Link, vielleicht ein Tippfehler.',
+          sections: [
+            {
+              id: 'weiter',
+              heading: 'Weiter',
+              paragraphs: [
+                'Zum <a href="/">Atlas</a>, zu <a href="/ueber/">Über das Projekt</a>, zum <a href="/impressum/">Impressum</a> oder zur <a href="/datenschutz/">Datenschutzerklärung</a>.',
+              ],
+            },
+          ],
+        },
+      },
+    },
+  );
+  await writeFile(join(PUBLIC, '404.html'), notFound, 'utf8');
+  console.log(`  404.html  ${(Buffer.byteLength(notFound) / 1024).toFixed(1)} kB`);
 
   const urls = PAGES.map((p) => `${SITE}/${p.path}/`);
   const sitemap =
