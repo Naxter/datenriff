@@ -70,6 +70,9 @@ export interface TileQuery {
   region?: FocusGeometry | null;
   /** Timeline scrubbing keeps the country LOD in charge. */
   enabled: boolean;
+  /** Where the country comes to rest in this window; the fine levels start
+   *  above it rather than at an absolute zoom. */
+  countryZoom?: number;
 }
 
 /** At most this many tiles kept in memory. */
@@ -196,11 +199,23 @@ export class TileManager {
     for (const entry of this.lods) entry.index = null;
   }
 
-  /** The finest tiled LOD the current zoom qualifies for. */
-  activeLod(zoom: number): SculptureLOD | null {
+  /** The finest tiled LOD the current zoom qualifies for.
+   *
+   *  A level's minZoom is an absolute number tuned against a laptop, where
+   *  the country comes to rest around zoom 5.9. On a 4K screen the country
+   *  fits at 7.12 — past r9's 7.0 — so the *resting* view was already inside
+   *  the fine level: 300 tile requests, the request cap, to draw the opening
+   *  picture, and the poster composition replaced by fine detail before the
+   *  reader had touched anything.
+   *
+   *  Detail belongs to zooming in, so the floor is relative to where the
+   *  country rests. 0.6 is the same margin cameraStops() uses to decide a
+   *  stop is far enough above the country to be worth having. */
+  activeLod(zoom: number, countryZoom = -Infinity): SculptureLOD | null {
     let best: TileLodRuntime | null = null;
     for (const entry of this.lods) {
-      if (zoom >= entry.lod.minZoom && entry.index) {
+      const floor = Math.max(entry.lod.minZoom, countryZoom + 0.6);
+      if (zoom >= floor && entry.index) {
         if (!best || entry.lod.resolution > best.lod.resolution) best = entry;
       }
     }
@@ -316,7 +331,7 @@ export class TileManager {
   }
 
   update(q: TileQuery): void {
-    const lod = q.enabled ? this.activeLod(q.zoom) : null;
+    const lod = q.enabled ? this.activeLod(q.zoom, q.countryZoom) : null;
     if (!lod || !this.supportsMode(lod, q.mode)) return;
     const index = this.indexOf(lod);
     if (!index) return;
