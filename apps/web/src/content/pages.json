@@ -208,6 +208,14 @@
           ]
         },
         {
+          "id": "lizenzen",
+          "heading": "Lizenzen und Quelltext",
+          "paragraphs": [
+            "Der Quelltext dieser Seite steht unter der Apache-Lizenz 2.0. Lizenztext, NOTICE, Autorenliste und die Hinweise zu den mitgelieferten Fremdbibliotheken werden mit ausgeliefert und sind unter /legal/ abrufbar: /legal/LICENSE, /legal/NOTICE, /legal/AUTHORS und /legal/THIRD-PARTY-NOTICES.md.",
+            "Die dargestellten Daten stehen nicht unter dieser Lizenz. Ihre Rechte liegen bei den jeweiligen Herausgebern; der Vermerk am jeweiligen Modus nennt Quelle, Lizenz und den Hinweis, dass die Daten verändert wurden. Die Schriften Inter und Instrument Serif stehen unter der SIL Open Font License 1.1."
+          ]
+        },
+        {
           "id": "streit",
           "heading": "Streitbeilegung",
           "paragraphs": [
@@ -250,7 +258,7 @@
           "id": "speicherung",
           "heading": "Einstellungen auf Ihrem Gerät",
           "paragraphs": [
-            "Die Anwendung speichert im lokalen Speicher (localStorage) Ihres Browsers zwei Dinge: die gewählte Sprache und Ihre Anzeigeeinstellungen, etwa Schattenstärke, Qualitätsstufe und Farbpalette.",
+            "Die Anwendung speichert im lokalen Speicher (localStorage) Ihres Browsers zwei Dinge: die gewählte Sprache und Ihre Anzeigeeinstellungen, etwa Schattenstärke, Qualitätsstufe und Farbpalette. Dazu kommt ein Eintrag im Sitzungsspeicher (sessionStorage), der lediglich vermerkt, dass Ihnen die Eröffnungssequenz in dieser Sitzung bereits gezeigt wurde; er wird gelöscht, sobald Sie den Tab schließen.",
             "Das sind keine Cookies, es findet keine Übertragung an einen Server statt, und es entsteht kein Profil. Da diese Speicherung für den von Ihnen ausdrücklich gewünschten Dienst unbedingt erforderlich ist, ist sie nach § 25 Abs. 2 Nr. 2 TDDDG einwilligungsfrei. Sie können die Einträge jederzeit über die Einstellungen Ihres Browsers löschen; die Anwendung startet dann mit den Standardwerten."
           ]
         },
