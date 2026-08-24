@@ -41,6 +41,12 @@ const VIEWPORTS = [
   { id: 'phone-browser', width: 390, height: 660 },
   { id: 'phone-small', width: 320, height: 568 },
   { id: 'phone-landscape', width: 844, height: 390 },
+  // Just above the 760 px breakpoint, where the interface is corner-anchored
+  // and its wrappers have no box. Measuring those zeros as a chrome inset
+  // once fed fitBounds a padding taller than the window and took the whole
+  // atlas to the crash page — on every portrait tablet.
+  { id: 'tablet-portrait', width: 768, height: 1024 },
+  { id: 'tablet-wide', width: 800, height: 1100 },
 ];
 
 // What the navigation is expected to offer, by the text it prints. This is

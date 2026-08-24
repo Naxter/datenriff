@@ -132,7 +132,11 @@ const framePitch = (pitch: number) => ({
  *  whenever the country outline is on, and a layout guessed at from constants
  *  put the south of the country behind the legend for exactly that reason. */
 function chromeInsets(): ViewInsets {
-  if (window.innerWidth / window.innerHeight >= 0.8) return { top: 0, bottom: 0 };
+  // 760 px is the CSS breakpoint. Above it the interface is corner-anchored
+  // and its wrappers are `display: contents`, which have no box at all — an
+  // aspect-ratio test disagreed with the stylesheet and measured those zeros
+  // as a full-height inset, which crashed the fit on a portrait tablet.
+  if (!window.matchMedia?.('(max-width: 760px)').matches) return { top: 0, bottom: 0 };
   const top = document.querySelector('.topblock')?.getBoundingClientRect().bottom ?? 0;
   const bar = document.querySelector('.bottombar')?.getBoundingClientRect().top;
   return {
@@ -145,7 +149,10 @@ function chromeInsets(): ViewInsets {
  *  flattens the pitch, so the two never disagree about what kind of frame
  *  this is. */
 function isPortrait(): boolean {
-  return window.innerWidth > 0 && window.innerWidth / window.innerHeight < 0.8;
+  // same breakpoint as the stylesheet: the fixed camera belongs with the
+  // phone layout, not with an aspect ratio that can disagree with it
+  return (window.matchMedia?.('(max-width: 760px)').matches ?? false) &&
+    window.innerWidth / window.innerHeight < 1;
 }
 
 export function SculptureView({ scene, engine }: Props) {
