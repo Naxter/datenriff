@@ -26,6 +26,7 @@ import os
 import re
 import sys
 import urllib.error
+import urllib.parse
 import urllib.request
 from collections.abc import Iterator
 from pathlib import Path
@@ -34,6 +35,13 @@ PRODUCT = "VNP46A4"
 # CMR collection version; granule names carry it as `.002.`
 VERSION = "2"
 CMR_GRANULES = "https://cmr.earthdata.nasa.gov/search/granules.umm_json"
+
+# Hosts the Earthdata bearer token may be sent to. The download URL comes out
+# of a catalogue response, and urllib follows redirects while re-sending the
+# headers it was given — so without this, a catalogue entry (or anything that
+# could stand in for one) could walk the token to a host of its choosing.
+# Suffix match on the registered domain, so new NASA subdomains keep working.
+TOKEN_HOSTS = (".earthdata.nasa.gov", ".earthdatacloud.nasa.gov", ".nasa.gov")
 
 RADIANCE_LAYER = "AllAngle_Composite_Snow_Free"
 QUALITY_LAYER = "AllAngle_Composite_Snow_Free_Quality"
@@ -143,6 +151,29 @@ def granules_from_umm(payload: dict) -> dict[str, str]:
     return found
 
 
+def _token_target(url: str) -> str:
+    """The URL, if it is somewhere the token may go. Raises otherwise.
+
+    Checked before the request and again after every redirect: a 302 to
+    another host would otherwise carry the Authorization header with it.
+    """
+    parsed = urllib.parse.urlparse(url)
+    if parsed.scheme != "https":
+        raise SystemExit(f"refusing to send the Earthdata token over {parsed.scheme or '?'}: {url}")
+    host = (parsed.hostname or "").lower()
+    if not any(host == h.lstrip(".") or host.endswith(h) for h in TOKEN_HOSTS):
+        raise SystemExit(f"refusing to send the Earthdata token to {host or '?'}: {url}")
+    return url
+
+
+class _SameHostRedirect(urllib.request.HTTPRedirectHandler):
+    """Let redirects through only while they stay on an allowed host."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        _token_target(newurl)
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
 def download(year: int, tile: str, tiles_dir: Path, urls: dict[str, str] | None = None) -> Path:
     """Fetch one tile into tiles_dir unless it is already there."""
     existing = tile_file(tiles_dir, year, tile)
@@ -166,7 +197,7 @@ def download(year: int, tile: str, tiles_dir: Path, urls: dict[str, str] | None 
         headers={"Authorization": f"Bearer {_token()}", "User-Agent": "datenriff-blackmarble"},
     )
     try:
-        with urllib.request.urlopen(req, timeout=600) as res, tmp.open("wb") as fh:
+        with opener.open(req, timeout=600) as res, tmp.open("wb") as fh:
             while True:
                 chunk = res.read(1 << 20)
                 if not chunk:

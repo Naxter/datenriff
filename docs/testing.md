@@ -81,6 +81,21 @@ shows what moved. `--threshold 0.5` (percent of pixels) is the default;
 `--only people,wind` restricts the run; without `--gpu` it uses SwiftShader
 and `?shadows=0`.
 
+## Serving the build the way the host will
+
+```bash
+npm run build
+npm run serve:dist -- --port 4180
+node scripts/check-ui.cjs --gpu --url http://localhost:4180
+```
+
+`vite preview` ignores `_headers`, so a Content-Security-Policy could only
+ever be wrong in production. This applies the real rules — cumulatively, as
+Cloudflare does — and serves `404.html` for unknown paths. Run the interface
+suite against it after touching `_headers`: a policy that blocks the tile
+worker or the export blob shows up as a failing check rather than a blank
+page after deploy.
+
 ## Provenance
 
 ```bash
