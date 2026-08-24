@@ -36,6 +36,9 @@ const DESKTOP = { width: 1400, height: 900 };
 const VIEWPORTS = [
   { id: 'desktop', width: 1400, height: 900 },
   { id: 'phone', width: 390, height: 844 },
+  // what a phone browser actually leaves once its own chrome is counted —
+  // the shape the layout was worst in, and the one nothing was testing
+  { id: 'phone-browser', width: 390, height: 660 },
   { id: 'phone-small', width: 320, height: 568 },
   { id: 'phone-landscape', width: 844, height: 390 },
 ];
@@ -146,13 +149,29 @@ async function hitTestable(page, selector) {
     if (r.left < 0 || r.top < 0 || r.right > innerWidth || r.bottom > innerHeight) {
       return { ok: false, why: `outside the viewport (${Math.round(r.left)},${Math.round(r.top)} → ${Math.round(r.right)},${Math.round(r.bottom)} of ${innerWidth}×${innerHeight})` };
     }
-    const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
-    // Only the element itself or something inside it counts. Accepting an
-    // ancestor as well would accept `body`, which contains everything — the
-    // first draft of this check passed happily under a full-page overlay.
-    if (!top || !(el === top || el.contains(top))) {
-      const by = top ? `${top.tagName.toLowerCase()}${top.className ? `.${top.className}` : ''}` : 'nothing';
-      return { ok: false, why: `covered by ${by}` };
+    // Sample the corners as well as the centre. Testing the middle alone
+    // passed an element whose lower half was under another one — which is
+    // exactly how the mode nav and the legal links overlapped on a phone
+    // while this check reported both reachable.
+    const inset = 2;
+    const points = [
+      [r.left + r.width / 2, r.top + r.height / 2],
+      [r.left + inset, r.top + inset],
+      [r.right - inset, r.top + inset],
+      [r.left + inset, r.bottom - inset],
+      [r.right - inset, r.bottom - inset],
+    ];
+    for (const [x, y] of points) {
+      const top = document.elementFromPoint(x, y);
+      // Only the element itself or something inside it counts. Accepting an
+      // ancestor as well would accept `body`, which contains everything —
+      // the first draft passed happily under a full-page overlay.
+      if (!top || !(el === top || el.contains(top))) {
+        const by = top
+          ? `${top.tagName.toLowerCase()}${top.className ? `.${top.className}` : ''}`
+          : 'nothing';
+        return { ok: false, why: `covered by ${by} at ${Math.round(x)},${Math.round(y)}` };
+      }
     }
     return { ok: true };
   });
@@ -370,10 +389,16 @@ const SCENARIOS = [
           return panel?.contains(document.activeElement) || document.activeElement === panel;
         });
         expect(inside, 'focus did not move into the dialog');
-        const behindInert = await page.evaluate(
-          () => document.querySelector('.modenav')?.hasAttribute('inert') ?? false,
-        );
-        expect(behindInert, 'the page behind the dialog is not inert');
+        // Test the behaviour, not the attribute: `inert` is inherited, so it
+        // sits on an ancestor and a control inside it carries nothing of its
+        // own. What matters is that the control cannot take focus.
+        const behindInert = await page.evaluate(() => {
+          const behind = document.querySelector('.modenav__family');
+          if (!behind) return false;
+          behind.focus();
+          return document.activeElement !== behind;
+        });
+        expect(behindInert, 'a control behind the dialog can still take focus');
         // twenty tabs is more controls than the dialog has: if any of them
         // escaped, focus would be outside by now
         for (let i = 0; i < 20; i += 1) await page.keyboard.press('Tab');
@@ -697,6 +722,11 @@ const SCENARIOS = [
         ['.header__source', 'the source credit'],
         ['.pagelinks a[href="/impressum/"]', 'the legal notice link'],
         ['.pagelinks a[href="/datenschutz/"]', 'the privacy link'],
+        // the nav was reported reachable while its lower edge sat under the
+        // legal links on a phone, so it is checked here too
+        ['.modenav__families', 'the dataset families'],
+        ['.modenav__modes', 'the mode row'],
+        ['.legend', 'the legend'],
       ];
 
       for (const viewport of VIEWPORTS) {
