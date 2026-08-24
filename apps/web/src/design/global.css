@@ -1523,6 +1523,41 @@ body {
   gap: 2px;
 }
 
+/* Sits under the ladder and appears only once there is something to undo.
+   44 px tall so it is a real target on a phone (WCAG 2.2 target size), and
+   knocked out of the paper the way the city labels are — it stands over the
+   sculpture, where quiet ink alone disappears into the columns. */
+.ladder__reset {
+  pointer-events: auto;
+  appearance: none;
+  border: 0;
+  background: none;
+  min-height: 44px;
+  text-align: left;
+  font: inherit;
+  font-size: 0.66rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition:
+    color 160ms ease,
+    background 160ms ease;
+  /* Its own paper, not a halo: the button stands over the sculpture, and a
+     text shadow still leaves the letters competing with the columns behind
+     them. The chip is the paper the interface is drawn on anyway. */
+  align-self: flex-start;
+  padding: 10px 12px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--paper) 88%, transparent);
+  backdrop-filter: blur(2px);
+}
+.ladder__reset:hover,
+.ladder__reset:focus-visible {
+  color: var(--ink);
+  background: var(--paper);
+}
+
 .ladder__rung {
   appearance: none;
   border: 0;

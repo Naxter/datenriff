@@ -77,22 +77,6 @@ function viewFragment(view: MapViewState): string {
 /** The full link to what is on screen, for the copy button. Everything the
  *  reader chose is spelled out, so the recipient lands on the same picture
  *  rather than on the atlas's default. */
-export function shareUrl(
-  modeId: string,
-  timeT: number,
-  palette: string | null,
-  view: MapViewState,
-  focus: string | null = null,
-): string {
-  const params = new URLSearchParams();
-  params.set('mode', modeId);
-  if (timeT < 1) params.set('t', timeT.toFixed(2));
-  if (palette) params.set('palette', palette);
-  if (focus) params.set('focus', focus);
-  const { origin, pathname } = window.location;
-  return `${origin}${pathname}?${params.toString()}#${viewFragment(view)}`;
-}
-
 let writeTimer: ReturnType<typeof setTimeout> | undefined;
 
 export function writeUrlState(

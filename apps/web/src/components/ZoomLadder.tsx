@@ -19,6 +19,8 @@ export function ZoomLadder() {
   const coverage = useAtlasStore((s) => s.detailCoverage);
   const request = useAtlasStore((s) => s.requestZoomStop);
   const introPhase = useAtlasStore((s) => s.introPhase);
+  const focus = useAtlasStore((s) => s.focus);
+  const reset = useAtlasStore((s) => s.requestViewReset);
 
   if (stops.length < 2 || introPhase !== null) return null;
   // detail is still on its way while the coarse cells are what is on screen
@@ -59,6 +61,20 @@ export function ZoomLadder() {
           </>
         )}
       </div>
+      {/* Reset belongs with the ladder rather than the toolbar: both answer
+          where you are looking, while the toolbar is what you can do with
+          the view. Shown only once the camera has left the country stop —
+          a reset that resets nothing is noise. */}
+      {(index > 0 || focus) && (
+        <button
+          type="button"
+          className="ladder__reset"
+          onClick={reset}
+          title={i18n.t('ui.resetHint')}
+        >
+          {i18n.t('ui.reset')}
+        </button>
+      )}
     </div>
   );
 }

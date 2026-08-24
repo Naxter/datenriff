@@ -559,6 +559,27 @@ export function SculptureView({ scene, engine }: Props) {
     }));
   }, [zoomStopRequest, stops, requestZoomStop]);
 
+  // Reset: the whole country, centred, at the opening angle. A zoom stop
+  // only changes the zoom, so resetting from a city used to pull back while
+  // staying over that city — which is not what "reset the view" means.
+  const viewResetRequest = useAtlasStore((s) => s.viewResetRequest);
+  const firstReset = useRef(true);
+  useEffect(() => {
+    if (firstReset.current) {
+      firstReset.current = false;
+      return;
+    }
+    const fit = fitViewState(scene.lod.bounds, window.innerWidth, window.innerHeight);
+    setViewState((v) => ({
+      ...v,
+      ...fit,
+      pitch: INITIAL_VIEW_STATE.pitch,
+      bearing: INITIAL_VIEW_STATE.bearing,
+      transitionDuration: STEP_MS,
+      transitionInterpolator: new FlyToInterpolator({ speed: 1.4 }),
+    }));
+  }, [viewResetRequest, scene.lod.bounds]);
+
   // New object identity → deck re-uploads the attributes. That now happens
   // only when an endpoint buffer actually changed (a new mode, a scrub),
   // not on every frame of a transition.

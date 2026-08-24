@@ -70,6 +70,10 @@ interface AtlasState {
   /** A stop the reader asked for by clicking the ladder; the view flies
    *  there and clears it. */
   zoomStopRequest: number | null;
+  /** Bumped to ask the view to fly back to the whole country. A counter
+   *  rather than a flag: pressing reset twice has to move twice, even if the
+   *  camera never left. */
+  viewResetRequest: number;
   /** Bumped when the engine buffers were mutated outside the render loop. */
   sculptureVersion: number;
   setManifest(manifest: AtlasManifest): void;
@@ -90,6 +94,7 @@ interface AtlasState {
   setZoomLadder(stops: number[], index: number, coverage: number | null): void;
   setBkgCredit(credit: { attribution: string; license: string }): void;
   requestZoomStop(index: number | null): void;
+  requestViewReset(): void;
   playStory(stop: CameraStop | null): void;
   bumpSculpture(): void;
 }
@@ -119,6 +124,7 @@ export const useAtlasStore = create<AtlasState>((set) => ({
   zoomStopIndex: 0,
   detailCoverage: null,
   zoomStopRequest: null,
+  viewResetRequest: 0,
   sculptureVersion: 0,
   setManifest: (manifest) => set({ manifest }),
   setScene: (scene) => set({ scene, status: 'ready', sceneLoading: false, sceneProgress: 1 }),
@@ -148,6 +154,7 @@ export const useAtlasStore = create<AtlasState>((set) => ({
     set({ zoomStops, zoomStopIndex, detailCoverage }),
   setBkgCredit: (bkgCredit) => set((s) => (s.bkgCredit ? s : { bkgCredit })),
   requestZoomStop: (zoomStopRequest) => set({ zoomStopRequest }),
+  requestViewReset: () => set((s) => ({ viewResetRequest: s.viewResetRequest + 1, focus: null, hover: null })),
   playStory: (storyStop) => set({ storyStop }),
   bumpSculpture: () => set((s) => ({ sculptureVersion: s.sculptureVersion + 1 })),
 }));

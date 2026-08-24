@@ -252,27 +252,10 @@ const SCENARIOS = [
         const buttons = await page.$$eval('.export button', (els) =>
           els.map((el) => el.textContent.trim()),
         );
-        for (const wanted of ['Settings', 'Copy link', 'Reset view']) {
+        for (const wanted of ['Settings']) {
           expect(buttons.includes(wanted), `toolbar has ${buttons.join(', ')}, no ${wanted}`);
         }
         return buttons.join(', ');
-      });
-
-      // A link that does not carry the view is worse than no button: the
-      // recipient lands on the atlas's default and believes they are looking
-      // at what was sent.
-      await check('controls', 'copy-link', async () => {
-        await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
-        await press(page, '.export button >> text="Copy link"');
-        await page.waitForTimeout(600);
-        const label = await page.$eval('.export button >> text="Copied"', (el) =>
-          el.textContent.trim(),
-        ).catch(() => null);
-        expect(label === 'Copied', 'the button did not confirm the copy');
-        const copied = await page.evaluate(() => navigator.clipboard.readText());
-        expect(copied.includes('mode=people'), `copied link has no mode: ${copied}`);
-        expect(/#-?\d+\.\d+,-?\d+\.\d+,/.test(copied), `copied link has no camera: ${copied}`);
-        return copied.replace(/^https?:\/\/[^/]+/, '');
       });
 
       await check('controls', 'pagelinks', async () => {
@@ -764,8 +747,21 @@ const SCENARIOS = [
         const before = await page.$eval('.ladder__rung--active .ladder__name', (el) =>
           el.textContent.trim(),
         );
-        await press(page, '.export button >> text="Reset view"');
+        // The camera is over Berlin. Reset has to bring it back to the middle
+        // of the country, not merely pull the zoom out over Berlin — which is
+        // all a zoom-stop request did.
+        const at = () =>
+          page.evaluate(() => location.hash.replace(/^#/, '').split(',').map(Number));
+        const [lon0] = await at();
+        expect(Math.abs(lon0 - 13.4) < 1, `did not start over Berlin (lon ${lon0})`);
+        await press(page, '.ladder__reset');
         await page.waitForTimeout(4000);
+        const [lon1, lat1, , pitch1] = await at();
+        expect(
+          Math.abs(lon1 - 10.9) < 1.2 && Math.abs(lat1 - 52.0) < 1.5,
+          `reset left the camera at ${lon1},${lat1} — it did not recentre`,
+        );
+        expect(Math.abs(pitch1 - 58) < 2, `reset left the pitch at ${pitch1}`);
         const after = await page.$eval('.ladder__rung--active .ladder__name', (el) =>
           el.textContent.trim(),
         );
@@ -786,7 +782,7 @@ const SCENARIOS = [
           undefined,
           { timeout: 60_000 },
         );
-        await press(page, '.export button >> text="Reset view"');
+        await press(page, '.ladder__reset');
         await page.waitForTimeout(2500);
         const label = await text(page, '.modenav__focus');
         expect(label !== null && !label.includes('·'), `focus still reads "${label}"`);
