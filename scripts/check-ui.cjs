@@ -252,8 +252,27 @@ const SCENARIOS = [
         const buttons = await page.$$eval('.export button', (els) =>
           els.map((el) => el.textContent.trim()),
         );
-        expect(buttons.includes('Settings'), `toolbar has ${buttons.join(', ')}, no Settings`);
+        for (const wanted of ['Settings', 'Copy link', 'Reset view']) {
+          expect(buttons.includes(wanted), `toolbar has ${buttons.join(', ')}, no ${wanted}`);
+        }
         return buttons.join(', ');
+      });
+
+      // A link that does not carry the view is worse than no button: the
+      // recipient lands on the atlas's default and believes they are looking
+      // at what was sent.
+      await check('controls', 'copy-link', async () => {
+        await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+        await press(page, '.export button >> text="Copy link"');
+        await page.waitForTimeout(600);
+        const label = await page.$eval('.export button >> text="Copied"', (el) =>
+          el.textContent.trim(),
+        ).catch(() => null);
+        expect(label === 'Copied', 'the button did not confirm the copy');
+        const copied = await page.evaluate(() => navigator.clipboard.readText());
+        expect(copied.includes('mode=people'), `copied link has no mode: ${copied}`);
+        expect(/#-?\d+\.\d+,-?\d+\.\d+,/.test(copied), `copied link has no camera: ${copied}`);
+        return copied.replace(/^https?:\/\/[^/]+/, '');
       });
 
       await check('controls', 'pagelinks', async () => {
@@ -611,16 +630,22 @@ const SCENARIOS = [
         return Object.keys(q).join(', ');
       });
 
+      // The camera is written to the fragment, not the query: it changes on
+      // every pan, and a fragment neither reaches the server nor makes a
+      // second indexable URL out of one page. The query keeps what the
+      // reader chose.
       await check('url-flags', 'view-is-written', async () => {
         const q = await params();
         expect(q.mode === 'people', `the mode became "${q.mode}"`);
         expect(q.palette === 'moss', `the palette became "${q.palette}"`);
-        const view = (q.view ?? '').split(',').map(Number);
+        expect(q.view === undefined, `the camera is still in the query as "${q.view}"`);
+        const hash = await page.evaluate(() => location.hash.replace(/^#/, ''));
+        const view = hash.split(',').map(Number);
         expect(
           view.length === 5 && view.every(Number.isFinite),
-          `the view state is "${q.view}", want five numbers`,
+          `the fragment is "${hash}", want five numbers`,
         );
-        return q.view;
+        return hash;
       });
 
       await check('url-flags', 'no-reload-loop', async () => {
@@ -723,6 +748,56 @@ const SCENARIOS = [
       });
 
       await check('boundaries', 'no-failure-page', () => assertNoFailurePage(page, 'boundaries'));
+    },
+  },
+
+  // ------------------------------------------------------------------ reset
+  {
+    id: 'reset',
+    async run(page) {
+      // Reset means the view: back to the country and out of any focused
+      // region. It must not throw away the mode or the palette, which are
+      // the reader's choices rather than their position.
+      await open(page, 'mode=rain&palette=moss&view=13.405,52.520,10.40,58,-18');
+
+      await check('reset', 'returns-to-country', async () => {
+        const before = await page.$eval('.ladder__rung--active .ladder__name', (el) =>
+          el.textContent.trim(),
+        );
+        await press(page, '.export button >> text="Reset view"');
+        await page.waitForTimeout(4000);
+        const after = await page.$eval('.ladder__rung--active .ladder__name', (el) =>
+          el.textContent.trim(),
+        );
+        expect(after === 'Country', `the ladder rests on "${after}", want Country`);
+        const title = await text(page, '.header__title');
+        expect(title === 'Rain', `reset changed the mode to "${title}"`);
+        const q = await page.evaluate(() =>
+          Object.fromEntries(new URLSearchParams(location.search)),
+        );
+        expect(q.palette === 'moss', `reset changed the palette to "${q.palette}"`);
+        return `${before} → ${after}`;
+      });
+
+      await check('reset', 'clears-focus', async () => {
+        await open(page, 'mode=people&focus=state:DE-09');
+        await page.waitForFunction(
+          () => /·/.test(document.querySelector('.modenav__focus')?.textContent ?? ''),
+          undefined,
+          { timeout: 60_000 },
+        );
+        await press(page, '.export button >> text="Reset view"');
+        await page.waitForTimeout(2500);
+        const label = await text(page, '.modenav__focus');
+        expect(label !== null && !label.includes('·'), `focus still reads "${label}"`);
+        expect(
+          (await count(page, '.header__source--extra')) === 0,
+          'the boundary credit is still up with no boundaries in use',
+        );
+        return label;
+      });
+
+      await check('reset', 'no-failure-page', () => assertNoFailurePage(page, 'reset'));
     },
   },
 ];
