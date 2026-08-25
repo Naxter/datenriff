@@ -16,6 +16,7 @@ import { CHANGE_PCT_METRIC } from '../modes/modes';
 import { EXPORT_DPR, currentFormat, type ExportFormat } from './exportBridge';
 import { effectiveColorScale } from './targets';
 import { licenceRef } from '../data/licences';
+import type { BkgCredit } from '../state/store';
 
 const PAPER = '#f7f0ea';
 const INK = '#221c15';
@@ -30,8 +31,9 @@ export interface PosterContext {
   /** The language on screen. The poster was always English. */
   lang: Lang;
   colorStats: MetricStats;
-  /** BKG boundary credit, when the outline or a state focus used VG2500. */
-  boundaryCredit?: { attribution: string; license: string } | null;
+  /** BKG boundary credit. Owed on every poster, not only where a border is
+   *  drawn: the country ring the raster pipelines clip to is VG2500. */
+  boundaryCredit?: BkgCredit | null;
 }
 
 /** Compose the captured frame into the poster: paper, sculpture, then title,
@@ -132,7 +134,10 @@ function drawOverlay(
   c.textAlign = 'left';
   c.globalAlpha = 0.45;
   c.font = `500 ${26 * u}px Inter, sans-serif`;
-  const lines = sourceNoteLines(ctx);
+  // The note is long — three addresses on the boundary line alone — and a
+  // 9:16 crop is half as wide as a 16:9 one, so it is wrapped to the frame
+  // rather than allowed to run off the paper.
+  const lines = sourceNoteLines(ctx).flatMap((line) => wrapNote(c, line, W - 2 * MARGIN, 2.2 * u));
   const step = 34 * u;
   lines.forEach((line, i) => {
     drawTracked(c, line, MARGIN, H - MARGIN - (lines.length - 1 - i) * step, 2.2 * u);
@@ -140,25 +145,61 @@ function drawOverlay(
   c.globalAlpha = 1;
 }
 
+/** Break one note line to `width`, preferring the separators the note is
+ *  already built from so a URL is never split down the middle. */
+function wrapNote(
+  c: CanvasRenderingContext2D,
+  line: string,
+  width: number,
+  tracking: number,
+): string[] {
+  const fits = (s: string) => c.measureText(s).width + tracking * Math.max(0, s.length - 1) <= width;
+  if (fits(line)) return [line];
+  const parts = line.split(/(?<=·)\s+|\s+(?=·)/).filter((p) => p.trim() !== '·');
+  const out: string[] = [];
+  let current = '';
+  for (const part of parts) {
+    const next = current ? `${current} ${part}` : part;
+    if (current && !fits(next)) {
+      out.push(current);
+      current = part;
+    } else {
+      current = next;
+    }
+  }
+  if (current) out.push(current);
+  return out;
+}
+
+/** Strip the scheme: a printed URL is read, not clicked, and "https://"
+ *  costs a fifth of the line for nothing. */
+const bare = (url: string) => url.replace(/^https?:\/\//, '');
+
 /** The source note, printed rather than linked.
  *
- *  DL-DE-BY-2.0 §2 wants the provider, the licence annotation with a
- *  reference to its text, and the dataset URI; §3 wants the note that the
- *  data was changed. CC BY 4.0 §3(a) asks for the same shape. The boundary
- *  credit joins whenever VG2500 shaped what is in the frame. */
-function sourceNoteLines(ctx: PosterContext): string[] {
+ *  DL-DE-BY-2.0 §2 wants the provider, the licence annotation *with a
+ *  reference to the licence text*, and the dataset URI; §3 wants the note
+ *  that the data was changed. CC BY 4.0 §3(a)(1)(C) likewise wants the text
+ *  of the licence or a URI to it. On a web page those references are the
+ *  links under the words; on paper there is nothing to click, so both
+ *  addresses are printed. The boundary credit is owed on every poster: the
+ *  country ring every raster pipeline is clipped to comes from VG2500. */
+export function sourceNoteLines(ctx: PosterContext): string[] {
   const { scene, lang } = ctx;
   const source = scene.dataset.source;
   const licence = licenceRef(source.license);
   const modified = translate(lang, 'source.modified');
   // "dl-de/by-2-0" is one of the two forms the licence permits; it keeps its
   // case while the rest of the note takes the poster's uppercase.
-  const parts = [source.label.toUpperCase(), licence?.short, modified.toUpperCase()];
+  const prefix = translate(lang, 'source.prefix').replace(/:\s*$/, '');
+  const name = source.label.replace(/^Data:\s*/, '');
+  const parts = [`${prefix}: ${name}`.toUpperCase(), licence?.short, modified.toUpperCase()];
   const lines = [parts.filter(Boolean).join(' · ')];
   // the dataset's page, not the download it came from: a poster cannot be
   // clicked, and the landing page outlives any one file name
   const uri = source.url ?? source.provenance?.sourceUrl;
-  if (uri) lines.push(uri.replace(/^https?:\/\//, ''));
+  const addresses = [uri, licence?.url].filter(Boolean) as string[];
+  if (addresses.length) lines.push(addresses.map(bare).join('  ·  '));
   const bkg = ctx.boundaryCredit;
   if (bkg) {
     const bkgLicence = licenceRef(bkg.license);
@@ -171,6 +212,8 @@ function sourceNoteLines(ctx: PosterContext): string[] {
         .filter(Boolean)
         .join(' · '),
     );
+    const bkgAddresses = [bkg.url, bkgLicence?.url, bkg.sourcesUrl].filter(Boolean) as string[];
+    if (bkgAddresses.length) lines.push(bkgAddresses.map(bare).join('  ·  '));
   }
   return lines;
 }

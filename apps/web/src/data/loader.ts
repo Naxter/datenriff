@@ -11,6 +11,29 @@ import type {
   SculptureMode,
 } from '@datenriff/data-contracts';
 import { pickCountryLod, type QualityProfile } from '../sculpture/quality';
+import { useAtlasStore } from '../state/store';
+
+/** A ring file that also carries its own source note. boundary.json,
+ *  outline.json and states.json all use this shape. */
+export interface BoundaryFile {
+  rings: [number, number][][];
+  attribution?: string;
+  license?: string;
+  url?: string;
+  sourcesUrl?: string;
+}
+
+/** Hand a ring file's source note to the interface. First one wins: they all
+ *  carry the same BKG note, and the eager boundary.json arrives first. */
+export function keepBkgCredit(file: Partial<BoundaryFile> | null): void {
+  if (!file?.attribution || !file.license) return;
+  useAtlasStore.getState().setBkgCredit({
+    attribution: file.attribution,
+    license: file.license,
+    url: file.url,
+    sourcesUrl: file.sourcesUrl,
+  });
+}
 
 export interface SceneData {
   manifest: AtlasManifest;
@@ -151,8 +174,8 @@ export async function loadScene(
     fetchBuffer(lod.positions),
     manifest.labels ? fetchJson<CityLabel[]>(manifest.labels) : Promise.resolve([]),
     manifest.boundary
-      ? fetchJson<{ rings: [number, number][][] }>(manifest.boundary)
-      : Promise.resolve({ rings: [] }),
+      ? fetchJson<BoundaryFile>(manifest.boundary)
+      : Promise.resolve({ rings: [] } as BoundaryFile),
     ...first.map((m) => fetchBuffer(metricUrl(lod, m))),
   ];
   let done = 0;
@@ -166,7 +189,13 @@ export async function loadScene(
   );
   const [positionsBuf, cities, boundary, ...metricBufs] = (await Promise.all(
     counted,
-  )) as [ArrayBuffer, CityLabel[], { rings: [number, number][][] }, ...ArrayBuffer[]];
+  )) as [ArrayBuffer, CityLabel[], BoundaryFile, ...ArrayBuffer[]];
+
+  // The country ring is simplified from VG2500 and every raster pipeline is
+  // clipped to it, so BKG geometry shapes what is drawn in every mode — not
+  // only where a border is on screen. Handing the credit over here is what
+  // lets the interface show it from the first frame.
+  keepBkgCredit(boundary);
 
   const positions = new Float32Array(positionsBuf);
   const count = positions.length / 2;

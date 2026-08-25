@@ -49,9 +49,33 @@ from . import classes, coverage, gpkg
 H3_EDGE_METERS = {5: 8544.4, 6: 3229.5, 7: 1220.6, 8: 461.4}
 TILE_PARENT_RES = 5
 LICENSE = "Datenlizenz Deutschland – Namensnennung – Version 2.0"
-SOURCE_URL = "https://gdz.bkg.bund.de/index.php/default/corine-land-cover-5-ha-clc5.html"
+SOURCE_URL = (
+    "https://gdz.bkg.bund.de/index.php/default/"
+    "corine-land-cover-5-ha-stand-2021-clc5-2021.html"
+)
+#: BKG's terms want the word "BKG" in the source note linked to their site,
+#: which is not where the dataset lives — so the credit carries both.
+PROVIDER_URL = "https://www.bkg.bund.de"
+DATASET_NAME = "CLC5-2021"
 #: CLC5's minimum mapping unit is 5 ha; as a length that is ~224 m
 SPATIAL_RESOLUTION_METERS = 224
+
+
+def bkg_attribution(download_date: str | None) -> str:
+    """BKG prescribes CLC5's source note as
+
+        © GeoBasis-DE / BKG (Jahr des letzten Datenbezugs) dl-de/by-2-0
+
+    The licence half is rendered by the app from `license`; the year has to
+    come from the download, so a run without a download date refuses rather
+    than stamping a year it cannot know.
+    """
+    if not download_date:
+        raise SystemExit(
+            "--download-date is required: BKG's source note has to carry the "
+            "year of the last download"
+        )
+    return f"Data: © GeoBasis-DE / BKG {download_date[:4]}"
 
 
 def log(message: str) -> None:
@@ -75,6 +99,7 @@ def run(args: argparse.Namespace) -> None:
     tiled = {int(r) for r in args.tiled.split(",") if r.strip()} if args.tiled else set()
     year = int(args.year)
     names = metric_names(args.metric_prefix, year)
+    attribution = args.attribution or bkg_attribution(args.download_date)
 
     log(f"CLC5 {year}: {Path(args.input).name} -> H3 r{coverage.FINE_RES} coverage")
     features = gpkg.read_features(Path(args.input), args.table, args.attribute, limit=args.limit)
@@ -204,8 +229,10 @@ def run(args: argparse.Namespace) -> None:
         "metrics": metric_entries,
         "lods": lod_fragments,
         "source": {
-            "label": args.attribution,
+            "label": attribution,
             "url": SOURCE_URL,
+            "providerUrl": PROVIDER_URL,
+            "datasetName": DATASET_NAME,
             "license": LICENSE,
             "referenceDate": args.reference_date or f"{year}-01-01",
             "provenance": provenance(
@@ -239,7 +266,12 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--dataset-id", default="land")
     parser.add_argument("--dataset-title", default="Land")
     parser.add_argument("--reference-date", default=None)
-    parser.add_argument("--attribution", default="Data: GeoBasis-DE / BKG, CLC5")
+    parser.add_argument(
+        "--attribution",
+        default=None,
+        help="source note; defaults to BKG's prescribed form for CLC5, "
+        "\"© GeoBasis-DE / BKG <Jahr des letzten Datenbezugs>\"",
+    )
     parser.add_argument("--download-date")
     run(parser.parse_args(argv))
 

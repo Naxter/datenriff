@@ -104,6 +104,16 @@ export interface AttributionDefinition {
   label: string;
   url?: string;
   license?: string;
+  /** The provider's own site, when its terms require the provider's name in
+   *  the credit to link there rather than at the dataset. BKG asks for this
+   *  ("Bei der Darstellung auf einer Webseite sind 'BKG' mit der URL
+   *  https://www.bkg.bund.de … zu verlinken"), which collides with the
+   *  dataset URI DL-DE-BY-2.0 §2 nr. 3 wants — so the credit carries both,
+   *  the name pointing here and `datasetName` pointing at `url`. */
+  providerUrl?: string;
+  /** Short name for the dataset link, when the credit needs a segment of its
+   *  own for the URI. Ignored unless `providerUrl` is set. */
+  datasetName?: string;
   referenceDate?: string;
   provenance?: {
     sourceUrl?: string;

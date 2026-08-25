@@ -137,16 +137,23 @@ function nationalOutline(features) {
 
 const outline = nationalOutline(geo.features.filter((f) => f.properties.gf === 9));
 
+// The data are downloaded a few lines above, so today *is* the year of the
+// last download that BKG's note asks for.
 const year = new Date().getUTCFullYear();
 const out = {
   source: 'BKG VG2500 (Verwaltungsgebiete 1:2 500 000)',
-  // BKG's terms: the credit carries the year of the last download, the
-  // licence, a note that the data was changed, and — on a web page — a link
-  // to bkg.bund.de. The app renders all four; these fields are where it
-  // gets the first two.
-  attribution: `© GeoBasis-DE / BKG ${year}`,
+  // BKG prescribes VG2500's source note verbatim, and it is not the
+  // "© GeoBasis-DE / BKG" form their other products use — that one belongs
+  // to the V GeoBund and ZSGT routes. VG2500 open data reads:
+  //   © BKG (Jahr des letzten Datenbezugs) dl-de/by-2-0,
+  //   Datenquellen: https://sgx.geodatenzentrum.de/…/datenquellen_vg_nuts.pdf
+  // The app assembles that from these fields: the name here, the licence
+  // from `license`, the change note of its own, and both links.
+  attribution: `© BKG ${year}`,
   license: 'DL-DE-BY-2.0',
-  url: 'https://gdz.bkg.bund.de/index.php/default/verwaltungsgebiete-1-2-500-000-stand-01-01-vg2500.html',
+  url: 'https://gdz.bkg.bund.de/index.php/default/verwaltungsgebiete-1-2-500-000-stand-31-12-vg2500-12-31.html',
+  sourcesUrl:
+    'https://sgx.geodatenzentrum.de/web_public/gdz/datenquellen/datenquellen_vg_nuts.pdf',
   states,
 };
 mkdirSync(OUT, { recursive: true });
@@ -163,6 +170,7 @@ writeFileSync(
     attribution: out.attribution,
     license: out.license,
     url: out.url,
+    sourcesUrl: out.sourcesUrl,
     rings: outline,
   }),
 );

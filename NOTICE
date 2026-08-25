@@ -33,8 +33,17 @@ DATA
                                       – Version 2.0
     Bundesnetzagentur, MaStR          Datenlizenz Deutschland – Namensnennung
                                       – Version 2.0
-    BKG (CLC5, VG2500)                Datenlizenz Deutschland – Namensnennung
-                                      – Version 2.0, © GeoBasis-DE / BKG
+    BKG, CLC5-2021                    Datenlizenz Deutschland – Namensnennung
+                                      – Version 2.0; BKG prescribes the note
+                                      "© GeoBasis-DE / BKG (Jahr des letzten
+                                      Datenbezugs) dl-de/by-2-0"
+    BKG, VG2500                       Datenlizenz Deutschland – Namensnennung
+                                      – Version 2.0; BKG prescribes the note
+                                      "© BKG (Jahr des letzten Datenbezugs)
+                                      dl-de/by-2-0, Datenquellen: …" — note
+                                      that this one is *not* the GeoBasis-DE
+                                      form, which belongs to the V GeoBund
+                                      and ZSGT routes rather than open data
     Deutscher Wetterdienst            Creative Commons Attribution 4.0
     European Forest Disturbance       Creative Commons Attribution 4.0
       Atlas (Viana-Soto & Senf)

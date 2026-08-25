@@ -3,19 +3,8 @@
 // only builds `FocusGeometry` values.
 
 import type { AtlasManifest, CityLabel } from '@datenriff/data-contracts';
-import type { SceneData } from './loader';
+import { keepBkgCredit, type BoundaryFile, type SceneData } from './loader';
 import { CITY_RADIUS_KM, type FocusGeometry, type StatesFile } from '../sculpture/focus';
-import { useAtlasStore } from '../state/store';
-
-/** Both boundary files carry the BKG credit; whichever loads first hands it
- *  to the interface, which owes it while either is in use. */
-function keepCredit(file: { attribution?: string; license?: string } | null): void {
-  if (!file?.attribution || !file.license) return;
-  useAtlasStore.getState().setBkgCredit({
-    attribution: file.attribution,
-    license: file.license,
-  });
-}
 
 let statesPromise: Promise<StatesFile | null> | null = null;
 
@@ -25,7 +14,7 @@ export function loadStates(manifest: AtlasManifest): Promise<StatesFile | null> 
     statesPromise = fetch(manifest.states)
       .then((res) => (res.ok ? (res.json() as Promise<StatesFile>) : null))
       .then((file) => {
-        keepCredit(file);
+        keepBkgCredit(file);
         return file;
       })
       .catch(() => null);
@@ -40,15 +29,10 @@ let outlinePromise: Promise<[number, number][][] | null> | null = null;
 export function loadOutline(manifest: AtlasManifest): Promise<[number, number][][] | null> {
   if (!manifest.outline) return Promise.resolve(null);
   if (!outlinePromise) {
-    type OutlineFile = {
-      rings: [number, number][][];
-      attribution?: string;
-      license?: string;
-    };
     outlinePromise = fetch(manifest.outline)
-      .then((res) => (res.ok ? (res.json() as Promise<OutlineFile>) : null))
+      .then((res) => (res.ok ? (res.json() as Promise<BoundaryFile>) : null))
       .then((file) => {
-        keepCredit(file);
+        keepBkgCredit(file);
         return file?.rings ?? null;
       })
       .catch(() => null);

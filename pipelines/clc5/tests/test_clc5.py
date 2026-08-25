@@ -264,6 +264,9 @@ class TestPipeline(unittest.TestCase):
         pipeline.main([
             "--input", str(src), "--year", "2021", "--out", str(out),
             "--resolutions", "8,7", "--tiled", "8",
+            # BKG's source note carries the year of the last download, so the
+            # pipeline refuses to guess one
+            "--download-date", "2026-08-19",
         ])
         cells = (out / "r8" / "cells.txt").read_text().split()
         share = struct.unpack(
@@ -314,6 +317,7 @@ class TestPipeline(unittest.TestCase):
             pipeline.main([
                 "--input", str(src), "--year", "2012", "--out", str(out),
                 "--resolutions", "8,7", "--tiled", "8",
+                "--download-date", "2026-08-19",
             ])
 
             self.assertEqual((out / "r8" / "cells.txt").read_text(), first, "universe is fixed")

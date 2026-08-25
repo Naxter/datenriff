@@ -68,9 +68,10 @@ export function ExportDialog({ builder, onClose }: Props) {
       timeT: s.timeT,
       lang: s.lang,
       colorStats: builder.build(mode, s.palette).colorStats,
-      // the boundary credit is owed on paper too, whenever VG2500 shaped
-      // what the frame shows
-      boundaryCredit: s.focus?.kind === 'state' || s.settings.border ? s.bkgCredit : null,
+      // the boundary credit is owed on paper too, and on every poster: the
+      // country ring the raster pipelines clip to is VG2500, so BKG geometry
+      // shaped the frame whether or not a border is drawn in it
+      boundaryCredit: s.bkgCredit,
     };
   }, [builder]);
 

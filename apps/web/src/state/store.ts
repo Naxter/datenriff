@@ -8,6 +8,19 @@ import { applyDocumentLang, detectLang, persistLang } from '../i18n';
 import type { Lang } from '../i18n/strings';
 import type { FocusGeometry } from '../sculpture/focus';
 
+/** The source note BKG's terms of use prescribe for their open data: the
+ *  provider designation with the year of the last download, the licence, a
+ *  link to the dataset, and — for VG2500 — the Datenquellen list they name
+ *  as part of the note. */
+export interface BkgCredit {
+  attribution: string;
+  license: string;
+  /** The dataset's product page: DL-DE-BY-2.0 §2 nr. 3. */
+  url?: string;
+  /** VG2500's "Datenquellen: …" list, when the product names one. */
+  sourcesUrl?: string;
+}
+
 export interface HoverInfo {
   x: number;
   y: number;
@@ -57,9 +70,11 @@ interface AtlasState {
   /** Current stop of a running camera story, or null. */
   storyStop: CameraStop | null;
   /** The BKG boundary credit, once a file carrying it has loaded. Their
-   *  terms want the year of the last download and a link to bkg.bund.de,
-   *  and both travel in states.json / outline.json. */
-  bkgCredit: { attribution: string; license: string } | null;
+   *  terms want the year of the last download, a link to bkg.bund.de and a
+   *  link to the dataset; VG2500 also names its Datenquellen list as part
+   *  of the note. All of it travels in boundary.json, which every scene
+   *  loads, so the credit is on screen before any boundary is drawn. */
+  bkgCredit: BkgCredit | null;
   /** Where the camera sits on the ladder of composed stops, and how much of
    *  the finer detail for it has arrived. `detail` is null where the stop
    *  has no finer level under it (the country view) or tiles are switched
@@ -92,7 +107,7 @@ interface AtlasState {
   setHover(hover: HoverInfo | null): void;
   setView(view: MapViewState): void;
   setZoomLadder(stops: number[], index: number, coverage: number | null): void;
-  setBkgCredit(credit: { attribution: string; license: string }): void;
+  setBkgCredit(credit: BkgCredit): void;
   requestZoomStop(index: number | null): void;
   requestViewReset(): void;
   playStory(stop: CameraStop | null): void;

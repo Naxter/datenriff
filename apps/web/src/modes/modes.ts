@@ -312,9 +312,16 @@ MODES.push({
   attribution: DWD_ATTRIBUTION,
 });
 
+// BKG prescribes this note for CLC5: "© GeoBasis-DE / BKG (Jahr des letzten
+// Datenbezugs) dl-de/by-2-0". `providerUrl` is where their terms want the
+// word "BKG" to point; `url` is the dataset URI DL-DE-BY-2.0 §2 nr. 3 wants,
+// so the credit carries a segment for each. The year comes from the dataset
+// manifest at runtime; this is only the fallback for a missing dataset.
 const BKG_ATTRIBUTION = {
-  label: 'Data: GeoBasis-DE / BKG, CLC5',
-  url: 'https://gdz.bkg.bund.de/index.php/default/corine-land-cover-5-ha-clc5.html',
+  label: 'Data: © GeoBasis-DE / BKG',
+  url: 'https://gdz.bkg.bund.de/index.php/default/corine-land-cover-5-ha-stand-2021-clc5-2021.html',
+  providerUrl: 'https://www.bkg.bund.de',
+  datasetName: 'CLC5-2021',
 };
 
 /** CLC5 has four vintages; the mode binds to the ones actually loaded. */

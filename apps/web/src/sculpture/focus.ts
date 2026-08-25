@@ -17,6 +17,8 @@ export interface StatesFile {
   attribution: string;
   license: string;
   url: string;
+  /** VG2500's "Datenquellen: …" list, part of BKG's prescribed note. */
+  sourcesUrl?: string;
   states: StateShape[];
 }
 

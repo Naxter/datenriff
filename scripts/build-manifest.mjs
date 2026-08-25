@@ -9,7 +9,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { CITIES, GERMANY } from './germany.mjs';
+import { CITIES, GERMANY_RINGS, GERMANY_SOURCE } from './germany.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = process.argv[2] ?? join(ROOT, 'apps', 'web', 'public', 'data');
@@ -111,7 +111,13 @@ Run a pipeline first — see pipelines/zensus/README.md.`,
     join(OUT, 'cities.json'),
     JSON.stringify(CITIES.map(([name, lon, lat, tier]) => ({ name, lon, lat, tier })), null, 2),
   );
-  writeFileSync(join(OUT, 'boundary.json'), JSON.stringify({ rings: [GERMANY] }));
+  // The ring is simplified from BKG VG2500 and every raster pipeline clips
+  // to it, so it carries its own source note: this file loads with every
+  // scene, which is what lets the credit be on screen from the first frame.
+  writeFileSync(
+    join(OUT, 'boundary.json'),
+    JSON.stringify({ ...GERMANY_SOURCE, rings: GERMANY_RINGS }),
+  );
   for (const d of datasets) console.log(`${d.id}: ${d.metrics.length} metrics, LODs ${d.lods.map((l) => l.resolution).join('/')}`);
   console.log(`Wrote ${join(OUT, 'manifest.json')}`);
 }
