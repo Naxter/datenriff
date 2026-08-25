@@ -271,6 +271,11 @@ more trust than it has earned:
 - **No accounts, no tracking, no cookies.** The site is static files. There is
   no analytics, no third-party embed and no consent banner, because there is
   nothing to consent to. The host sees ordinary request logs.
+- **One credential, for one pipeline.** AFTER DARK needs a free NASA
+  Earthdata token; nothing else does, and the site itself needs none. It
+  lives in `.env`, which is git-ignored, and the fetcher refuses to send it
+  to any host outside `*.nasa.gov` — a redirect would otherwise carry the
+  Authorization header wherever it pointed.
 - **Only Germany**, and only what a pipeline has produced. There is no
   fallback dataset: an empty `public/data/` means an error page, deliberately,
   rather than an invented one.
@@ -307,10 +312,10 @@ modified — every pipeline here re-grids and aggregates what it reads.
 | PEOPLE · CHANGE · AGE · RENT · HEATING · HOMES · VACANCY · FAMILIES | Destatis, Zensus 2022 and 2011, 100 m grid | DL-DE-BY-2.0 |
 | WIND | Marktstammdatenregister (Bundesnetzagentur) | DL-DE-BY-2.0 |
 | RAIN | Deutscher Wetterdienst, gridded annual precipitation | CC BY 4.0 |
-| LAND | BKG, CORINE Land Cover 5 ha | DL-DE-BY-2.0, © GeoBasis-DE / BKG |
+| LAND | BKG, CORINE Land Cover 5 ha, Stand 2021 | DL-DE-BY-2.0, © GeoBasis-DE / BKG |
 | FOREST | European Forest Disturbance Atlas (Viana-Soto & Senf) | CC BY 4.0 |
 | AFTER DARK | NASA Black Marble VNP46A4 | NASA open data (CC0 unless marked) |
-| FOCUS outlines | BKG VG2500 (`node scripts/fetch-states.mjs`) | DL-DE-BY-2.0, © GeoBasis-DE / BKG |
+| Country ring and FOCUS outlines | BKG VG2500 (`node scripts/fetch-states.mjs`) | DL-DE-BY-2.0, © BKG |
 
 Attribution and the reference date travel in the manifest and stay visible in
 the app, on desktop and mobile alike — for these sources the credit is a
