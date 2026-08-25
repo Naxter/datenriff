@@ -12,7 +12,7 @@ const CENSUS_ATTRIBUTION = {
 /** Derived in the app from the two population buffers, not shipped. */
 export const CHANGE_PCT_METRIC = 'population_change_pct';
 
-/** Curated camera moves (plan §98). Zoom is absolute Mercator scale, so
+/** Curated camera moves. Zoom is absolute Mercator scale, so
  *  these are city-scale stops the viewer flies between. */
 const RUHR = { longitude: 7.1, latitude: 51.45, zoom: 8.4 };
 const BERLIN = { longitude: 13.4, latitude: 52.52, zoom: 8.6 };
@@ -232,7 +232,7 @@ MODES.push({
   family: 'energy',
   label: 'After Dark',
   // deliberately not "light pollution": the product measures light leaving
-  // the ground, not its ecological effect (plan §19)
+  // the ground, not its ecological effect
   subtitle: 'Artificial light over Germany',
   dataset: 'afterdark',
   // the latest year the data carries stands in for these (bindMode)
@@ -259,7 +259,7 @@ const MASTR_ATTRIBUTION = {
  *  the mode is bound to the years the dataset carries. */
 const WIND_YEARS = Array.from({ length: 41 }, (_, i) => String(1990 + i));
 
-// The energy transition as a landscape (plan §26): every turbine standing
+// The energy transition as a landscape: every turbine standing
 // at year end, cumulative MW per cell, played year by year. Offshore parks
 // stay in — they are the North Sea's story.
 MODES.push({

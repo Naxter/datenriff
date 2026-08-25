@@ -1,4 +1,4 @@
-// Curated camera moves (plan §98). A story is a short flight between a few
+// Curated camera moves. A story is a short flight between a few
 // named places; the point is that the sculpture reads differently up close,
 // and that a viewer who does not know where Lusatia is still gets shown it.
 

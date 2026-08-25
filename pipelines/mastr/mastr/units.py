@@ -2,7 +2,7 @@
 
 The export lists one `<EinheitWind>` (etc.) element per unit with flat
 child fields. Only what the atlas needs is kept, and only units the
-register places on the map itself (plan §24): no coordinates, no unit —
+register places on the map itself: no coordinates, no unit —
 we never invent a position from a municipality.
 """
 

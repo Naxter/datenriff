@@ -2,7 +2,7 @@
 
 Radiance is an intensity, not a count: two neighbouring pixels of 30
 nW/cm²/sr do not make 60. Cells therefore take the **mean** of the pixels
-falling into them (plan §92), and the pixel count travels with it so
+falling into them, and the pixel count travels with it so
 coarser levels can re-weight instead of averaging averages.
 
 Kept free of raster and H3 dependencies so it is testable with the

@@ -9,12 +9,12 @@
      -> stats + binary (wind_mw_{year}.f32) + dataset.json
 
 Cumulative capacity per year is what lets the atlas "play" the build-up of
-wind power (plan §26). Every year is a metric; the app binds the WIND mode
+wind power. Every year is a metric; the app binds the WIND mode
 to the years present and shows the latest, with the timeline.
 
 Source: Bundesnetzagentur, Marktstammdatenregister — Datenlizenz Deutschland
 Namensnennung 2.0. Only units with coordinates in the register are used;
-positions are never invented from a municipality (plan §24).
+positions are never invented from a municipality.
 
 The binary writer is shared with the census pipeline
 (`pip install -e pipelines/zensus`); everything else is stdlib + h3.

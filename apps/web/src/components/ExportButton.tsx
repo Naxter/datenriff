@@ -1,4 +1,4 @@
-// EXPORT opens the poster dialog (plan §100) — also on the E key, mirroring
+// EXPORT opens the poster dialog — also on the E key, mirroring
 // the prototype. Formats and the render button live in the dialog.
 
 import { useEffect, useState } from 'react';

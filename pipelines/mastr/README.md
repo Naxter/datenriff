@@ -15,8 +15,8 @@ The register publishes a full export (`Gesamtdatenexport_<date>_<v>.zip`,
 over HTTP range requests** — the whole archive is never downloaded. A local
 zip works too (`--zip`).
 
-- Only units with public coordinates are used (plan §24: never a position
-  invented from a municipality); that is nearly every turbine.
+- Only units with public coordinates are used, and a position is never
+  invented from a municipality centroid; that is nearly every turbine.
 - Standing at year end = commissioned by then, not finally shut down
   before, and not merely planned. Temporarily shut-down units count as
   installed.

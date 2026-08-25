@@ -1,4 +1,4 @@
-// Opening sequence (plan §97): a plain visit does not start with a menu.
+// Opening sequence: a plain visit does not start with a menu.
 // The title stands on empty paper, Germany rises out of the plane beneath
 // it, a tagline follows, then the UI comes in. Deep links, repeat visits in
 // the same session and reduced-motion users go straight to the sculpture.

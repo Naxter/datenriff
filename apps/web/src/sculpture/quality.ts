@@ -1,4 +1,4 @@
-// Quality profiles (plan §116/§117). A phone cannot render the desktop
+// Quality profiles. A phone cannot render the desktop
 // country LOD with shadows at full device pixel ratio, and it should not
 // try: the atlas drops to a coarser H3 resolution instead of dropping
 // frames. Everything that costs GPU time is decided here, in one place.

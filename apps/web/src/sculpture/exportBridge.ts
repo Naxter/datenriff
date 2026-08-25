@@ -3,7 +3,7 @@
 // poster is captured from the app's own canvas, resized to 4K for one
 // frame by SculptureView.
 
-// Social formats (plan §101). CSS size of the capture frame; the deck
+// Social formats. CSS size of the capture frame; the deck
 // renders it at 2× device pixels and the poster composes at that
 // resolution, so needles stay crisp.
 export const EXPORT_DPR = 2;

@@ -243,7 +243,7 @@ export interface CameraPreset {
   bearing: number;
 }
 
-/** One stop of a curated camera move (plan §98). Unlike CameraPreset this
+/** One stop of a curated camera move. Unlike CameraPreset this
  *  names a place, so it carries position and zoom too. */
 export interface CameraStop {
   label: string;
@@ -270,7 +270,7 @@ export interface SculptureMode {
   dataset: string;
   /** Composition angle; the view morphs there on mode switch. */
   camera?: CameraPreset;
-  /** Curated camera moves through the mode's story (plan §98). */
+  /** Curated camera moves through the mode's story. */
   stories?: CameraStory[];
   heightMetric: string;
   colorMetric: string;

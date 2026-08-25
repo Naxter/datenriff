@@ -450,7 +450,7 @@ export function SculptureView({ scene, engine }: Props) {
   // Throttled, not debounced: a camera flight moves the view every frame,
   // and a debounce would postpone every tile request until it has landed.
   // Firing every ~250 ms lets the destination's tiles start streaming while
-  // the camera is still descending (plan §73).
+  // the camera is still descending.
   const lastTileQuery = useRef(0);
   useEffect(() => {
     if (!fineUsable || !tileManager || !quality.streamTiles) return;

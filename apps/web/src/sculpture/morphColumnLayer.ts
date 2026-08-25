@@ -1,4 +1,4 @@
-// GPU morph between two sculptures (plan §69).
+// GPU morph between two sculptures.
 //
 // The CPU path rewrites every elevation and colour on each frame of a
 // transition — at 272k cells that is ~1.4 M float writes plus a full buffer

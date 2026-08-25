@@ -84,8 +84,8 @@
       occlusion, thin plinth, MSAA — calibrated in the prototype
 - [x] camera fits the dataset bounds to the viewport, so the sculpture fills
       the frame at any window size (fixed zoom cropped or shrank it)
-- [x] camera stories per mode (plan §98) — curated flights between named
-      places, e.g. CHANGE: Munich → Leipzig → Lusatia
+- [x] camera stories per mode — curated flights between named places,
+      e.g. CHANGE: Munich → Leipzig → Lusatia
 - [x] social export formats 16:9 / 4:5 / 1:1 / 9:16, type scaled to the
       frame; portrait crops turn the camera so the country lies diagonally
 

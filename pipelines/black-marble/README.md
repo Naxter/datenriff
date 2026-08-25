@@ -46,7 +46,7 @@ PYTHONPATH=".;../zensus" ../zensus/.venv/Scripts/python -m blackmarble.pipeline 
   the dark year (below the floor), not as missing.
 - Quality: good (0) and gap-filled (2) pixels are kept, poor ones (1: too
   few clear nights) dropped. `--keep-quality 0,1,2` keeps everything.
-- Aggregation is a **mean** weighted by pixel count (plan §92): radiance is
+- Aggregation is a **mean** weighted by pixel count: radiance is
   an intensity, two neighbouring pixels of 30 do not make 60.
 - `--clip`: the bbox alone drags in France, Poland and the North Sea; the
   atlas outline keeps it to Germany.
