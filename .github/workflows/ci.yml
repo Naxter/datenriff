@@ -23,7 +23,7 @@ jobs:
       # The pipeline suites need these to run at all: without them mastr,
       # clc5 and forest fail at import rather than skipping, so CI was
       # reporting on four of six pipelines and nobody noticed.
-      - run: pip install numpy h3 pyproj rasterio
+      - run: pip install "numpy>=2,<3" "h3>=4.0,<5" "pyproj>=3.6,<4" "rasterio>=1.4,<2"
 
       - run: npm ci
       - run: npm run lint

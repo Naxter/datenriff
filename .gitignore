@@ -21,10 +21,17 @@ pipelines/**/downloads/
 .env.*
 !.env.example
 
-# Tooling
+# Editor and tooling state: local to whoever is working, not part of the
+# project.
 *.log
 .DS_Store
 .idea/
+.vscode/
+.claude/
+.cursor/
+.continue/
+.windsurf/
+.aider*
 
 # Local visual-regression baselines (scripts/visual-check.cjs)
 .visual/

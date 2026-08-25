@@ -4,13 +4,17 @@ version = "0.1.0"
 description = "Destatis Zensus 100m grid → H3 → binary sculpture buffers (Vertical Atlas Germany)"
 requires-python = ">=3.10"
 license = "Apache-2.0"
+# Upper bounds, not exact pins: this is installed with `pip install -e` into
+# a venv the reader owns, and an exact pin would fight whatever else lives
+# there. The caps are the reproducibility that matters — h3 4→5 renamed the
+# cell API once already, and a silent major bump would rewrite every cell id.
 dependencies = [
-    "h3>=4.0",
-    "pyproj>=3.6",
+    "h3>=4.0,<5",
+    "pyproj>=3.6,<4",
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8"]
+dev = ["pytest>=8,<9"]
 
 [tool.setuptools.packages.find]
 include = ["zensus_pipeline*"]

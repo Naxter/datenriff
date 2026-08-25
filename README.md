@@ -163,9 +163,13 @@ packages/
   data-contracts/       dataset, LOD manifest, metric and mode contracts
   color-scales/         palettes and typed-array colour mapping
   sculpture-core/       morph engine, elevation calibration, derived metrics
-pipelines/
-  zensus/               Python ETL: Destatis 100 m grid → H3 → binary
-  black-marble/         NASA night lights raster → H3 → binary
+pipelines/              six Python ETLs, one per source, all writing the same binary format
+  zensus/               Destatis 100 m census grid → H3
+  black-marble/         NASA VNP46A4 night-light raster → H3
+  mastr/                Marktstammdatenregister wind units, streamed from the export zip
+  dwd/                  DWD annual precipitation grids → H3
+  clc5/                 BKG CORINE Land Cover 5 ha polygons → H3 coverage
+  forest/               European Forest Disturbance Atlas rasters → H3
 prototype/              dependency-free WebGL2 viewer over the same binaries
 scripts/                manifest builder, demo seeder, screenshot, picking, interface and upload checks
 docs/                   architecture, data format, testing, deploy
