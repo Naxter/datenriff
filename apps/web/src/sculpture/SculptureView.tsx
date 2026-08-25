@@ -39,6 +39,7 @@ import {
   captureIsPending,
   currentFormat,
   deliverCapture,
+  failCapture,
 } from './exportBridge';
 import { createLighting, tuneLighting } from './lighting';
 import { labelTierCap, shadowPassPossible, shadowsEnabled } from './quality';
@@ -942,8 +943,16 @@ export function SculptureView({ scene, engine }: Props) {
     const copy = document.createElement('canvas');
     copy.width = pw;
     copy.height = ph;
-    copy.getContext('2d')?.drawImage(canvas, 0, 0);
+    const ctx = copy.getContext('2d');
     setExporting(false);
+    if (!ctx) {
+      // Without a context the copy stays blank, and resolving with it hands
+      // the poster composer an empty frame to print a credit onto. Fail the
+      // capture instead, so the dialog can say so.
+      if (captureIsPending()) failCapture(new Error('2D canvas unavailable'));
+      return;
+    }
+    ctx.drawImage(canvas, 0, 0);
     if (captureIsPending()) deliverCapture(copy);
   };
 

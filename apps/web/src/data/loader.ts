@@ -83,22 +83,6 @@ export async function loadManifest(base = '/data'): Promise<AtlasManifest> {
   return await fetchJson<AtlasManifest>(`${base}/manifest.json`);
 }
 
-/** Does this dataset carry every metric the mode needs? */
-export function datasetSupportsMode(
-  dataset: SculptureDataset,
-  mode: SculptureMode,
-  derivedMetrics: (dataset: SculptureDataset, mode: SculptureMode) => boolean,
-): boolean {
-  const has = (id: string) => dataset.metrics.some((m) => m.id === id);
-  if (!has(mode.heightMetric)) return false;
-  if (!has(mode.colorMetric) && !derivedMetrics(dataset, mode)) return false;
-  const scale = mode.colorScale;
-  if (scale.type === 'categorical' && scale.saturationMetric) {
-    return has(scale.saturationMetric);
-  }
-  return true;
-}
-
 /** The dataset a mode should render from: its declared id when that one can
  *  serve it, otherwise the first that can. */
 export function resolveDataset(
