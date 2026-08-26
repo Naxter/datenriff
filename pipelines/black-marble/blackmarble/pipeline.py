@@ -128,7 +128,14 @@ def sample_pixels(
 
     west, south, east, north = bbox
     with rasterio.open(path) as ds:
-        window = from_bounds(west, south, east, north, ds.transform)
+        # round to whole pixels before both read and window_transform:
+        # ds.read rounds internally, and a fractional window would leave the
+        # transform shifted by up to a pixel against the data actually read
+        window = (
+            from_bounds(west, south, east, north, ds.transform)
+            .round_offsets(op="floor")
+            .round_lengths(op="ceil")
+        )
         data = ds.read(window=window)
         transform = ds.window_transform(window)
         bands = data.shape[0]
@@ -232,10 +239,23 @@ def run(args: argparse.Namespace) -> None:
                 values_by_year[year], _ = aggregate_mean_to_parent(
                     means, counts, lambda c, r=res: h3.cell_to_parent(c, r)
                 )
-        universe = sorted(set().union(*(v.keys() for v in values_by_year.values())))
         res_dir = out / f"r{res}"
         res_dir.mkdir(parents=True, exist_ok=True)
-        (res_dir / "cells.txt").write_text("\n".join(universe), encoding="utf-8")
+        # runs into the same output must share a cell universe, or the
+        # year buffers kept by merge_dataset_manifest no longer line up
+        # with positions.bin. The first run defines it.
+        cells_file = res_dir / "cells.txt"
+        if cells_file.exists():
+            universe = cells_file.read_text(encoding="utf-8").split()
+            new_cells = set().union(*(v.keys() for v in values_by_year.values()))
+            dropped = len(new_cells - set(universe))
+            if dropped:
+                print(f"  r{res}: {dropped:,} cells outside the existing "
+                      "universe dropped (delete the output directory and "
+                      "re-run all years to grow it)", file=sys.stderr)
+        else:
+            universe = sorted(set().union(*(v.keys() for v in values_by_year.values())))
+            cells_file.write_text("\n".join(universe), encoding="utf-8")
         positions = [(round(lon, 6), round(lat, 6)) for lon, lat in
                      ((h3.cell_to_latlng(cell)[1], h3.cell_to_latlng(cell)[0])
                       for cell in universe)]
@@ -244,9 +264,12 @@ def run(args: argparse.Namespace) -> None:
         metric_files: list[tuple[str, list[float], str]] = []
         for year, values in values_by_year.items():
             metric_id = f"{args.metric_prefix}_{year}"
-            # a cell lit in some other year but not this one is dark, not
-            # unknown: below the floor, like every pixel the floor dropped
-            aligned = [values.get(cell, 0.0) for cell in universe]
+            # VNP46 keeps sub-floor pixels as 0.0, so a universe cell with no
+            # samples in a year can only mean fill or quality-masked pixels:
+            # unknown, not dark. The visualisation GeoTIFF drops sub-floor
+            # pixels instead, so absence there really is darkness.
+            missing = None if args.vnp46 else 0.0
+            aligned = [values.get(cell, missing) for cell in universe]
             write_f32(res_dir / f"{metric_id}.f32", aligned)
             stats = compute_stats(aligned)
             stats_by_metric[metric_id] = stats

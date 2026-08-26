@@ -285,8 +285,17 @@ class TestPipelineYears(unittest.TestCase):
             n = len(cells)
             v20 = struct.unpack(f"<{n}f", (out / "r8" / "light_2020.f32").read_bytes())
             v21 = struct.unpack(f"<{n}f", (out / "r8" / "light_2021.f32").read_bytes())
-            self.assertIn(0.0, v20, "cell unlit in 2020 is dark, not missing")
-            self.assertAlmostEqual(sorted(v20)[-1], 20.0, places=4)
+            # the second cell's only 2020 pixel is fill: nothing was
+            # measured there, so the year reads as missing — a genuinely
+            # dark pixel would have been kept as 0.0 and produced a 0.0 mean
+            import math
+
+            self.assertTrue(
+                any(math.isnan(v) for v in v20),
+                "cell with only fill pixels in 2020 is missing, not dark",
+            )
+            measured20 = [v for v in v20 if not math.isnan(v)]
+            self.assertAlmostEqual(max(measured20), 20.0, places=4)
             self.assertAlmostEqual(sorted(v21)[-1], 40.0, places=4)
             lods = {lod["resolution"]: lod for lod in manifest["lods"]}
             self.assertIn("light_2021", lods[8]["metricStats"])
