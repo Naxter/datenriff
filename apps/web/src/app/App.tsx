@@ -185,6 +185,11 @@ export default function App() {
       });
     return () => {
       cancelled = true;
+      // the guarded `finally` above never runs for a cancelled fetch, and
+      // the next effect run may bail out before touching the flag (switching
+      // back while the old mode's buffers are still in flight) — so the
+      // cleanup clears it; a run that still loads sets it true again.
+      useAtlasStore.setState({ sceneLoading: false });
     };
   }, [scene, missing, setError]);
 

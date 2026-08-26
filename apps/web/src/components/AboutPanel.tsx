@@ -63,18 +63,9 @@ export function AboutPanel() {
   const scroller = useRef<HTMLDivElement>(null);
   /** Where the reader was before the tour started driving. */
   const before = useRef<{ modeId: string; timeT: number } | null>(null);
-  const close = useCallback(() => {
-    // the tour moved the mode, the year and the camera on the reader's
-    // behalf; closing it should hand back what they were looking at
-    playStory(null);
-    const was = before.current;
-    if (was) {
-      if (useAtlasStore.getState().modeId !== was.modeId) setMode(was.modeId);
-      setTimeT(was.timeT);
-      before.current = null;
-    }
-    setOpen(false);
-  }, [playStory, setMode, setTimeT, setOpen]);
+  // the restore itself lives in the `open` effect below, so it also runs
+  // when something else flips the store flag (the About toggle in PageLinks)
+  const close = useCallback(() => setOpen(false), [setOpen]);
 
   // A toggles it, like E and S; Escape closes it
   useEffect(() => {
@@ -92,17 +83,25 @@ export function AboutPanel() {
     return () => window.removeEventListener('keydown', onKey);
   }, [setOpen, close]);
 
-  // remember the view the moment the panel opens
+  // remember the view the moment the panel opens; on close, hand back what
+  // the reader was looking at — the tour moved the mode, the year and the
+  // camera on their behalf, however the panel got closed
   useEffect(() => {
     if (!open) {
-      before.current = null;
+      playStory(null);
+      const was = before.current;
+      if (was) {
+        if (useAtlasStore.getState().modeId !== was.modeId) setMode(was.modeId);
+        setTimeT(was.timeT);
+        before.current = null;
+      }
       return;
     }
     if (!before.current) {
       const s = useAtlasStore.getState();
       before.current = { modeId: s.modeId, timeT: s.timeT };
     }
-  }, [open]);
+  }, [open, playStory, setMode, setTimeT]);
 
   // the prose is only fetched once somebody wants to read it
   useEffect(() => {

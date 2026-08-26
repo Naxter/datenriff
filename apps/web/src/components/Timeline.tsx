@@ -24,6 +24,9 @@ export function Timeline({ mode }: { mode: SculptureMode }) {
     if (reducedMotion) {
       // discrete: one step per beat, no sweeping
       let index = timeT >= 1 ? 0 : nearestStep(timeT, n);
+      // starting on the last step restarts the series — incrementing past
+      // it would push timeT beyond 1 and play a phantom beat
+      if (index >= n - 1) index = 0;
       setTimeT(stepT(index, n));
       const timer = setInterval(() => {
         index += 1;
