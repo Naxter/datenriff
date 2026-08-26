@@ -19,7 +19,13 @@ zip works too (`--zip`).
   invented from a municipality centroid; that is nearly every turbine.
 - Standing at year end = commissioned by then, not finally shut down
   before, and not merely planned. Temporarily shut-down units count as
-  installed.
+  installed; a unit marked *finally* shut down whose export names no
+  shutdown date counts in no year at all — it is certainly not standing
+  now, and there is no year its shutdown can be placed in.
+- The series stops at the last **complete** year (`--last-year` overrides).
+  Running in August and counting "this year" put eight months of data on
+  the end of the timeline labelled as a full one, and dated the dataset to
+  a 31 December that had not happened.
 - Capacity is `Bruttoleistung` (kW in the register, MW here); cells sum.
 - Offshore parks stay in — the bbox reaches into the North Sea and Baltic.
   `--onshore-only` drops them.
@@ -41,8 +47,9 @@ beyond the stdlib):
 
 Then `npm run build:manifest`.
 
-A run in August 2026 read 42,107 turbines with coordinates and wrote 37
-years (1990–2026), 81.5 GW standing in 2026, 16,762 r8 cells, 4 MB.
+A run on 26 August 2026 read 42,119 turbines with coordinates and wrote 36
+years (1990–2025), 77.8 GW standing in 2025, 16,427 r8 cells, 4 MB. The
+register is refreshed daily, so the counts drift between runs.
 
 ## Tests
 
