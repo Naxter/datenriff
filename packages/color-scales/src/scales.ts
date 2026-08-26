@@ -72,7 +72,9 @@ export function mapSequential(
   out: Uint8Array,
 ): void {
   const [lo, hi] = resolveSequentialDomain(def, stats);
-  const tLo = transform(def.type, Math.max(0, lo));
+  // no clamp here: a linear domain may start below zero, and transform()
+  // already clamps for sqrt/log1p where negatives are undefined
+  const tLo = transform(def.type, lo);
   const tHi = transform(def.type, hi);
   const span = tHi - tLo || 1;
   const palette = getPalette(def.palette);
