@@ -12,8 +12,6 @@ export type Easing = (t: number) => number;
 export const cubicInOut: Easing = (t) =>
   t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 
-export const linearEase: Easing = (t) => t;
-
 export interface MorphTarget {
   /** Per-cell elevations in metres, already calibrated. */
   heights: Float32Array;

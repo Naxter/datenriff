@@ -99,17 +99,6 @@ export function buildChangePct(
   return out;
 }
 
-export function buildChangeAbs(
-  pop2022: Float32Array,
-  pop2011: Float32Array,
-): Float32Array {
-  const out = new Float32Array(pop2022.length);
-  for (let i = 0; i < out.length; i++) {
-    out[i] = pop2022[i]! - pop2011[i]!;
-  }
-  return out;
-}
-
 /** Runtime stats for derived buffers; NaNs are ignored. */
 export function computeStats(values: Float32Array): MetricStats {
   const finite: number[] = [];
