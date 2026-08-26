@@ -171,6 +171,35 @@ class TestUnits(unittest.TestCase):
         planned = by_id["SEE900000000005"]
         self.assertFalse(units.installed_in_year(planned, 2027))
 
+    def test_a_final_shutdown_without_a_date_counts_in_no_year(self):
+        # Status 38 is "endgültig stillgelegt". Where the export names no
+        # shutdown date the unit cannot be placed in time, and it is
+        # certainly not standing now — counting it from commissioning
+        # onwards inflated every recent year's capacity.
+        def unit(status, decommissioned=None):
+            return units.Unit(
+                id="SEE900000000009",
+                lon=10.0,
+                lat=51.0,
+                kw=1000,
+                commissioned=dt.date(2000, 6, 1),
+                decommissioned=decommissioned,
+                status=status,
+                offshore=False,
+            )
+
+        retired = unit(units.STATUS_ENDGUELTIG_STILLGELEGT)
+        self.assertFalse(units.installed_in_year(retired, 2001))
+        self.assertFalse(units.installed_in_year(retired, 2025))
+        # a dated final shutdown still counts up to the year before it
+        dated = unit(units.STATUS_ENDGUELTIG_STILLGELEGT, dt.date(2015, 1, 10))
+        self.assertTrue(units.installed_in_year(dated, 2014))
+        self.assertFalse(units.installed_in_year(dated, 2015))
+        # only a *final* shutdown is treated this way: a temporarily
+        # shut-down unit is still standing, dateless or not
+        paused = unit(units.STATUS_VORUEBERGEHEND_STILLGELEGT)
+        self.assertTrue(units.installed_in_year(paused, 2025))
+
 
 class TestPipeline(unittest.TestCase):
     def test_end_to_end(self):
