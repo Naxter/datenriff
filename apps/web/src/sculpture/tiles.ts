@@ -39,10 +39,15 @@ export interface ReadyTile {
   values: Record<string, Float32Array | Uint8Array>;
 }
 
-/** Every visible tile concatenated into one set of buffers, so the view can
- *  draw them with a single layer. `offsets` maps a merged index back to the
- *  tile it came from, which is what the tooltip needs. */
+/** The visible tiles of one LOD concatenated into one set of buffers, so
+ *  the view can draw them with a single layer. `offsets` maps a merged index
+ *  back to the tile it came from, which is what the tooltip needs. */
 export interface MergedTiles {
+  /** H3 resolution these tiles belong to — stand-ins from the previous
+   *  generation can be a different LOD than the current one. */
+  resolution: number;
+  /** The level's own cell radius, so stand-ins keep their footprint. */
+  cellRadiusMeters: number;
   count: number;
   positions: Float32Array;
   heights: Float32Array;
@@ -163,7 +168,7 @@ export class TileManager {
   private needed = new Set<string>();
   /** Height scale per level and mode; see `heightScaleOf`. */
   private readonly heightScales = new Map<string, number>();
-  private mergedCache: MergedTiles | null = null;
+  private mergedCache: MergedTiles[] | null = null;
   private mergedKey = '';
   private zone: LonLatBounds | null = null;
 
@@ -265,32 +270,55 @@ export class TileManager {
     return result;
   }
 
-  /** The visible tiles as one buffer set, rebuilt only when the set itself
-   *  changes. One layer per tile cost 71 draw calls a frame at city zoom,
-   *  and 73 picking draws per mouse move, for tiles of a few hundred cells;
-   *  concatenating is a memcpy of a megabyte or two per tile arrival. */
-  merged(): MergedTiles | null {
+  /** The visible tiles as one buffer set per LOD, rebuilt only when the set
+   *  itself changes. One layer per tile cost 71 draw calls a frame at city
+   *  zoom, and 73 picking draws per mouse move, for tiles of a few hundred
+   *  cells; concatenating is a memcpy of a megabyte or two per tile arrival.
+   *  Grouped by resolution because stand-ins from the previous generation
+   *  can belong to another LOD, and a 175 m cell drawn with a 66 m footprint
+   *  is mostly gap — each level keeps its own radius and calibration. */
+  merged(): MergedTiles[] {
     const tiles = this.tiles();
     if (tiles.length === 0) {
       this.mergedCache = null;
       this.mergedKey = '';
-      return null;
+      return [];
     }
     const key = tiles.map((t) => t.key).join('|');
     if (this.mergedCache && this.mergedKey === key) return this.mergedCache;
 
-    const { offsets, total: count } = mergeOffsets(tiles.map((t) => t.count));
-    const positions = new Float32Array(count * 2);
-    const heights = new Float32Array(count);
-    const colors = new Uint8Array(count * 4);
-    tiles.forEach((t, i) => {
-      const at = offsets[i]!;
-      positions.set(t.positions.subarray(0, t.count * 2), at * 2);
-      heights.set(t.heights.subarray(0, t.count), at);
-      colors.set(t.colors.subarray(0, t.count * 4), at * 4);
-    });
+    const groups = new Map<number, ReadyTile[]>();
+    for (const tile of tiles) {
+      // the generation prefix of the key starts with the LOD's resolution
+      const resolution = Number(tile.key.slice(0, tile.key.indexOf('|')));
+      const group = groups.get(resolution);
+      if (group) group.push(tile);
+      else groups.set(resolution, [tile]);
+    }
     this.mergedKey = key;
-    this.mergedCache = { count, positions, heights, colors, offsets, tiles };
+    this.mergedCache = [...groups.entries()].map(([resolution, group]) => {
+      const { offsets, total: count } = mergeOffsets(group.map((t) => t.count));
+      const positions = new Float32Array(count * 2);
+      const heights = new Float32Array(count);
+      const colors = new Uint8Array(count * 4);
+      group.forEach((t, i) => {
+        const at = offsets[i]!;
+        positions.set(t.positions.subarray(0, t.count * 2), at * 2);
+        heights.set(t.heights.subarray(0, t.count), at);
+        colors.set(t.colors.subarray(0, t.count * 4), at * 4);
+      });
+      const lod = this.lods.find((l) => l.lod.resolution === resolution)?.lod;
+      return {
+        resolution,
+        cellRadiusMeters: lod?.cellRadiusMeters ?? 0,
+        count,
+        positions,
+        heights,
+        colors,
+        offsets,
+        tiles: group,
+      };
+    });
     return this.mergedCache;
   }
 

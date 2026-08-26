@@ -10,7 +10,8 @@ import {
 } from '@datenriff/color-scales';
 import type { SceneData } from '../data/loader';
 import { metricForScene } from '../data/loader';
-import { type Lang, metricText, modeText, translate } from '../i18n/strings';
+import { LOCALE, type Lang, metricText, modeText, translate } from '../i18n/strings';
+import { intFormat } from '../i18n/format';
 import { nearestStep } from '../modes/time';
 import { CHANGE_PCT_METRIC } from '../modes/modes';
 import { EXPORT_DPR, currentFormat, type ExportFormat } from './exportBridge';
@@ -303,9 +304,9 @@ function drawLegend(
   } else {
     const [lo, hi] = resolveSequentialDomain(scale, ctx.colorStats);
     c.textAlign = 'left';
-    c.fillText(formatNumber(lo, def.unit, def.aggregation), right - barW, barY + 66 * u);
+    c.fillText(formatNumber(ctx.lang, lo, def.unit, def.aggregation), right - barW, barY + 66 * u);
     c.textAlign = 'right';
-    c.fillText(formatNumber(hi, def.unit, def.aggregation), right, barY + 66 * u);
+    c.fillText(formatNumber(ctx.lang, hi, def.unit, def.aggregation), right, barY + 66 * u);
   }
   c.globalAlpha = 1;
 }
@@ -347,11 +348,11 @@ function drawTracked(
   return total;
 }
 
-const nf = new Intl.NumberFormat('de-DE', { maximumFractionDigits: 0 });
-
 /** Same rule as the screen legend: a share reads as a percentage, anything
- *  else prints the unit the pipeline declared. */
-function formatNumber(v: number, unit?: string, aggregation?: string): string {
+ *  else prints the unit the pipeline declared. The poster follows the
+ *  language on screen — an English poster gets English digit grouping. */
+function formatNumber(lang: Lang, v: number, unit?: string, aggregation?: string): string {
+  const nf = intFormat(LOCALE[lang]);
   if (aggregation === 'share') return `${nf.format(Math.round(v * 100))} %`;
   const compact = Math.abs(v) >= 10_000 ? `${nf.format(Math.round(v / 1000))}k` : nf.format(v);
   return unit ? `${compact} ${unit}` : compact;

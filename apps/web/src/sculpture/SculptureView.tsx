@@ -589,6 +589,9 @@ export function SculptureView({ scene, engine }: Props) {
     // not passive: the page would otherwise scroll and the browser zoom
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
+      // the phone layout's camera is fixed; keyboard and double click are
+      // gated the same way
+      if (fixedCamera) return;
       if (Math.abs(e.deltaY) < 2) return;
       stepCamera(e.deltaY < 0 ? 1 : -1, [e.clientX, e.clientY]);
     };
@@ -738,11 +741,14 @@ export function SculptureView({ scene, engine }: Props) {
 
   const visibleLabels = useMemo(() => {
     if (!fontReady) return [];
-    const zoom = viewState.zoom;
+    // the frame being rendered decides the density: the poster re-frames
+    // the whole country, and the live camera's city zoom must not blanket
+    // it with every tier-3 town
+    const zoom = renderView.zoom ?? viewState.zoom;
     const byZoom = zoom > 7 ? 3 : zoom > 6.2 ? 2 : 1;
     const maxTier = Math.min(byZoom, labelTierCap(quality, settings.labels));
     return scene.cities.filter((c) => c.tier <= maxTier);
-  }, [fontReady, scene.cities, viewState.zoom, quality, settings.labels]);
+  }, [fontReady, scene.cities, renderView.zoom, viewState.zoom, quality, settings.labels]);
 
   const characterSet = useMemo(() => labelCharacterSet(scene.cities), [scene.cities]);
 
@@ -776,21 +782,23 @@ export function SculptureView({ scene, engine }: Props) {
     // they are a speck of unrelated detail over one city.
     if (exporting) return [];
     if (fineOpacity <= 0 || !fineLod || !tileManager) return [];
-    const merged = tileManager.merged();
-    if (!merged) return [];
-    const fineRadius = fineLod.cellRadiusMeters * 1.15;
-    // How much taller the density rule draws this level than the country
-    // one: a 66 m cell covers a forty-ninth of a 460 m cell, so it carries
-    // forty-nine times the metres per person. For a mean, a share or a rate
-    // there is no such step and the ratio is 1.
-    const fineAreaRatio = perAreaHeight.current
-      ? Math.pow((scene.lod.cellRadiusMeters || 1) / (fineLod.cellRadiusMeters || 1), 2)
-      : 1;
-    // One layer for every visible tile, not one per tile: same geometry,
-    // a single draw call and a single picking pass.
-    return [
-      new ColumnLayer({
-        id: 'tiles-merged',
+    // One buffer set — and one layer — per LOD present: stand-ins from the
+    // previous generation can be a coarser level, and drawing a 175 m cell
+    // with a 66 m footprint leaves mostly gap. Still a handful of draw
+    // calls at most, never one per tile.
+    return tileManager.merged().map((merged) => {
+      const cellRadius = merged.cellRadiusMeters || fineLod.cellRadiusMeters;
+      const fineRadius = cellRadius * 1.15;
+      // How much taller the density rule draws this level than the country
+      // one: a 66 m cell covers a forty-ninth of a 460 m cell, so it carries
+      // forty-nine times the metres per person. For a mean, a share or a rate
+      // there is no such step and the ratio is 1. Each level's tiles were
+      // calibrated with their own ratio, so each set applies its own.
+      const fineAreaRatio = perAreaHeight.current
+        ? Math.pow((scene.lod.cellRadiusMeters || 1) / (cellRadius || 1), 2)
+        : 1;
+      return new ColumnLayer({
+        id: `tiles-merged-r${merged.resolution}`,
         data: {
           length: merged.count,
           attributes: {
@@ -832,8 +840,8 @@ export function SculptureView({ scene, engine }: Props) {
           shininess: 110,
           specularColor: [46, 42, 38],
         },
-      }),
-    ];
+      });
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     exporting,
@@ -886,7 +894,9 @@ export function SculptureView({ scene, engine }: Props) {
     labelScale: exporting ? 1.15 : 1,
     labelOpacity,
     mixAmount,
-    fadeBox,
+    // the poster drops the fine layers, so the country layer must not keep
+    // the live view's fade hole where the tiles were standing
+    fadeBox: exporting ? null : fadeBox,
     elevationScale: heightScale,
     outgoingLayer,
     fineLayers,
@@ -930,15 +940,42 @@ export function SculptureView({ scene, engine }: Props) {
     if (shadowsWanted && !canShadow.current) window.location.reload();
   }, [shadowsWanted]);
 
+  // frames rendered while the capture canvas has the wrong size; a run of
+  // them means the requested size is unreachable, not merely late
+  const captureMismatchFrames = useRef(0);
   const finishCapture = () => {
     if (!exporting) return;
+    // the bridge may have given up on its own (its timeout rejects the
+    // caller's promise without telling this component) — leave the export
+    // layout instead of holding a poster-sized canvas forever
+    if (!captureIsPending()) {
+      captureMismatchFrames.current = 0;
+      setExporting(false);
+      return;
+    }
     const canvas = deckRef.current?.deck?.canvas;
     const format = currentFormat();
     const pw = Math.round(format.width * currentDpr());
     const ph = Math.round(format.height * currentDpr());
     if (!canvas || canvas.width !== pw || canvas.height !== ph) {
-      return; // resize has not landed yet; a later frame will match
+      // The resize normally lands within a frame or two. A driver that caps
+      // the drawing buffer (luma clamps the pixel ratio) will never reach the
+      // requested size, and waiting on it would hold the app in the export
+      // layout until the bridge's timeout — fail fast with the reason.
+      captureMismatchFrames.current += 1;
+      if (canvas && captureMismatchFrames.current > 120) {
+        captureMismatchFrames.current = 0;
+        setExporting(false);
+        failCapture(
+          new Error(
+            `Canvas stayed at ${canvas.width}×${canvas.height}, expected ` +
+              `${pw}×${ph} — the GPU may cap the drawing buffer at this size`,
+          ),
+        );
+      }
+      return;
     }
+    captureMismatchFrames.current = 0;
     // must copy synchronously — the drawing buffer is cleared after the task
     const copy = document.createElement('canvas');
     copy.width = pw;
