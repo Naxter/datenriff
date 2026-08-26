@@ -13,20 +13,15 @@ import { nearestStep } from '../modes/time';
 import { effectiveColorScale } from '../sculpture/targets';
 import { useAtlasStore } from '../state/store';
 import { useI18n } from '../i18n';
-import { intFormat } from '../i18n/format';
+import { formatMetricValue } from '../i18n/format';
 
 /** The metric says what it is: a share is a fraction of 1 and reads as a
  *  percentage, anything else prints whatever unit the pipeline declared.
  *  Hard-coding three units meant nW/cm²/sr, years, % and people never
- *  reached the legend, and a share printed as "0" to "1". */
+ *  reached the legend, and a share printed as "0" to "1". The rule itself
+ *  lives in i18n/format.ts, shared with the poster export. */
 function formatValue(locale: string, v: number, metric: MetricDefinition, unit: string): string {
-  const nf = intFormat(locale);
-  if (metric.aggregation === 'share') {
-    return `${nf.format(Math.round(v * 100))} %`;
-  }
-  const compact =
-    Math.abs(v) >= 10_000 ? `${nf.format(Math.round(v / 1000))}k` : nf.format(v);
-  return unit ? `${compact} ${unit}` : compact;
+  return formatMetricValue(locale, v, unit, metric.aggregation);
 }
 
 const cssGradient = (id: string) =>

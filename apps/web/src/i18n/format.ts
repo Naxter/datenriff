@@ -22,6 +22,21 @@ export function dec1Format(locale: string): Intl.NumberFormat {
   return f;
 }
 
+/** The legend's number rule, shared with the poster export so the two can
+ *  never drift: a share reads as a rounded percentage, values from 10 000
+ *  compact to "Nk", anything else prints the unit it was handed. */
+export function formatMetricValue(
+  locale: string,
+  v: number,
+  unit?: string,
+  aggregation?: string,
+): string {
+  const nf = intFormat(locale);
+  if (aggregation === 'share') return `${nf.format(Math.round(v * 100))} %`;
+  const compact = Math.abs(v) >= 10_000 ? `${nf.format(Math.round(v / 1000))}k` : nf.format(v);
+  return unit ? `${compact} ${unit}` : compact;
+}
+
 export function longDate(locale: string, iso: string): string {
   // a date-only ISO string parses as UTC midnight, so it must be formatted
   // in UTC too — otherwise a viewer west of Greenwich reads the day before
