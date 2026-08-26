@@ -30,11 +30,13 @@ export function stepStop(
   if (sorted.length === 0) return zoom;
   if (dir > 0) {
     for (const stop of sorted) if (stop > zoom + epsilon) return stop;
-    return sorted[sorted.length - 1]!;
+    // past the last stop (a URL can restore such a zoom): stay, rather
+    // than answering a zoom-in by flying back out to the last stop
+    return zoom;
   }
   for (let i = sorted.length - 1; i >= 0; i--) {
     const stop = sorted[i]!;
     if (stop < zoom - epsilon) return stop;
   }
-  return sorted[0]!;
+  return zoom;
 }

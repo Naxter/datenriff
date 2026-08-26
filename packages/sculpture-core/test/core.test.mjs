@@ -62,6 +62,10 @@ test('stepStop moves one stop at a time, from anywhere', () => {
   // sitting a hair off a stop does not count as being past it
   assert.equal(stepStop(stops, 10.92, 1), 11.9);
   assert.equal(stepStop(stops, 10.92, -1), 8.6);
+  // beyond the ends: stepping further out has nowhere to go, and must
+  // not fly the camera back to the end stop
+  assert.equal(stepStop(stops, 12.4, 1), 12.4);
+  assert.equal(stepStop(stops, 5.2, -1), 5.2);
 });
 
 test('computeElevations zeroes NaN and negatives', () => {
