@@ -3,6 +3,7 @@
 // it, a tagline follows, then the UI comes in. Deep links, repeat visits in
 // the same session and reduced-motion users go straight to the sculpture.
 
+import { isPhoneLayout } from '../layout';
 import { readUrlState } from '../state/url';
 import { useAtlasStore, type IntroPhase } from '../state/store';
 import { launchParams } from '../state/url';
@@ -29,7 +30,7 @@ export function introEligible(reducedMotion: boolean): boolean {
   // which on a narrow screen means the mode nav is visible, unreadable
   // through the title laid over it, and dead to the touch. On a wide screen
   // there is room for the staging; here it only reads as a broken page.
-  if (window.matchMedia?.('(max-width: 760px)').matches) return false;
+  if (isPhoneLayout()) return false;
   const url = readUrlState();
   if (url.modeId || url.view || url.palette || url.timeT !== undefined) return false;
   try {

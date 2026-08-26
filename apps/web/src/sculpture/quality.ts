@@ -4,6 +4,7 @@
 // frames. Everything that costs GPU time is decided here, in one place.
 
 import type { SculptureDataset, SculptureLOD } from '@datenriff/data-contracts';
+import { isPhoneLayout } from '../layout';
 import type { Settings, Tri } from '../state/settings';
 import { launchParam } from '../state/url';
 
@@ -49,7 +50,7 @@ export function detectQuality(setting: Settings['quality'] = 'auto'): QualityPro
   if (forced === 'desktop') return DESKTOP;
   if (setting === 'mobile') return MOBILE;
   if (setting === 'desktop') return DESKTOP;
-  const smallScreen = window.matchMedia('(max-width: 760px)').matches;
+  const smallScreen = isPhoneLayout();
   const coarsePointer = window.matchMedia('(pointer: coarse)').matches;
   const fewCores = (navigator.hardwareConcurrency ?? 8) <= 4;
   return smallScreen || (coarsePointer && fewCores) ? MOBILE : DESKTOP;

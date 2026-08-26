@@ -4,8 +4,8 @@
 // to, because they have to work when the app does not. On a phone About is
 // a page too — see below.
 
-import { useEffect, useState } from 'react';
 import { useAtlasStore } from '../state/store';
+import { usePhoneLayout } from '../layout';
 import { useI18n } from '../i18n';
 
 export function PageLinks() {
@@ -22,14 +22,7 @@ export function PageLinks() {
   // narrow screen — the sheet covers the sculpture it is talking about, and
   // the camera is fixed here anyway. The static page is the better version of
   // the same words: it is already built, it is plain text, and it scrolls.
-  const [onPhone, setOnPhone] = useState(() => window.matchMedia?.('(max-width: 760px)').matches);
-  useEffect(() => {
-    const query = window.matchMedia?.('(max-width: 760px)');
-    if (!query) return;
-    const onChange = () => setOnPhone(query.matches);
-    query.addEventListener('change', onChange);
-    return () => query.removeEventListener('change', onChange);
-  }, []);
+  const onPhone = usePhoneLayout();
 
   return (
     <nav className="pagelinks" aria-label={t('pages.aria')}>
