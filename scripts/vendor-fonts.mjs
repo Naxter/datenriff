@@ -65,38 +65,53 @@ const slug = (face) =>
 
 async function main() {
   await mkdir(OUT, { recursive: true });
-  const blocks = [];
-  let bytes = 0;
 
-  for (const family of FAMILIES) {
-    const res = await fetch(
-      `https://fonts.googleapis.com/css2?family=${family.query}&display=swap`,
-      { headers: { 'User-Agent': UA } },
-    );
-    if (!res.ok) throw new Error(`${family.name}: stylesheet ${res.status}`);
-    const faces = parseFaces(await res.text()).filter((f) => KEEP.has(f.subset));
-    if (!faces.length) throw new Error(`${family.name}: no latin faces found`);
+  // every request is independent, so nothing waits in line: both
+  // stylesheets together, then all the faces together. The CSS blocks keep
+  // the declaration order of FAMILIES and of each stylesheet, so the output
+  // is byte-identical however the downloads land.
+  const faces = (
+    await Promise.all(
+      FAMILIES.map(async (family) => {
+        const res = await fetch(
+          `https://fonts.googleapis.com/css2?family=${family.query}&display=swap`,
+          { headers: { 'User-Agent': UA } },
+        );
+        if (!res.ok) throw new Error(`${family.name}: stylesheet ${res.status}`);
+        const kept = parseFaces(await res.text()).filter((f) => KEEP.has(f.subset));
+        if (!kept.length) throw new Error(`${family.name}: no latin faces found`);
+        return kept;
+      }),
+    )
+  ).flat();
 
-    for (const face of faces) {
+  const downloaded = await Promise.all(
+    faces.map(async (face) => {
       const file = slug(face);
       const res = await fetch(face.url, { headers: { 'User-Agent': UA } });
       // an unchecked error response would be written to disk as a "font"
       if (!res.ok) throw new Error(`${file}: ${res.status} from ${face.url}`);
       const data = new Uint8Array(await res.arrayBuffer());
       await writeFile(join(OUT, file), data);
-      bytes += data.byteLength;
-      blocks.push(
-        `@font-face {\n` +
-          `  font-family: '${face.family}';\n` +
-          `  font-style: ${face.style};\n` +
-          `  font-weight: ${face.weight};\n` +
-          `  font-display: swap;\n` +
-          `  src: url('/fonts/${file}') format('woff2');\n` +
-          `  unicode-range: ${face.range};\n` +
-          `}`,
-      );
-      console.log(`  ${file}  ${(data.byteLength / 1024).toFixed(1)} kB`);
-    }
+      return { face, file, data };
+    }),
+  );
+
+  const blocks = [];
+  let bytes = 0;
+  for (const { face, file, data } of downloaded) {
+    bytes += data.byteLength;
+    blocks.push(
+      `@font-face {\n` +
+        `  font-family: '${face.family}';\n` +
+        `  font-style: ${face.style};\n` +
+        `  font-weight: ${face.weight};\n` +
+        `  font-display: swap;\n` +
+        `  src: url('/fonts/${file}') format('woff2');\n` +
+        `  unicode-range: ${face.range};\n` +
+        `}`,
+    );
+    console.log(`  ${file}  ${(data.byteLength / 1024).toFixed(1)} kB`);
   }
 
   const header =
