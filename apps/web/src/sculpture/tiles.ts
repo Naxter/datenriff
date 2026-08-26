@@ -174,6 +174,19 @@ export class TileManager {
 
   /** Bumped state for the view; called whenever ready tiles change. */
   onChange: (() => void) | null = null;
+  private notifyScheduled = false;
+
+  /** One onChange per animation frame, not per worker message: a burst of
+   *  arriving tiles otherwise rebuilds the merged buffers once per tile —
+   *  O(n²) copying and a GPU re-upload each — for frames nobody sees. */
+  private notify(): void {
+    if (this.notifyScheduled) return;
+    this.notifyScheduled = true;
+    requestAnimationFrame(() => {
+      this.notifyScheduled = false;
+      this.onChange?.();
+    });
+  }
 
   constructor(private readonly scene: SceneData) {
     this.lods = scene.tileLods.map((lod) => ({ lod, index: null }));
@@ -401,7 +414,7 @@ export class TileManager {
     }
     this.retirePrevious();
     this.evict();
-    this.onChange?.(); // zone/needed changed even if no tile did
+    this.notify(); // zone/needed changed even if no tile did
   }
 
   private indexOf(lod: SculptureLOD): TileIndex | null {
@@ -446,7 +459,7 @@ export class TileManager {
       const res = await fetch(entry.lod.tileIndex);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       entry.index = (await res.json()) as TileIndex;
-      this.onChange?.();
+      this.notify();
     } catch (e) {
       console.error(`tile index ${entry.lod.tileIndex}:`, e);
     }
@@ -550,7 +563,7 @@ export class TileManager {
     });
     this.lastUsed.set(msg.key, this.clock);
     this.retirePrevious();
-    this.onChange?.();
+    this.notify();
   }
 
   private evict(): void {

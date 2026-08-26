@@ -41,16 +41,11 @@ import {
   deliverCapture,
   failCapture,
 } from './exportBridge';
+import { hexToRgb } from '@datenriff/color-scales';
+import { isPhoneLayout } from '../layout';
 import { createLighting, tuneLighting } from './lighting';
 import { labelTierCap, shadowPassPossible, shadowsEnabled } from './quality';
 import { loadOutline } from '../data/focusData';
-
-/** '#221c15' -> [34, 28, 21]; the settings keep the colour as CSS hex so a
- *  colour input can edit it directly. */
-function hexToRgb(hex: string): [number, number, number] {
-  const n = Number.parseInt(hex.slice(1), 16);
-  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
-}
 import { resolveReducedMotion } from '../state/settings';
 import {
   createColumnLayer,
@@ -133,11 +128,11 @@ const framePitch = (pitch: number) => ({
  *  whenever the country outline is on, and a layout guessed at from constants
  *  put the south of the country behind the legend for exactly that reason. */
 function chromeInsets(): ViewInsets {
-  // 760 px is the CSS breakpoint. Above it the interface is corner-anchored
+  // PHONE_QUERY is the CSS breakpoint. Above it the interface is corner-anchored
   // and its wrappers are `display: contents`, which have no box at all — an
   // aspect-ratio test disagreed with the stylesheet and measured those zeros
   // as a full-height inset, which crashed the fit on a portrait tablet.
-  if (!window.matchMedia?.('(max-width: 760px)').matches) return { top: 0, bottom: 0 };
+  if (!isPhoneLayout()) return { top: 0, bottom: 0 };
   const top = document.querySelector('.topblock')?.getBoundingClientRect().bottom ?? 0;
   const bar = document.querySelector('.bottombar')?.getBoundingClientRect().top;
   return {
@@ -152,8 +147,7 @@ function chromeInsets(): ViewInsets {
 function isPortrait(): boolean {
   // same breakpoint as the stylesheet: the fixed camera belongs with the
   // phone layout, not with an aspect ratio that can disagree with it
-  return (window.matchMedia?.('(max-width: 760px)').matches ?? false) &&
-    window.innerWidth / window.innerHeight < 1;
+  return isPhoneLayout() && window.innerWidth / window.innerHeight < 1;
 }
 
 export function SculptureView({ scene, engine }: Props) {
@@ -526,7 +520,13 @@ export function SculptureView({ scene, engine }: Props) {
   // framing (a 100 km needle would otherwise fill a city frame). Where the
   // fine levels carry a count per unit area they rise steeply with detail,
   // so those modes ease down faster — see DENSITY_HEIGHT_FALLOFF.
-  const countryZoom = fitViewState(scene.lod.bounds, renderWidth, renderHeight).zoom;
+  // memoized: the component re-renders every animation frame, and on a
+  // portrait frame the fit solves an iterative search (zoomThatFits) that
+  // must not run per frame — the inputs only change on resize or export
+  const countryZoom = useMemo(
+    () => fitViewState(scene.lod.bounds, renderWidth, renderHeight).zoom,
+    [scene.lod.bounds, renderWidth, renderHeight],
+  );
   // The falloff follows what is drawn, not what is chosen: while a new
   // dataset streams, the chosen mode is already the new one and the sculpture
   // sinking into the plane is still the old one. Keeping the last answer that
@@ -902,7 +902,7 @@ export function SculptureView({ scene, engine }: Props) {
     fineLayers,
     border:
       settings.border && borderRings
-        ? { color: hexToRgb(settings.borderColor), rings: borderRings }
+        ? { color: [...hexToRgb(settings.borderColor)], rings: borderRings }
         : null,
     // stays pickable: the country layer still draws the far field, and the
     // tiles carry no metric values, so hover reads the country cell
