@@ -150,10 +150,23 @@ def run(args: argparse.Namespace) -> None:
                 values_by_year[year], _ = aggregate_mean_to_parent(
                     means, counts, lambda c, r=res: h3.cell_to_parent(c, r)
                 )
-        universe = sorted(set().union(*(v.keys() for v in values_by_year.values())))
         res_dir = out / f"r{res}"
         res_dir.mkdir(parents=True, exist_ok=True)
-        (res_dir / "cells.txt").write_text("\n".join(universe), encoding="utf-8")
+        # runs into the same output must share a cell universe, or the
+        # year buffers kept by merge_dataset_manifest no longer line up
+        # with positions.bin. The first run defines it.
+        cells_file = res_dir / "cells.txt"
+        if cells_file.exists():
+            universe = cells_file.read_text(encoding="utf-8").split()
+            new_cells = set().union(*(v.keys() for v in values_by_year.values()))
+            dropped = len(new_cells - set(universe))
+            if dropped:
+                print(f"  r{res}: {dropped:,} cells outside the existing "
+                      "universe dropped (delete the output directory and "
+                      "re-run all years to grow it)", file=sys.stderr)
+        else:
+            universe = sorted(set().union(*(v.keys() for v in values_by_year.values())))
+            cells_file.write_text("\n".join(universe), encoding="utf-8")
         positions = positions_for(universe)
         write_positions(res_dir / "positions.bin", positions)
 
