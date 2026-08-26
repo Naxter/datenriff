@@ -100,6 +100,11 @@ def installed_in_year(unit: Unit, year: int) -> bool:
         return False
     if unit.commissioned is None or unit.commissioned.year > year:
         return False
+    if unit.status == STATUS_ENDGUELTIG_STILLGELEGT and unit.decommissioned is None:
+        # permanently shut down but the export names no date: the unit is
+        # certainly not standing today, and there is no year its shutdown
+        # can be placed in — leave it out rather than count it forever
+        return False
     if unit.decommissioned is not None and unit.decommissioned.year <= year:
         return False
     return True
