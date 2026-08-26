@@ -42,8 +42,9 @@ PYTHONPATH=".;../zensus" ../zensus/.venv/Scripts/python -m blackmarble.pipeline 
 ```
 
 - `--floor 0.5`: radiance at or below this is sensor floor / airglow, not
-  settlement. Cells lit in one year but not another are written as 0 for
-  the dark year (below the floor), not as missing.
+  settlement. Sub-floor pixels are kept as 0, so a genuinely dark year
+  reads as 0; a cell whose every pixel was fill or quality-masked in a
+  year has no measurement and is written as missing (NaN), not as dark.
 - Quality: good (0) and gap-filled (2) pixels are kept, poor ones (1: too
   few clear nights) dropped. `--keep-quality 0,1,2` keeps everything.
 - Aggregation is a **mean** weighted by pixel count: radiance is
