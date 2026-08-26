@@ -211,6 +211,7 @@ const METRIC_TEXT: Record<Lang, Record<string, string>> = {
     population: 'Einwohner',
     population_2011: 'Einwohner 2011',
     population_2022: 'Einwohner 2022',
+    population_change_pct: 'Veränderung 2011–2022',
     age_mean: 'Durchschnittsalter',
     rent: 'Nettokaltmiete',
     homes: 'Vermietete Wohnungen',

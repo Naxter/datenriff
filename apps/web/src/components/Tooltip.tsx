@@ -72,7 +72,10 @@ function formatField(
       return `${intFmt.format(Math.round(value))}${suffix}`;
     case 'decimal1':
       return `${dec1Fmt.format(value)}${suffix}`;
-    case 'percent': {
+    case 'percent':
+      // a plain share — "Forest cover 34.5 %" — never carries a sign
+      return `${dec1Fmt.format(value * 100)} %`;
+    case 'signedPercent': {
       const pct = value * 100;
       return `${pct > 0 ? '+' : ''}${dec1Fmt.format(pct)} %`;
     }

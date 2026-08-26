@@ -63,7 +63,7 @@ export const MODES: SculptureMode[] = [
     tooltip: {
       fields: [
         { metric: 'population_2022', label: 'Population 2022', format: 'integer' },
-        { metric: CHANGE_PCT_METRIC, label: 'Change 2011–2022', format: 'percent' },
+        { metric: CHANGE_PCT_METRIC, label: 'Change 2011–2022', format: 'signedPercent' },
       ],
     },
     stories: [

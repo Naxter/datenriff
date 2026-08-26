@@ -226,6 +226,8 @@ export interface TooltipFieldDefinition {
     | 'integer'
     | 'decimal1'
     | 'percent'
+    /** a delta: positive values carry an explicit "+" */
+    | 'signedPercent'
     | 'currencyPerSqm'
     | 'megawatt'
     | 'millimetre'
