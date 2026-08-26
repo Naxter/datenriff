@@ -75,6 +75,8 @@ from .gridref import find_centre_columns, find_grid_id_column, parse_grid_id
 from .provenance import provenance
 from .special_values import parse_value
 from .tiling import (
+    H3_EDGE_METERS,
+    TILE_PARENT_RES,
     group_by_tile,
     merge_tile_index,
     write_tile_metric,
@@ -84,10 +86,8 @@ from .tiling import (
 BASE_RESOLUTION = 10
 # r7 is the mobile country LOD (~5 km² cells), r8 the desktop one
 COARSE_RESOLUTIONS = (9, 8, 7)
-H3_EDGE_METERS = {7: 1220.6, 8: 461.4, 9: 174.4, 10: 65.9}
-# finer LODs ship as tiles grouped by this H3 parent resolution
+# finer LODs ship as tiles (grouped by TILE_PARENT_RES, see tiling.py)
 TILED_RESOLUTIONS = frozenset({9, 10})
-TILE_PARENT_RES = 5
 WEIGHT_KEY = "__weight"
 
 
@@ -145,10 +145,22 @@ def stream_rows(
             print(f"  {skipped:,} rows without coordinates skipped", file=sys.stderr)
 
 
+# run_all_metrics.py drives several metric runs through one process, and
+# two of them weight by the same ~3-million-row population CSV — parsing it
+# once per run cost minutes. Keyed by path, column and mtime, so an edited
+# file is re-read.
+_weight_cache: dict[tuple[str, str, int], dict[str, float]] = {}
+
+
 def load_weight_lookup(
     path: Path, value_column: str, encoding: str, delimiter: str
 ) -> dict[str, float]:
     """Grid-id keyed weights from a second grid CSV (e.g. population)."""
+    key = (str(path.resolve()), value_column, path.stat().st_mtime_ns)
+    hit = _weight_cache.get(key)
+    if hit is not None:
+        print(f"Weights from {path.name} already loaded", file=sys.stderr)
+        return hit
     print(f"Loading weights from {path.name} …", file=sys.stderr)
     fh, reader = open_reader(path, encoding, delimiter)
     lookup: dict[str, float] = {}
@@ -172,6 +184,7 @@ def load_weight_lookup(
                 if x and y:
                     lookup[f"{x:.0f}:{y:.0f}"] = value
     print(f"  {len(lookup):,} weight cells", file=sys.stderr)
+    _weight_cache[key] = lookup
     return lookup
 
 
@@ -191,11 +204,23 @@ def make_cell_of_batch():
     return cell_of_batch
 
 
+# One list object per universe file across the metric runs of a process, so
+# positions_for below can cache the h3 conversion of the whole universe —
+# lod_fragment used to redo ~3 million conversions per resolution per run.
+_universe_cache: dict[Path, tuple[int, list[str]]] = {}
+
+
 def load_universe(res_dir: Path) -> list[str] | None:
     cells_file = res_dir / "cells.txt"
     if not cells_file.exists():
         return None
-    return cells_file.read_text(encoding="utf-8").split()
+    stamp = cells_file.stat().st_mtime_ns
+    hit = _universe_cache.get(cells_file)
+    if hit is not None and hit[0] == stamp:
+        return hit[1]
+    cells = cells_file.read_text(encoding="utf-8").split()
+    _universe_cache[cells_file] = (stamp, cells)
+    return cells
 
 
 def write_universe(res_dir: Path, cells: list[str]) -> None:
@@ -210,13 +235,23 @@ def write_universe(res_dir: Path, cells: list[str]) -> None:
     write_positions(res_dir / "positions.bin", lonlat)
 
 
+# Keyed by list identity; the entry keeps a reference to the list, so its
+# id cannot be reused while the entry lives. Together with the universe
+# cache above this converts each universe exactly once per process.
+_positions_cache: dict[int, tuple[list[str], list[tuple[float, float]]]] = {}
+
+
 def positions_for(cells: list[str]) -> list[tuple[float, float]]:
     import h3
 
+    hit = _positions_cache.get(id(cells))
+    if hit is not None and hit[0] is cells:
+        return hit[1]
     result = []
     for cell in cells:
         lat, lon = h3.cell_to_latlng(cell)
         result.append((lon, lat))
+    _positions_cache[id(cells)] = (cells, result)
     return result
 
 

@@ -6,46 +6,18 @@ falling into them, and the pixel count travels with it so
 coarser levels can re-weight instead of averaging averages.
 
 Kept free of raster and H3 dependencies so it is testable with the
-standard library alone.
+standard library alone. The mean helpers moved to zensus_pipeline.aggregate
+— dwd pools intensities the same way — and are re-exported here.
 """
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable, Mapping
+from collections.abc import Mapping
 
-
-def accumulate_mean(
-    samples: Iterable[tuple[str, float | None]],
-) -> tuple[dict[str, float], dict[str, int]]:
-    """Mean value per cell. Returns (mean_by_cell, sample_count_by_cell)."""
-    total: dict[str, float] = {}
-    count: dict[str, int] = {}
-    for cell, value in samples:
-        if value is None:
-            continue
-        total[cell] = total.get(cell, 0.0) + value
-        count[cell] = count.get(cell, 0) + 1
-    return {cell: total[cell] / count[cell] for cell in count}, count
-
-
-def aggregate_mean_to_parent(
-    means: Mapping[str, float | None],
-    counts: Mapping[str, int],
-    parent_of: Callable[[str], str],
-) -> tuple[dict[str, float | None], dict[str, int]]:
-    """Aggregate a mean one level up, weighted by each child's sample count."""
-    num: dict[str, float] = {}
-    den: dict[str, int] = {}
-    for cell, mean in means.items():
-        if mean is None:
-            continue
-        weight = counts.get(cell, 0)
-        if weight <= 0:
-            continue
-        parent = parent_of(cell)
-        num[parent] = num.get(parent, 0.0) + mean * weight
-        den[parent] = den.get(parent, 0) + weight
-    return {parent: num[parent] / den[parent] for parent in den}, den
+from zensus_pipeline.aggregate import (  # noqa: F401  (re-export)
+    accumulate_mean,
+    aggregate_mean_to_parent,
+)
 
 
 def relative_change(

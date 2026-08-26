@@ -27,9 +27,9 @@ import argparse
 import datetime as _dt
 import subprocess
 import sys
-from collections import defaultdict
 from pathlib import Path
 
+from zensus_pipeline.aggregate import accumulate_mean, aggregate_mean_to_parent
 from zensus_pipeline.provenance import provenance
 from zensus_pipeline.binary_writer import (
     bounds_of,
@@ -38,62 +38,15 @@ from zensus_pipeline.binary_writer import (
     write_f32,
     write_positions,
 )
-from zensus_pipeline.tiling import (
-    group_by_tile,
-    merge_tile_index,
-    write_tile_metric,
-    write_tile_positions,
-)
+from zensus_pipeline.tiling import H3_EDGE_METERS, TILE_PARENT_RES, write_tiled_lod
+from zensus_pipeline.years import parse_years
 
 from .grids import CDC, download, local_path, sample_grid
 
-H3_EDGE_METERS = {5: 8544.4, 6: 3229.5, 7: 1220.6, 8: 461.4}
-TILE_PARENT_RES = 5
 # DWD publishes its open geodata under CC BY 4.0, not the Datenlizenz
 # Deutschland: opendata.dwd.de/climate_environment/CDC/Terms_of_use.txt and
 # dwd.de/DE/service/rechtliche_hinweise. Checked 21 August 2026.
 LICENSE = "CC BY 4.0"
-
-
-def parse_years(spec: str) -> list[int]:
-    """"1991-1995,2020" becomes [1991, 1992, 1993, 1994, 1995, 2020]."""
-    years: set[int] = set()
-    for part in spec.split(","):
-        part = part.strip()
-        if not part:
-            continue
-        if "-" in part:
-            a, b = part.split("-", 1)
-            years.update(range(int(a), int(b) + 1))
-        else:
-            years.add(int(part))
-    if not years:
-        raise SystemExit("no years given")
-    return sorted(years)
-
-
-def accumulate_mean(samples):
-    """Per cell: the mean of its pixels, and how many there were."""
-    totals: dict[str, float] = defaultdict(float)
-    counts: dict[str, int] = defaultdict(int)
-    for cell, value in samples:
-        totals[cell] += value
-        counts[cell] += 1
-    return {c: totals[c] / counts[c] for c in totals}, dict(counts)
-
-
-def aggregate_mean_to_parent(means, counts, parent_of):
-    """Pool children into parents: mean weighted by pixel count, never a
-    mean of means (a cell built from 20 pixels must outweigh one built
-    from 2)."""
-    totals: dict[str, float] = defaultdict(float)
-    weights: dict[str, int] = defaultdict(int)
-    for cell, value in means.items():
-        w = counts.get(cell, 1)
-        parent = parent_of(cell)
-        totals[parent] += value * w
-        weights[parent] += w
-    return {p: totals[p] / weights[p] for p in totals if weights[p]}, dict(weights)
 
 
 def positions_for(cells: list[str]) -> list[tuple[float, float]]:
@@ -201,22 +154,12 @@ def run(args: argparse.Namespace) -> None:
             "metricStats": stats_by_metric,
         }
         if res in tiled:
-            groups = group_by_tile(universe, lambda c: h3.cell_to_parent(c, TILE_PARENT_RES))
-            counts_per_tile = {tile: len(idx) for tile, idx in groups.items()}
-            tile_bounds = write_tile_positions(res_dir, groups, positions)
-            for file_name, aligned, storage in metric_files:
-                write_tile_metric(res_dir, groups, file_name, aligned, storage)
-            merge_tile_index(
-                res_dir, res, H3_EDGE_METERS[res], tile_bounds,
-                counts_per_tile, stats_by_metric,
+            tile_fragment, tile_count = write_tiled_lod(
+                res_dir, res, universe, positions, metric_files, stats_by_metric,
+                lambda c: h3.cell_to_parent(c, TILE_PARENT_RES),
             )
-            fragment.update({
-                "tileIndex": f"r{res}/index.json",
-                "tileTemplate": f"r{res}/tiles/{{tile}}.{{metric}}",
-                "positionsTemplate": f"r{res}/tiles/{{tile}}.positions.bin",
-                "tileParentResolution": TILE_PARENT_RES,
-            })
-            print(f"  r{res}: {len(groups):,} tiles", file=sys.stderr)
+            fragment.update(tile_fragment)
+            print(f"  r{res}: {tile_count:,} tiles", file=sys.stderr)
         lod_fragments.append(fragment)
         print(f"  r{res}: {len(universe):,} cells, {len(years)} year(s)", file=sys.stderr)
 

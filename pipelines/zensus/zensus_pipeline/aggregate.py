@@ -97,6 +97,43 @@ def aggregate_weighted_mean_to_parent(
     return {parent: weighted_mean(pairs) for parent, pairs in grouped.items()}
 
 
+def accumulate_mean(
+    samples: Iterable[tuple[str, float | None]],
+) -> tuple[dict[str, float], dict[str, int]]:
+    """Mean value per cell for intensity samples (radiance, precipitation:
+    two pixels of 30 do not make 60). Returns (mean_by_cell,
+    sample_count_by_cell) — the count travels with the mean so coarser
+    levels can re-weight instead of averaging averages."""
+    total: dict[str, float] = {}
+    count: dict[str, int] = {}
+    for cell, value in samples:
+        if value is None:
+            continue
+        total[cell] = total.get(cell, 0.0) + value
+        count[cell] = count.get(cell, 0) + 1
+    return {cell: total[cell] / count[cell] for cell in count}, count
+
+
+def aggregate_mean_to_parent(
+    means: Mapping[str, float | None],
+    counts: Mapping[str, int],
+    parent_of: Callable[[str], str],
+) -> tuple[dict[str, float | None], dict[str, int]]:
+    """Aggregate a mean one level up, weighted by each child's sample count."""
+    num: dict[str, float] = {}
+    den: dict[str, int] = {}
+    for cell, mean in means.items():
+        if mean is None:
+            continue
+        weight = counts.get(cell, 0)
+        if weight <= 0:
+            continue
+        parent = parent_of(cell)
+        num[parent] = num.get(parent, 0.0) + mean * weight
+        den[parent] = den.get(parent, 0) + weight
+    return {parent: num[parent] / den[parent] for parent in den}, den
+
+
 def weighted_harmonic_mean(
     pairs: Iterable[tuple[float | None, float | None]],
 ) -> float | None:

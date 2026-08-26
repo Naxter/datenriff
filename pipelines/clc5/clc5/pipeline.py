@@ -37,17 +37,10 @@ from zensus_pipeline.binary_writer import (
     write_positions,
     write_u8,
 )
-from zensus_pipeline.tiling import (
-    group_by_tile,
-    merge_tile_index,
-    write_tile_metric,
-    write_tile_positions,
-)
+from zensus_pipeline.tiling import H3_EDGE_METERS, TILE_PARENT_RES, write_tiled_lod
 
 from . import classes, coverage, gpkg
 
-H3_EDGE_METERS = {5: 8544.4, 6: 3229.5, 7: 1220.6, 8: 461.4}
-TILE_PARENT_RES = 5
 LICENSE = "Datenlizenz Deutschland – Namensnennung – Version 2.0"
 SOURCE_URL = (
     "https://gdz.bkg.bund.de/index.php/default/"
@@ -206,21 +199,12 @@ def run(args: argparse.Namespace) -> None:
             "metricStats": stats_by_metric,
         }
         if res in tiled:
-            groups = group_by_tile(universe, lambda c: h3.cell_to_parent(c, TILE_PARENT_RES))
-            counts_per_tile = {tile: len(idx) for tile, idx in groups.items()}
-            tile_bounds = write_tile_positions(res_dir, groups, positions)
-            for file_name, aligned, storage in metric_files:
-                write_tile_metric(res_dir, groups, file_name, aligned, storage)
-            merge_tile_index(
-                res_dir, res, H3_EDGE_METERS[res], tile_bounds, counts_per_tile, stats_by_metric,
+            tile_fragment, tile_count = write_tiled_lod(
+                res_dir, res, universe, positions, metric_files, stats_by_metric,
+                lambda c: h3.cell_to_parent(c, TILE_PARENT_RES),
             )
-            fragment.update({
-                "tileIndex": f"r{res}/index.json",
-                "tileTemplate": f"r{res}/tiles/{{tile}}.{{metric}}",
-                "positionsTemplate": f"r{res}/tiles/{{tile}}.positions.bin",
-                "tileParentResolution": TILE_PARENT_RES,
-            })
-            log(f"  r{res}: {len(groups):,} tiles")
+            fragment.update(tile_fragment)
+            log(f"  r{res}: {tile_count:,} tiles")
         lod_fragments.append(fragment)
         log(f"  r{res}: {len(universe):,} cells")
 

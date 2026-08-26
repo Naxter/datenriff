@@ -39,12 +39,12 @@ from zensus_pipeline.binary_writer import (
     write_f32,
     write_positions,
 )
+from zensus_pipeline.tiling import H3_EDGE_METERS
 
 from .remotezip import FileRange, HttpRange, MemberStream, central_directory, find_member, open_member
 from .units import installed_in_year, parse_units
 
 DOWNLOAD_PAGE = "https://www.marktstammdatenregister.de/MaStR/Datendownload"
-H3_EDGE_METERS = {5: 8544.4, 6: 3229.5, 7: 1220.6, 8: 461.4, 9: 174.4}
 FIRST_YEAR = 1990
 
 

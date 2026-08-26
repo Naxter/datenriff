@@ -17,6 +17,12 @@ from .binary_writer import bounds_of, write_f32, write_positions, write_u8
 
 TILES_DIR = "tiles"
 
+#: H3 average hexagon edge length in metres per resolution — the renderer's
+#: column radius. One table for every pipeline; six carried their own copy.
+H3_EDGE_METERS = {5: 8544.4, 6: 3229.5, 7: 1220.6, 8: 461.4, 9: 174.4, 10: 65.9}
+#: Fine-LOD tiles are grouped by this coarser H3 parent resolution.
+TILE_PARENT_RES = 5
+
 
 def group_by_tile(
     universe: Sequence[str],
@@ -58,6 +64,40 @@ def write_tile_metric(
     writer = write_f32 if storage == "f32" else write_u8
     for tile_id, indices in groups.items():
         writer(tiles_dir / f"{tile_id}.{file_name}", [aligned[i] for i in indices])
+
+
+def write_tiled_lod(
+    res_dir: Path,
+    res: int,
+    universe: Sequence[str],
+    positions: Sequence[tuple[float, float]],
+    metric_files: Sequence[tuple[str, Sequence, str]],
+    stats_by_metric: dict[str, dict],
+    parent_of: Callable[[str], str],
+) -> tuple[dict, int]:
+    """Write one tiled LOD the way every pipeline does it.
+
+    Groups the universe by tile, writes per-tile positions and metric
+    buffers, merges ``index.json``, and returns the fragment keys the LOD
+    entry gains plus the tile count (for the log line). This sequence was
+    copy-pasted near-verbatim across five pipelines; a change to the tile
+    layout had to be re-applied in each.
+    """
+    groups = group_by_tile(universe, parent_of)
+    counts_per_tile = {tile: len(idx) for tile, idx in groups.items()}
+    tile_bounds = write_tile_positions(res_dir, groups, positions)
+    for file_name, aligned, storage in metric_files:
+        write_tile_metric(res_dir, groups, file_name, aligned, storage)
+    merge_tile_index(
+        res_dir, res, H3_EDGE_METERS[res], tile_bounds, counts_per_tile, stats_by_metric,
+    )
+    fragment = {
+        "tileIndex": f"r{res}/index.json",
+        "tileTemplate": f"r{res}/tiles/{{tile}}.{{metric}}",
+        "positionsTemplate": f"r{res}/tiles/{{tile}}.positions.bin",
+        "tileParentResolution": TILE_PARENT_RES,
+    }
+    return fragment, len(groups)
 
 
 def merge_tile_index(
