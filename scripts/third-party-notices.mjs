@@ -21,9 +21,18 @@ const OUT = join(ROOT, 'THIRD-PARTY-NOTICES.md');
 /** Our own workspace packages: covered by this repository's LICENSE. */
 const OURS = /^@datenriff\//;
 
-const pkgDir = (name) => {
-  for (const base of ['apps/web/node_modules', 'node_modules']) {
-    const p = join(ROOT, base, name, 'package.json');
+const pkgDir = (name, fromDir) => {
+  // resolve the way Node does: node_modules beside the requiring package
+  // first, then every directory above it, then the workspace hoist spots —
+  // a version conflict nests one copy, and the nested copy is the one that
+  // is actually bundled
+  const bases = [];
+  for (let d = fromDir; d && d.startsWith(ROOT); d = dirname(d)) {
+    bases.push(join(d, 'node_modules'));
+  }
+  bases.push(join(ROOT, 'apps/web/node_modules'), join(ROOT, 'node_modules'));
+  for (const base of bases) {
+    const p = join(base, name, 'package.json');
     if (existsSync(p)) return dirname(p);
   }
   return null;
@@ -32,23 +41,29 @@ const pkgDir = (name) => {
 /** Every production dependency reachable from apps/web. */
 function closure() {
   const seen = new Map();
-  const visit = (name) => {
-    if (seen.has(name)) return;
-    const dir = pkgDir(name);
+  const visit = (name, fromDir) => {
+    const dir = pkgDir(name, fromDir);
     if (!dir) return; // an optional or platform-specific dep that is not installed
+    if (seen.has(dir)) return;
     const doc = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8'));
-    seen.set(name, {
+    seen.set(dir, {
+      name,
       version: doc.version,
       license: doc.license ?? doc.licenses?.[0]?.type ?? 'UNKNOWN',
       dir,
     });
-    for (const dep of Object.keys(doc.dependencies ?? {})) visit(dep);
+    for (const dep of Object.keys(doc.dependencies ?? {})) visit(dep, dir);
   };
   const root = JSON.parse(readFileSync(join(ROOT, 'apps/web/package.json'), 'utf8'));
-  for (const dep of Object.keys(root.dependencies ?? {})) visit(dep);
-  return [...seen.entries()]
-    .filter(([name]) => !OURS.test(name))
-    .sort(([a], [b]) => a.localeCompare(b));
+  for (const dep of Object.keys(root.dependencies ?? {})) visit(dep, join(ROOT, 'apps/web'));
+  // the same name@version can be found at two paths (nested and hoisted);
+  // one row per version is enough for the notices
+  const uniq = new Map();
+  for (const v of seen.values()) uniq.set(`${v.name}@${v.version}`, v);
+  return [...uniq.values()]
+    .filter((v) => !OURS.test(v.name))
+    .sort((a, b) => a.name.localeCompare(b.name) || a.version.localeCompare(b.version))
+    .map((v) => [v.name, v]);
 }
 
 /** A package's licence file, and the copyright line inside it. */

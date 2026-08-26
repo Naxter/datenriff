@@ -16,7 +16,9 @@ function standingPages(): Plugin {
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
         const path = (req.url ?? '').split('?')[0] ?? '';
-        if (!path.endsWith('/') || path === '/') return next();
+        // only plain slug segments: a path with dots or percent-escapes
+        // could walk out of public/ and must fall through to Vite instead
+        if (!/^\/(?:[\w-]+\/)+$/.test(path) || path === '/') return next();
         const file = fileURLToPath(new URL(`./public${path}index.html`, import.meta.url));
         if (!existsSync(file)) return next();
         res.setHeader('Content-Type', 'text/html; charset=utf-8');

@@ -79,7 +79,10 @@ async function main() {
 
     for (const face of faces) {
       const file = slug(face);
-      const data = new Uint8Array(await (await fetch(face.url, { headers: { 'User-Agent': UA } })).arrayBuffer());
+      const res = await fetch(face.url, { headers: { 'User-Agent': UA } });
+      // an unchecked error response would be written to disk as a "font"
+      if (!res.ok) throw new Error(`${file}: ${res.status} from ${face.url}`);
+      const data = new Uint8Array(await res.arrayBuffer());
       await writeFile(join(OUT, file), data);
       bytes += data.byteLength;
       blocks.push(

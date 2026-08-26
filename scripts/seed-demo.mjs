@@ -233,8 +233,11 @@ const METRICS = [
 function main() {
   const datasetDir = join(OUT, 'zensus');
   // Refuse to stand on a real pipeline run: those cost hours and gigabytes.
-  if (existsSync(datasetDir) && !FORCE) {
-    const real = readdirSync(datasetDir).filter((f) => f !== 'dataset.json');
+  // An empty directory (or a stray dataset.json) is not one.
+  const real = existsSync(datasetDir)
+    ? readdirSync(datasetDir).filter((f) => f !== 'dataset.json')
+    : [];
+  if (real.length && !FORCE) {
     console.error(
       `${datasetDir} already holds data (${real.length} entries).\n` +
         'Refusing to overwrite a pipeline run. Pass --force if the demo is what you want there.',

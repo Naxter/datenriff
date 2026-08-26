@@ -98,9 +98,15 @@ function render({ key, lang, path, alt, noindex }, content) {
 
   const body = doc.sections
     .map((section) => {
-      const isNote = section.paragraphs.some((p) => p.startsWith('PLATZHALTER'));
+      const isNote = section.paragraphs.some(
+        (p) => typeof p === 'string' && p.startsWith('PLATZHALTER'),
+      );
+      // prose from pages.json is a string and gets escaped; only this
+      // script's own 404 page may pass { html } to keep its links as links
       const paras = section.paragraphs
-        .map((p) => `      <p${isNote ? ' class="placeholder"' : ''}>${escape(p)}</p>`)
+        .map((p) => `      <p${isNote ? ' class="placeholder"' : ''}>${
+          typeof p === 'string' ? escape(p) : p.html
+        }</p>`)
         .join('\n');
       return `    <section id="${section.id}">\n      <h2>${escape(section.heading)}</h2>\n${paras}\n    </section>`;
     })
@@ -197,7 +203,9 @@ async function main() {
               id: 'weiter',
               heading: 'Weiter',
               paragraphs: [
-                'Zum <a href="/">Atlas</a>, zu <a href="/ueber/">Über das Projekt</a>, zum <a href="/impressum/">Impressum</a> oder zur <a href="/datenschutz/">Datenschutzerklärung</a>.',
+                {
+                  html: 'Zum <a href="/">Atlas</a>, zu <a href="/ueber/">Über das Projekt</a>, zum <a href="/impressum/">Impressum</a> oder zur <a href="/datenschutz/">Datenschutzerklärung</a>.',
+                },
               ],
             },
           ],

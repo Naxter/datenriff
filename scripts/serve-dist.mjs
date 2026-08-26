@@ -16,7 +16,7 @@
 import { createReadStream, existsSync, readFileSync, statSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { networkInterfaces } from 'node:os';
-import { dirname, extname, join, normalize } from 'node:path';
+import { dirname, extname, join, normalize, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -96,10 +96,18 @@ function lanAddresses() {
 }
 
 const server = createServer((req, res) => {
-  const urlPath = decodeURIComponent((req.url ?? '/').split('?')[0].split('#')[0]);
-  // normalize first, then confirm the result is still under DIST
+  let urlPath;
+  try {
+    urlPath = decodeURIComponent((req.url ?? '/').split('?')[0].split('#')[0]);
+  } catch {
+    // a malformed escape like /% would otherwise throw and kill the process
+    res.writeHead(400).end('bad request');
+    return;
+  }
+  // normalize first, then confirm the result is still under DIST — with the
+  // separator appended, so a sibling like dist-old does not pass as a prefix
   let file = join(DIST, normalize(urlPath));
-  if (!file.startsWith(DIST)) {
+  if (file !== DIST && !file.startsWith(DIST + sep)) {
     res.writeHead(403).end('forbidden');
     return;
   }
