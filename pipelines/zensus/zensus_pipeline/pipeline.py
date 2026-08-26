@@ -453,8 +453,10 @@ def run(args: argparse.Namespace) -> None:
             for cell in universe:
                 entry = dominant.get(cell)
                 if entry is None:
+                    # no data for this cell: dominance is missing too, not
+                    # a measured 0 % that would drag the stats down
                     cats.append(None)
-                    doms.append(0)
+                    doms.append(None)
                 else:
                     cats.append(entry[0])
                     doms.append(round(entry[1] * 255))

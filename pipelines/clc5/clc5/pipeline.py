@@ -141,7 +141,7 @@ def run(args: argparse.Namespace) -> None:
 
         built: list[float | None] = []
         category: list[int | None] = []
-        dominance: list[int] = []
+        dominance: list[int | None] = []
         # a cell the universe carries but this vintage does not cover is
         # missing, not "nothing built": NaN renders as suppressed
         empty = np.zeros(len(classes.LABELS), dtype="int32")
@@ -151,7 +151,9 @@ def run(args: argparse.Namespace) -> None:
             )
             built.append(None if np.isnan(share) else share)
             category.append(None if dominant < 0 else dominant)
-            dominance.append(round(strength * 255))
+            # an uncovered cell has no dominant class, so it has no
+            # dominance either — 0 would enter the stats as measured
+            dominance.append(None if dominant < 0 else round(strength * 255))
 
         write_f32(res_dir / f"{names['built']}.f32", built)
         write_u8(res_dir / f"{names['category']}.u8", category)

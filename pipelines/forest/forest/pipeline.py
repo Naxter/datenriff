@@ -92,19 +92,20 @@ def to_parent(cells: dict[str, np.ndarray], res: int) -> dict[str, np.ndarray]:
     return dict(out)
 
 
-def metrics_of(counts: np.ndarray, cell: str) -> tuple[float, float | None, int | None, int]:
+def metrics_of(counts: np.ndarray, cell: str) -> tuple[float, float | None, int | None, int | None]:
     """(forest share of the cell, disturbed share of that forest, agent, dominance)."""
     forest = float(counts[FOREST])
     area = h3.cell_area(cell, unit="km^2")
     forest_share = min(forest * PIXEL_AREA_KM2 / area, 1.0) if area > 0 else 0.0
     if forest <= 0:
-        return forest_share, None, None, 0
+        return forest_share, None, None, None
     disturbed = float(counts[DISTURBED])
     disturbed_share = disturbed / forest
     agents = counts[AGENT0:]
     if agents.sum() <= 0:
-        # forest that has never been disturbed has no cause to name
-        return forest_share, disturbed_share, None, 0
+        # forest that has never been disturbed has no cause to name,
+        # and no cause means no dominance to measure either
+        return forest_share, disturbed_share, None, None
     dominant = int(np.argmax(agents))
     dominance = float(agents[dominant]) / float(agents.sum())
     return forest_share, disturbed_share, dominant, round(dominance * 255)
@@ -156,7 +157,7 @@ def run(args: argparse.Namespace) -> None:
         forest_share: list[float | None] = []
         disturbed_share: list[float | None] = []
         agent: list[int | None] = []
-        dominance: list[int] = []
+        dominance: list[int | None] = []
         for cell in universe:
             counts = at_res.get(cell)
             if counts is None:
@@ -164,7 +165,7 @@ def run(args: argparse.Namespace) -> None:
                 forest_share.append(None)
                 disturbed_share.append(None)
                 agent.append(None)
-                dominance.append(0)
+                dominance.append(None)
                 continue
             share, dist, dominant, strength = metrics_of(counts, cell)
             forest_share.append(share)
@@ -266,7 +267,8 @@ def run(args: argparse.Namespace) -> None:
             "provenance": provenance(
                 source_url=SOURCE_URL,
                 pipeline_version="forest-pipeline 0.1.0",
-                inputs=paths,
+                # paths is a dict; the rasters are its values, not its keys
+                inputs=list(paths.values()),
                 download_date=args.download_date,
             ),
         },

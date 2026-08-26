@@ -65,7 +65,9 @@ class TestMetrics(unittest.TestCase):
         self.assertGreater(share, 0)
         self.assertEqual(disturbed, 0.0)
         self.assertIsNone(agent, "forest that was never disturbed has no cause")
-        self.assertEqual(dominance, 0)
+        # and with no cause there is no dominance to measure — a 0 would
+        # enter the dominance stats as a measured value
+        self.assertIsNone(dominance)
 
     def test_dominant_cause_and_its_strength(self):
         # 6 harvest, 2 fire, 2 wind: harvest with 60 %
