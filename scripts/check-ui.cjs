@@ -108,6 +108,7 @@ async function press(page, selector) {
     const blocked = /intercepts pointer events/.test(err.message);
     throw new Error(
       blocked ? `${selector} is there but something is on top of it` : `cannot click ${selector}`,
+      { cause: err },
     );
   }
 }
