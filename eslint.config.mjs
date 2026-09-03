@@ -37,7 +37,12 @@ export default tseslint.config(
     },
     plugins: { 'react-hooks': reactHooks },
     rules: {
-      ...reactHooks.configs.recommended.rules,
+      // Only the two classic hook rules. eslint-plugin-react-hooks 7 folds
+      // the React Compiler checks (refs, immutability, set-state-in-effect,
+      // ...) into `recommended`; the renderer has not been reviewed against
+      // those, so spreading the preset would fail lint on existing code.
+      'react-hooks/rules-of-hooks': 'error',
+      'react-hooks/exhaustive-deps': 'warn',
       // The renderer keeps typed-array buffers and deck.gl layer props in
       // shapes their own types do not describe; an unused argument is often
       // a signature being honoured.
